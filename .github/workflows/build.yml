@@ -46,10 +46,32 @@ jobs:
 
       - name: Update HTML with output
         run: |
-          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
-          OUTPUT=$(cat output.txt | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-          sed -i "s|TIMESTAMP_PLACEHOLDER|$TIMESTAMP|g" docs/index.html
-          sed -i "s|OUTPUT_PLACEHOLDER|$OUTPUT|g" docs/index.html
+          python3 << 'PYTHON'
+          import html
+          from datetime import datetime
+
+          # Read output
+          with open('output.txt', 'r') as f:
+              output = f.read()
+
+          # Read HTML template
+          with open('docs/index.html', 'r') as f:
+              page = f.read()
+
+          # Escape HTML and replace placeholders
+          timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+          escaped_output = html.escape(output)
+
+          page = page.replace('TIMESTAMP_PLACEHOLDER', timestamp)
+          page = page.replace('OUTPUT_PLACEHOLDER', escaped_output)
+
+          # Write updated HTML
+          with open('docs/index.html', 'w') as f:
+              f.write(page)
+
+          print(f"Updated HTML with timestamp: {timestamp}")
+          print(f"Output length: {len(output)} chars")
+          PYTHON
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
