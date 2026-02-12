@@ -1,6 +1,6 @@
 example/
+prices/
 build/
 *.o
 *.a
 .DS_Store
-*_data.h
