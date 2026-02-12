@@ -13,12 +13,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install gcc-14
+    - name: Install gcc-15
       run: |
         sudo apt update
-        sudo apt install -y g++-14 cmake
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+        sudo apt install -y g++-15 cmake
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
 
     - name: Check compiler version
       run: g++ --version
