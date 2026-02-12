@@ -8,20 +8,21 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-26.10
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install gcc-15
+    - name: Install GCC 15
       run: |
-        sudo apt update
-        sudo apt install -y g++-15 cmake
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
+        sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install -y gcc-15 g++-15 cmake
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-15 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-15 100
 
-    - name: Check compiler version
-      run: g++ --version
+    - name: Verify GCC version
+      run: gcc --version
 
     - name: Configure CMake
       run: cmake -S . -B build
