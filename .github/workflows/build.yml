@@ -13,14 +13,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install gcc-15
+    - name: Install latest gcc
       run: |
-        sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-        sudo apt-get update
-        sudo apt-get install -y gcc-15 g++-15
+        sudo apt update
+        sudo apt install -y g++ cmake
+
+    - name: Check compiler version
+      run: g++ --version
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-15
+      run: cmake -S . -B build
 
     - name: Build
       run: cmake --build build -j
