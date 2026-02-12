@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:25.04
+      image: ubuntu:rolling
 
     steps:
       - uses: actions/checkout@v5
