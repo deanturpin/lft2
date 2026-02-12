@@ -8,6 +8,21 @@ This is a total redesign of the original [LFT project](https://github.com/deantu
 
 LFTv1 was a good proof of concept, but when you get into the details of why a trade happened it was quite hard to reason about. So this time we'll get all our strategies solid up front in unit tests and ensure that backtest and live behaviours are indistinguishable.
 
+## The main event loop
+
+1. Calibration (hourly) - recalculate indicators, update parameters, refresh state
+1. Exit management (every 5min bar) - check existing positions for exit signals
+1. Entry signals (every 5min bar) - scan for new opportunities
+
+## Avoid conditionals
+
+```cpp
+while (not eod){
+    risk_off = test_entries();
+    // ...
+}
+```
+
 ### To be done
 
 - [ ] Compile time strategy implementation
