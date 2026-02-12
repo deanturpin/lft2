@@ -80,7 +80,8 @@ constexpr auto test_large_values() -> bool {
 static_assert(test_large_values());
 } // namespace
 
-// Test parsing with negative values
+// Test parsing with negative values (validates parser handles negatives,
+// not realistic for stock prices)
 namespace {
 constexpr auto test_negative_values() -> bool {
   constexpr auto json = std::string_view{R"({
