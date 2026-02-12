@@ -12,15 +12,16 @@
 #include <print>
 
 int main() {
+  using namespace std::string_view_literals;
   std::println("Low Frequency Trader v2\n");
 
   // Test all 10 stocks
-  auto stocks = std::array{
-      std::pair{"AAPL", aapl_json}, std::pair{"AMZN", amzn_json},
-      std::pair{"ASML", asml_json}, std::pair{"BABA", baba_json},
-      std::pair{"BAC", bac_json},   std::pair{"CAT", cat_json},
-      std::pair{"COP", cop_json},   std::pair{"COST", cost_json},
-      std::pair{"CRML", crml_json}, std::pair{"CVX", cvx_json}};
+  auto stocks = std::array<std::pair<std::string_view, std::string_view>, 10>{{
+      {"AAPL"sv, aapl_json}, {"AMZN"sv, amzn_json},
+      {"ASML"sv, asml_json}, {"BABA"sv, baba_json},
+      {"BAC"sv, bac_json},   {"CAT"sv, cat_json},
+      {"COP"sv, cop_json},   {"COST"sv, cost_json},
+      {"CRML"sv, crml_json}, {"CVX"sv, cvx_json}}};
 
   for (const auto &[symbol, json] : stocks) {
     auto bars = parse_bars<1000>(json);
