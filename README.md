@@ -1,6 +1,6 @@
 # Low Frequency Trader
 
-Fully automated algorithmic trading platform, written in C++ and designed from the ground up to be `constepxr`, thereby offering compile-time unit testing and memory allocation guarantees.
+LFT is a fully automated algorithmic trading platform, written in the latest C++ (26) and designed from the ground up to be `constepxr`, thereby allowing compile-time unit testing and guaranteed memory safety.
 
 ## Project status
 
