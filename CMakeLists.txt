@@ -15,4 +15,4 @@ add_compile_options(
     -march=native
 )
 
-add_executable(lft2 main.cxx)
+add_executable(lft2 main.cxx test.cxx)
