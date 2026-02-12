@@ -4,18 +4,19 @@
 #include <string_view>
 
 // Minimal constexpr JSON parser for Alpaca bar data
-// Parses: {"bars":[{"c":val,"h":val,"l":val,"o":val,"t":"str","v":val,"vw":val,"n":val},...]}
+// Parses:
+// {"bars":[{"c":val,"h":val,"l":val,"o":val,"t":"str","v":val,"vw":val,"n":val},...]}
 // Designed to work with compile-time embedded JSON data via C++26 #embed
 
 // Skip whitespace
-constexpr auto skip_ws(std::string_view &s) -> void {
-  while (!s.empty() && (s[0] == ' ' || s[0] == '\n' || s[0] == '\r' ||
-                        s[0] == '\t'))
+constexpr void skip_ws(std::string_view &s) {
+  while (!s.empty() &&
+         (s[0] == ' ' || s[0] == '\n' || s[0] == '\r' || s[0] == '\t'))
     s.remove_prefix(1);
 }
 
 namespace {
-constexpr auto test_skip_ws() -> bool {
+constexpr bool test_skip_ws() {
   auto s = std::string_view{"  \n\t  hello"};
   skip_ws(s);
   return s == "hello";
@@ -24,7 +25,7 @@ static_assert(test_skip_ws());
 } // namespace
 
 // Expect and consume a specific character
-constexpr auto expect(std::string_view &s, char c) -> bool {
+constexpr bool expect(std::string_view &s, char c) {
   skip_ws(s);
   if (s.empty() || s[0] != c)
     return false;
@@ -33,7 +34,7 @@ constexpr auto expect(std::string_view &s, char c) -> bool {
 }
 
 namespace {
-constexpr auto test_expect() -> bool {
+constexpr bool test_expect() {
   auto s1 = std::string_view{"  {"};
   if (!expect(s1, '{'))
     return false;
@@ -48,7 +49,7 @@ static_assert(test_expect());
 } // namespace
 
 // Parse a string value between quotes
-constexpr auto parse_string(std::string_view &s) -> std::string_view {
+constexpr std::string_view parse_string(std::string_view &s) {
   skip_ws(s);
   if (s.empty() || s[0] != '"')
     return {};
@@ -69,7 +70,7 @@ constexpr auto parse_string(std::string_view &s) -> std::string_view {
 }
 
 namespace {
-constexpr auto test_parse_string() -> bool {
+constexpr bool test_parse_string() {
   auto s1 = std::string_view{R"("hello")"};
   auto result1 = parse_string(s1);
   if (result1 != "hello")
@@ -86,7 +87,7 @@ static_assert(test_parse_string());
 } // namespace
 
 // Parse a numeric value (double or unsigned long)
-template <typename T> constexpr auto parse_number(std::string_view &s) -> T {
+template <typename T> constexpr T parse_number(std::string_view &s) {
   skip_ws(s);
 
   auto start = s.data();
@@ -134,7 +135,7 @@ template <typename T> constexpr auto parse_number(std::string_view &s) -> T {
 }
 
 namespace {
-constexpr auto test_parse_number() -> bool {
+constexpr bool test_parse_number() {
   auto s1 = std::string_view{"42"};
   if (parse_number<int>(s1) != 42)
     return false;
@@ -159,7 +160,7 @@ static_assert(test_parse_number());
 } // namespace
 
 // Parse a single bar object
-constexpr auto parse_bar(std::string_view &s) -> bar {
+constexpr bar parse_bar(std::string_view &s) {
   auto b = bar{};
 
   if (!expect(s, '{'))
@@ -201,7 +202,7 @@ constexpr auto parse_bar(std::string_view &s) -> bar {
 }
 
 namespace {
-constexpr auto test_parse_bar() -> bool {
+constexpr bool test_parse_bar() {
   auto json = std::string_view{R"({
     "c": 255.75,
     "h": 255.855,
@@ -270,7 +271,7 @@ constexpr auto parse_bars(std::string_view json) -> std::array<bar, N> {
 }
 
 namespace {
-constexpr auto test_parse_bars() -> bool {
+constexpr bool test_parse_bars() {
   constexpr auto json = std::string_view{R"({
     "bars": [
       {
