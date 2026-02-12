@@ -238,7 +238,7 @@ static_assert(test_parse_bar());
 
 // Parse full JSON response into array of bars
 template <std::size_t N>
-constexpr auto parse_bars(std::string_view json) -> std::array<bar, N> {
+constexpr std::array<bar, N> parse_bars(std::string_view json) {
   auto bars = std::array<bar, N>{};
   auto s = json;
 
