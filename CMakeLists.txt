@@ -15,4 +15,9 @@ add_compile_options(
     -march=native
 )
 
-add_executable(lft2 main.cxx test.cxx)
+add_executable(lft2 src/main.cxx src/test.cxx)
+
+target_include_directories(lft2 PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
