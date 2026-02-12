@@ -28,7 +28,8 @@ jobs:
             gcc-15 g++-15 \
             cmake \
             git \
-            ca-certificates
+            ca-certificates \
+            python3
 
       - name: Generate data headers
         run: ./bin/generate_data_headers.sh
