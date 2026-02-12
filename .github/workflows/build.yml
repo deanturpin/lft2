@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:26.10
+      image: ubuntu:26.04
 
     steps:
       - uses: actions/checkout@v5
