@@ -1,5 +1,4 @@
 example/
-prices/
 build/
 *.o
 *.a
