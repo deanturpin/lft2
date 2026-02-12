@@ -8,12 +8,14 @@ int main() {
   auto bars = parse_bars<1000>(aapl_json);
 
   std::println("Parsed {} bars", bars.size());
-  std::println("First bar: {} | O:{} H:{} L:{} C:{} V:{}", bars[0].timestamp,
-               bars[0].open, bars[0].high, bars[0].low, bars[0].close,
-               bars[0].volume);
-  std::println("Last bar: {} | O:{} H:{} L:{} C:{} V:{}", bars[999].timestamp,
-               bars[999].open, bars[999].high, bars[999].low, bars[999].close,
-               bars[999].volume);
+
+  auto first = bars.front();
+  auto last = bars.back();
+
+  std::println("First bar: {} | O:{} H:{} L:{} C:{} V:{}", first.timestamp,
+               first.open, first.high, first.low, first.close, first.volume);
+  std::println("Last bar: {} | O:{} H:{} L:{} C:{} V:{}", last.timestamp,
+               last.open, last.high, last.low, last.close, last.volume);
 
   return 0;
 }
