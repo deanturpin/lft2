@@ -1,10 +1,15 @@
-name: Build and Test
+name: Build and Deploy
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -15,8 +20,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Check Ubuntu version
-        run: cat /etc/os-release
       - name: Install build tools
         run: |
           apt-get update
@@ -27,8 +30,8 @@ jobs:
             git \
             ca-certificates
 
-      - name: Check gcc-15
-        run: gcc-15 --version
+      - name: Generate data headers
+        run: ./bin/generate_data_headers.sh
 
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_C_COMPILER=gcc-15 -DCMAKE_CXX_COMPILER=g++-15
@@ -36,5 +39,32 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
-      - name: Run tests
-        run: ./build/lft2
+      - name: Run and capture output
+        run: |
+          ./build/lft2 > output.txt
+          cat output.txt
+
+      - name: Update HTML with output
+        run: |
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          OUTPUT=$(cat output.txt | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+          sed -i "s|TIMESTAMP_PLACEHOLDER|$TIMESTAMP|g" docs/index.html
+          sed -i "s|OUTPUT_PLACEHOLDER|$OUTPUT|g" docs/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
