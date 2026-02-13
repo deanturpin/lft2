@@ -75,6 +75,9 @@
         // Chart data will be injected here
         const chartData = CHART_DATA_PLACEHOLDER;
 
+        console.log('Chart data loaded:', Object.keys(chartData));
+        console.log('AAPL sample:', chartData.AAPL?.slice(0, 3));
+
         const darkTheme = {
             layout: {
                 background: { color: '#161b22' },
@@ -106,6 +109,10 @@
                 ...darkTheme,
                 width: chartDiv.clientWidth,
                 height: 400,
+                timeScale: {
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
             });
 
             const candlestickSeries = chart.addCandlestickSeries({
@@ -117,6 +124,9 @@
             });
 
             candlestickSeries.setData(chartData[symbol]);
+
+            // Auto-fit all data on load
+            chart.timeScale().fitContent();
 
             // Handle window resize
             window.addEventListener('resize', () => {

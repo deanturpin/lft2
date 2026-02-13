@@ -124,6 +124,9 @@ jobs:
           # Show sample of chart data
           for stock in list(chart_data.keys())[:2]:
               print(f"{stock}: {len(chart_data[stock])} bars")
+              if chart_data[stock]:
+                  print(f"  First bar: {chart_data[stock][0]}")
+                  print(f"  Last bar: {chart_data[stock][-1]}")
           PYTHON
 
       - name: Verify HTML output
