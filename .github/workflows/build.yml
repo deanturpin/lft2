@@ -74,17 +74,20 @@ jobs:
                   # Handle both {"bars": [...]} and [...] formats
                   bars = data.get('bars', data) if isinstance(data, dict) else data
 
-                  # Convert to lightweight-charts format (needs Unix timestamp in seconds)
-                  chart_data[stock.upper()] = [
-                      {
-                          'time': bar['t'].split('T')[0],  # Use date only (YYYY-MM-DD)
-                          'open': bar['o'],
-                          'high': bar['h'],
-                          'low': bar['l'],
-                          'close': bar['c']
-                      }
-                      for bar in bars
-                  ]
+                  # Convert to lightweight-charts format, filtering out invalid bars
+                  valid_bars = []
+                  for bar in bars:
+                      # Skip bars with null values
+                      if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
+                          valid_bars.append({
+                              'time': bar['t'].split('T')[0],  # Use date only (YYYY-MM-DD)
+                              'open': float(bar['o']),
+                              'high': float(bar['h']),
+                              'low': float(bar['l']),
+                              'close': float(bar['c'])
+                          })
+
+                  chart_data[stock.upper()] = valid_bars
                   print(f"Processed {stock.upper()}: {len(bars)} bars")
               except Exception as e:
                   print(f"Error processing {stock}: {e}")
