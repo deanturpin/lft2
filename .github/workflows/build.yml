@@ -69,12 +69,15 @@ jobs:
               json_file = f'prices/{stock}.json'
               try:
                   with open(json_file, 'r') as f:
-                      bars = json.load(f)
+                      data = json.load(f)
 
-                  # Convert to lightweight-charts format
+                  # Handle both {"bars": [...]} and [...] formats
+                  bars = data.get('bars', data) if isinstance(data, dict) else data
+
+                  # Convert to lightweight-charts format (needs Unix timestamp in seconds)
                   chart_data[stock.upper()] = [
                       {
-                          'time': bar['t'],
+                          'time': bar['t'].split('T')[0],  # Use date only (YYYY-MM-DD)
                           'open': bar['o'],
                           'high': bar['h'],
                           'low': bar['l'],
@@ -82,8 +85,11 @@ jobs:
                       }
                       for bar in bars
                   ]
+                  print(f"Processed {stock.upper()}: {len(bars)} bars")
               except Exception as e:
                   print(f"Error processing {stock}: {e}")
+                  import traceback
+                  traceback.print_exc()
 
           # Replace placeholders
           timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
