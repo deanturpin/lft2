@@ -45,13 +45,15 @@ jobs:
           ./build/lft2 > output.txt
           cat output.txt
 
-      - name: Update HTML with output
+      - name: Update HTML with output and charts
         run: |
           python3 << 'PYTHON'
           import html
+          import json
+          import glob
           from datetime import datetime
 
-          # Read output
+          # Read program output
           with open('output.txt', 'r') as f:
               output = f.read()
 
@@ -59,12 +61,37 @@ jobs:
           with open('docs/index.html', 'r') as f:
               page = f.read()
 
-          # Escape HTML and replace placeholders
+          # Process JSON price files for charts
+          chart_data = {}
+          stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx']
+
+          for stock in stocks:
+              json_file = f'prices/{stock}.json'
+              try:
+                  with open(json_file, 'r') as f:
+                      bars = json.load(f)
+
+                  # Convert to lightweight-charts format
+                  chart_data[stock.upper()] = [
+                      {
+                          'time': bar['t'],
+                          'open': bar['o'],
+                          'high': bar['h'],
+                          'low': bar['l'],
+                          'close': bar['c']
+                      }
+                      for bar in bars
+                  ]
+              except Exception as e:
+                  print(f"Error processing {stock}: {e}")
+
+          # Replace placeholders
           timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
           escaped_output = html.escape(output)
 
           page = page.replace('TIMESTAMP_PLACEHOLDER', timestamp)
           page = page.replace('OUTPUT_PLACEHOLDER', escaped_output)
+          page = page.replace('CHART_DATA_PLACEHOLDER', json.dumps(chart_data))
 
           # Write updated HTML
           with open('docs/index.html', 'w') as f:
@@ -72,6 +99,7 @@ jobs:
 
           print(f"Updated HTML with timestamp: {timestamp}")
           print(f"Output length: {len(output)} chars")
+          print(f"Chart data for {len(chart_data)} stocks")
           PYTHON
 
       - name: Upload Pages artifact

@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Low Frequency Trader v2</title>
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         body {
             font-family: 'Courier New', monospace;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
             background-color: #0d1117;
@@ -18,6 +19,11 @@
             border-bottom: 2px solid #30363d;
             padding-bottom: 10px;
         }
+        h2 {
+            color: #58a6ff;
+            margin-top: 30px;
+            font-size: 1.3em;
+        }
         .output {
             background-color: #161b22;
             border: 1px solid #30363d;
@@ -26,11 +32,33 @@
             white-space: pre-wrap;
             font-size: 14px;
             line-height: 1.6;
+            margin-bottom: 30px;
         }
         .timestamp {
             color: #8b949e;
             font-size: 12px;
             margin-bottom: 10px;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .chart-container {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+        }
+        .chart-title {
+            color: #58a6ff;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .chart {
+            height: 400px;
         }
     </style>
 </head>
@@ -39,5 +67,62 @@
     <h1>Low Frequency Trader v2</h1>
     <div class="timestamp">Last updated: <span id="timestamp">TIMESTAMP_PLACEHOLDER</span></div>
     <div class="output">OUTPUT_PLACEHOLDER</div>
+
+    <h2>Price Charts</h2>
+    <div class="charts-grid" id="chartsGrid"></div>
+
+    <script>
+        // Chart data will be injected here
+        const chartData = CHART_DATA_PLACEHOLDER;
+
+        const darkTheme = {
+            layout: {
+                background: { color: '#161b22' },
+                textColor: '#c9d1d9',
+            },
+            grid: {
+                vertLines: { color: '#30363d' },
+                horzLines: { color: '#30363d' },
+            },
+        };
+
+        // Create charts for each stock
+        Object.keys(chartData).forEach(symbol => {
+            const container = document.createElement('div');
+            container.className = 'chart-container';
+
+            const title = document.createElement('div');
+            title.className = 'chart-title';
+            title.textContent = symbol;
+            container.appendChild(title);
+
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'chart';
+            container.appendChild(chartDiv);
+
+            document.getElementById('chartsGrid').appendChild(container);
+
+            const chart = LightweightCharts.createChart(chartDiv, {
+                ...darkTheme,
+                width: chartDiv.clientWidth,
+                height: 400,
+            });
+
+            const candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+
+            candlestickSeries.setData(chartData[symbol]);
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                chart.applyOptions({ width: chartDiv.clientWidth });
+            });
+        });
+    </script>
 </body>
 </html>
