@@ -100,7 +100,24 @@ jobs:
           print(f"Updated HTML with timestamp: {timestamp}")
           print(f"Output length: {len(output)} chars")
           print(f"Chart data for {len(chart_data)} stocks")
+
+          # Verify data was inserted
+          if 'CHART_DATA_PLACEHOLDER' in page:
+              print("WARNING: CHART_DATA_PLACEHOLDER still present in output!")
+          else:
+              print("Chart data successfully inserted")
+
+          # Show sample of chart data
+          for stock in list(chart_data.keys())[:2]:
+              print(f"{stock}: {len(chart_data[stock])} bars")
           PYTHON
+
+      - name: Verify HTML output
+        run: |
+          echo "=== Checking for placeholders in HTML ==="
+          grep -o "PLACEHOLDER" docs/index.html || echo "No placeholders found (good!)"
+          echo "=== HTML file size ==="
+          ls -lh docs/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
