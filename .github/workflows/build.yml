@@ -75,12 +75,17 @@ jobs:
                   bars = data.get('bars', data) if isinstance(data, dict) else data
 
                   # Convert to lightweight-charts format, filtering out invalid bars
+                  # For intraday data, we need Unix timestamps in seconds
+                  from datetime import datetime as dt
+
                   valid_bars = []
                   for bar in bars:
                       # Skip bars with null values
                       if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
+                          # Convert ISO timestamp to Unix timestamp
+                          timestamp = int(dt.fromisoformat(bar['t'].replace('Z', '+00:00')).timestamp())
                           valid_bars.append({
-                              'time': bar['t'].split('T')[0],  # Use date only (YYYY-MM-DD)
+                              'time': timestamp,
                               'open': float(bar['o']),
                               'high': float(bar['h']),
                               'low': float(bar['l']),
