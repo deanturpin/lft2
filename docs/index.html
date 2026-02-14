@@ -3,145 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="cloudflare-rocket-loader" content="off">
     <title>Low Frequency Trader v2</title>
     <link rel="icon" href="data:,">
     <style>
         body {
             font-family: 'Courier New', monospace;
-            max-width: 1400px;
-            margin: 0 auto;
+            max-width: 100%;
+            margin: 0;
             padding: 20px;
             background-color: #0d1117;
             color: #c9d1d9;
         }
         h1 {
             color: #58a6ff;
-            border-bottom: 2px solid #30363d;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #58a6ff;
-            margin-top: 30px;
-            font-size: 1.3em;
-        }
-        .output {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 16px;
-            white-space: pre-wrap;
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 30px;
         }
         .timestamp {
             color: #8b949e;
             font-size: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .stats-table th,
-        .stats-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #30363d;
-        }
-        .stats-table th {
+        pre {
             background-color: #161b22;
-            color: #58a6ff;
-            font-weight: bold;
-            position: sticky;
-            top: 0;
-        }
-        .stats-table tr:hover {
-            background-color: #161b22;
-        }
-        .stats-table td.numeric {
-            text-align: right;
-            font-family: 'Courier New', monospace;
-        }
-        .stats-table td.positive {
-            color: #26a69a;
-        }
-        .stats-table td.negative {
-            color: #ef5350;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.4;
         }
     </style>
 </head>
-
 <body>
     <h1>Low Frequency Trader v2</h1>
     <div class="timestamp">
-        Last updated: <span id="timestamp">TIMESTAMP_PLACEHOLDER</span> |
-        <a href="stats.json" style="color: #58a6ff; text-decoration: none;">View raw JSON data</a>
+        Last updated: TIMESTAMP_PLACEHOLDER |
+        <a href="stats.json" style="color: #58a6ff;">Raw JSON</a>
     </div>
-    <div class="output">OUTPUT_PLACEHOLDER</div>
-
-    <table class="stats-table">
-            <thead>
-                <tr>
-                    <th>Symbol</th>
-                    <th>Bars</th>
-                    <th>Trades</th>
-                    <th>Best Gain (%)</th>
-                    <th>Best Duration</th>
-                    <th>Worst Loss (%)</th>
-                    <th>Worst Duration</th>
-                    <th>Avg Gain (%)</th>
-                    <th>Win Rate (%)</th>
-                    <th>Profit Factor</th>
-                    <th>Suggested TP (%)</th>
-                    <th>Suggested SL (%)</th>
-                    <th>Max Intraday Gain (%)</th>
-                    <th>Max Intraday Loss (%)</th>
-                </tr>
-            </thead>
-            <tbody id="statsTableBody"></tbody>
-    </table>
-
-    <script>
-        // Statistics data will be injected here
-        const assetStats = ASSET_STATS_PLACEHOLDER;
-
-        console.log('Asset stats loaded:', Object.keys(assetStats));
-
-        // Populate statistics table
-        const statsBody = document.getElementById('statsTableBody');
-        Object.entries(assetStats).sort((a, b) => b[1].max_intraday_gain_pct - a[1].max_intraday_gain_pct).forEach(([symbol, stats]) => {
-            const row = document.createElement('tr');
-
-            // Format durations (5-minute bars to human readable)
-            const formatDuration = (bars) => {
-                const minutes = bars * 5;
-                if (minutes < 60) return `${minutes}m`;
-                const hours = Math.floor(minutes / 60);
-                const mins = minutes % 60;
-                return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
-            };
-
-            row.innerHTML = `
-                <td><strong>${symbol}</strong></td>
-                <td class="numeric">${stats.bar_count}</td>
-                <td class="numeric">${stats.trade_count}</td>
-                <td class="numeric positive">+${stats.best_gain_pct.toFixed(2)}%</td>
-                <td class="numeric">${formatDuration(stats.best_gain_duration)}</td>
-                <td class="numeric negative">${stats.worst_loss_pct.toFixed(2)}%</td>
-                <td class="numeric">${formatDuration(stats.worst_loss_duration)}</td>
-                <td class="numeric ${stats.avg_gain_pct >= 0 ? 'positive' : 'negative'}">${stats.avg_gain_pct >= 0 ? '+' : ''}${stats.avg_gain_pct.toFixed(2)}%</td>
-                <td class="numeric">${stats.win_rate_pct.toFixed(1)}%</td>
-                <td class="numeric">${stats.profit_factor.toFixed(2)}</td>
-                <td class="numeric positive">${stats.suggested_tp_pct.toFixed(2)}%</td>
-                <td class="numeric negative">${stats.suggested_sl_pct.toFixed(2)}%</td>
-                <td class="numeric positive"><strong>+${stats.max_intraday_gain_pct.toFixed(2)}%</strong></td>
-                <td class="numeric negative">${stats.max_intraday_loss_pct.toFixed(2)}%</td>
-            `;
-            statsBody.appendChild(row);
-        });
-    </script>
+    <pre>OUTPUT_PLACEHOLDER</pre>
 </body>
 </html>

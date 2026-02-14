@@ -157,15 +157,16 @@ backtest_result run_backtest(std::string_view symbol,
   }
 
   // Capture context around best entry point
-  if (best_entry_idx >= 5 && best_entry_idx < bars.size()) {
+  if (best_entry_idx < bars.size()) {
     result.top_entry.bar_idx = best_entry_idx;
     result.top_entry.gain_pct = best_entry_gain;
     result.top_entry.entry_price = bars[best_entry_idx].open;
     result.top_entry.timestamp = bars[best_entry_idx].timestamp;
 
-    // Get previous 5 bars
-    for (auto k = 0uz; k < 5; ++k) {
-      auto idx = best_entry_idx - 5 + k;
+    // Get up to 5 previous bars (or fewer if near start)
+    auto lookback = std::min(5uz, best_entry_idx);
+    for (auto k = 0uz; k < lookback; ++k) {
+      auto idx = best_entry_idx - lookback + k;
       result.top_entry.prev_closes[k] = bars[idx].close;
       result.top_entry.prev_volumes[k] = static_cast<double>(bars[idx].volume);
     }
@@ -419,17 +420,22 @@ int main(int argc, char *argv[]) {
     std::println("\n=== Top 5 Best Entry Points - What Preceded the Big Moves? ===\n");
     for (auto i = 0uz; i < std::min(5uz, results.size()); ++i) {
       const auto &r = results[i];
+      auto lookback = std::min(5uz, r.top_entry.bar_idx);
       std::println("{} - {}% gain at bar {} ({})", r.symbol, r.top_entry.gain_pct,
                    r.top_entry.bar_idx, r.top_entry.timestamp);
       std::println("  Entry price: ${:.2f}", r.top_entry.entry_price);
-      std::print("  Previous 5 closes: ");
-      for (auto j = 0uz; j < 5; ++j)
-        std::print("${:.2f} ", r.top_entry.prev_closes[j]);
-      std::println("");
-      std::print("  Previous 5 volumes: ");
-      for (auto j = 0uz; j < 5; ++j)
-        std::print("{:.0f} ", r.top_entry.prev_volumes[j]);
-      std::println("\n");
+      if (lookback > 0) {
+        std::print("  Previous {} closes: ", lookback);
+        for (auto j = 0uz; j < lookback; ++j)
+          std::print("${:.2f} ", r.top_entry.prev_closes[j]);
+        std::println("");
+        std::print("  Previous {} volumes: ", lookback);
+        for (auto j = 0uz; j < lookback; ++j)
+          std::print("{:.0f} ", r.top_entry.prev_volumes[j]);
+        std::println("\n");
+      } else {
+        std::println("  (Entry at first bar - no previous data)\n");
+      }
     }
   }
 
