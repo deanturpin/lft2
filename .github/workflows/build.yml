@@ -40,35 +40,45 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
-      - name: Run and capture output
+      - name: Run lft2 and capture output
         run: |
           ./build/lft2 > output.txt
           cat output.txt
+
+      - name: Run backtest and generate statistics JSON
+        run: |
+          ./build/backtest --json > stats.json
+          echo "Generated statistics:"
+          cat stats.json
 
       - name: Update HTML with output and charts
         run: |
           python3 << 'PYTHON'
           import html
           import json
-          import glob
           from datetime import datetime
 
           # Read program output
           with open('output.txt', 'r') as f:
               output = f.read()
 
+          # Read backtest statistics
+          with open('stats.json', 'r') as f:
+              asset_stats = json.load(f)
+
           # Read HTML template
           with open('docs/index.html', 'r') as f:
               page = f.read()
 
-          # Process JSON price files for charts and statistics
+          # Process JSON price files for charts only
           chart_data = {}
-          asset_stats = {}
           stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx',
                     'de', 'dia', 'ge', 'googl', 'gs', 'hon', 'ief', 'iwm', 'jnj', 'jpm',
                     'ko', 'lly', 'lmnd', 'meta', 'ms', 'msft', 'nvda', 'nvo', 'pep', 'pfe',
                     'pg', 'qqq', 'rsp', 'sap', 'slb', 'spy', 'tlt', 'tsla', 'tsm', 'unh',
                     'vnq', 'wmt', 'xlf', 'xlk', 'xom']
+
+          from datetime import datetime as dt
 
           for stock in stocks:
               json_file = f'prices/{stock}.json'
@@ -79,15 +89,8 @@ jobs:
                   # Handle both {"bars": [...]} and [...] formats
                   bars = data.get('bars', data) if isinstance(data, dict) else data
 
-                  # Convert to lightweight-charts format, filtering out invalid bars
-                  # For intraday data, we need Unix timestamps in seconds
-                  from datetime import datetime as dt
-                  import statistics
-
+                  # Convert to lightweight-charts format for visualization only
                   valid_bars = []
-                  closes = []
-                  ranges = []
-
                   for bar in bars:
                       # Skip bars with null values
                       if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
@@ -101,114 +104,8 @@ jobs:
                               'close': float(bar['c'])
                           })
 
-                          # Collect data for statistics
-                          closes.append(float(bar['c']))
-                          high = float(bar['h'])
-                          low = float(bar['l'])
-                          close = float(bar['c'])
-                          ranges.append((high - low) / close * 100 if close > 0 else 0)
-
-                  # Calculate statistics for this asset
-                  if len(valid_bars) > 1 and len(closes) > 1:
-                      # Realistic intraday gains and losses during normal trading hours
-                      # Filter out bars with gaps (pre-market, post-market, overnight)
-                      intraday_gains = []
-                      intraday_losses = []
-                      continuous_ranges = []
-
-                      prev_timestamp = None
-                      for bar in bars:
-                          if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
-                              current_timestamp = bar['t']
-
-                              # Only include bars during continuous trading (no gaps)
-                              # Skip if more than 10 minutes from previous bar (indicates gap)
-                              if prev_timestamp:
-                                  prev_dt = dt.fromisoformat(prev_timestamp.replace('Z', '+00:00'))
-                                  curr_dt = dt.fromisoformat(current_timestamp.replace('Z', '+00:00'))
-                                  gap_minutes = (curr_dt - prev_dt).total_seconds() / 60
-
-                                  # Only count bars within normal 5-minute intervals (allowing for minor timing variations)
-                                  if gap_minutes <= 10:
-                                      entry = float(bar['o'])
-                                      high = float(bar['h'])
-                                      low = float(bar['l'])
-                                      close = float(bar['c'])
-
-                                      # Maximum gain if we entered at open and hit the high
-                                      max_gain_bar = (high - entry) / entry * 100 if entry > 0 else 0
-                                      # Maximum loss if we entered at open and hit the low
-                                      max_loss_bar = (low - entry) / entry * 100 if entry > 0 else 0
-
-                                      intraday_gains.append(max_gain_bar)
-                                      intraday_losses.append(max_loss_bar)
-                                      continuous_ranges.append((high - low) / close * 100 if close > 0 else 0)
-
-                              prev_timestamp = current_timestamp
-
-                      # Best and worst single-bar outcomes (excluding gaps)
-                      max_gain = max(intraday_gains) if intraday_gains else 0
-                      max_loss = min(intraday_losses) if intraday_losses else 0
-
-                      # Average intrabar range (only continuous trading bars)
-                      avg_range = statistics.mean(continuous_ranges) if continuous_ranges else 0
-
-                      # Volatility (standard deviation of returns, excluding gaps)
-                      # Recalculate using only continuous bars
-                      continuous_closes = []
-                      prev_timestamp = None
-                      for bar in bars:
-                          if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
-                              current_timestamp = bar['t']
-                              if prev_timestamp:
-                                  prev_dt = dt.fromisoformat(prev_timestamp.replace('Z', '+00:00'))
-                                  curr_dt = dt.fromisoformat(current_timestamp.replace('Z', '+00:00'))
-                                  gap_minutes = (curr_dt - prev_dt).total_seconds() / 60
-                                  if gap_minutes <= 10:
-                                      continuous_closes.append(float(bar['c']))
-                              else:
-                                  continuous_closes.append(float(bar['c']))
-                              prev_timestamp = current_timestamp
-
-                      returns = [(continuous_closes[i+1] - continuous_closes[i]) / continuous_closes[i] * 100
-                                for i in range(len(continuous_closes) - 1)]
-                      volatility = statistics.stdev(returns) if len(returns) > 1 else 0
-
-                      # Calculate win rate and expectancy metrics
-                      winning_bars = [g for g in intraday_gains if g > 0]
-                      losing_bars = [l for l in intraday_losses if l < 0]
-
-                      win_rate = (len(winning_bars) / len(intraday_gains) * 100) if intraday_gains else 0
-                      avg_win = statistics.mean(winning_bars) if winning_bars else 0
-                      avg_loss = statistics.mean(losing_bars) if losing_bars else 0
-
-                      # Profit factor: sum of gains / sum of losses
-                      total_gains = sum(winning_bars) if winning_bars else 0
-                      total_losses = abs(sum(losing_bars)) if losing_bars else 0
-                      profit_factor = (total_gains / total_losses) if total_losses > 0 else 0
-
-                      # Suggested trading parameters based on realistic intraday data
-                      # TP: 50% of best observed intraday gain for conservative target
-                      suggested_tp = max_gain * 0.5
-                      # SL: Use 2x volatility or 50% of worst intraday loss, whichever is tighter
-                      suggested_sl = min(abs(max_loss) * 0.5, volatility * 2.0)
-
-                      asset_stats[stock.upper()] = {
-                          'bar_count': len(valid_bars),
-                          'max_gain_pct': max_gain,
-                          'max_loss_pct': max_loss,
-                          'avg_range_pct': avg_range,
-                          'volatility': volatility,
-                          'win_rate_pct': win_rate,
-                          'avg_win_pct': avg_win,
-                          'avg_loss_pct': avg_loss,
-                          'profit_factor': profit_factor,
-                          'suggested_tp_pct': suggested_tp,
-                          'suggested_sl_pct': suggested_sl
-                      }
-
                   chart_data[stock.upper()] = valid_bars
-                  print(f"Processed {stock.upper()}: {len(bars)} bars")
+                  print(f"Processed {stock.upper()}: {len(valid_bars)} bars for charts")
               except Exception as e:
                   print(f"Error processing {stock}: {e}")
                   import traceback
@@ -228,31 +125,9 @@ jobs:
               f.write(page)
 
           print(f"Updated HTML with timestamp: {timestamp}")
-          print(f"Output length: {len(output)} chars")
+          print(f"Program output length: {len(output)} chars")
           print(f"Chart data for {len(chart_data)} stocks")
-          print(f"Asset statistics for {len(asset_stats)} stocks")
-
-          # Verify data was inserted
-          if 'CHART_DATA_PLACEHOLDER' in page:
-              print("WARNING: CHART_DATA_PLACEHOLDER still present in output!")
-          else:
-              print("Chart data successfully inserted")
-
-          if 'ASSET_STATS_PLACEHOLDER' in page:
-              print("WARNING: ASSET_STATS_PLACEHOLDER still present in output!")
-          else:
-              print("Asset statistics successfully inserted")
-
-          # Show sample of chart data and statistics
-          for stock in list(chart_data.keys())[:2]:
-              print(f"{stock}: {len(chart_data[stock])} bars")
-              if chart_data[stock]:
-                  print(f"  First bar: {chart_data[stock][0]}")
-                  print(f"  Last bar: {chart_data[stock][-1]}")
-              if stock in asset_stats:
-                  stats = asset_stats[stock]
-                  print(f"  Stats: max_gain={stats['max_gain_pct']:.2f}%, max_loss={stats['max_loss_pct']:.2f}%, vol={stats['volatility']:.2f}%")
-                  print(f"  Suggested: TP={stats['suggested_tp_pct']:.2f}%, SL={stats['suggested_sl_pct']:.2f}%")
+          print(f"Backtest statistics for {len(asset_stats)} stocks from C++ backtest")
           PYTHON
 
       - name: Verify HTML output

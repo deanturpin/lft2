@@ -193,9 +193,16 @@ backtest_result run_backtest(std::string_view symbol,
   return result;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   using namespace std::string_view_literals;
-  std::println("Low Frequency Trader v2 - Backtest\n");
+
+  // Check for --json flag
+  auto json_output = false;
+  if (argc > 1 && std::string_view{argv[1]} == "--json")
+    json_output = true;
+
+  if (!json_output)
+    std::println("Low Frequency Trader v2 - Backtest\n");
 
   // All stocks
   auto stocks = std::array{
@@ -258,20 +265,42 @@ int main() {
     return a.best_gain_pct > b.best_gain_pct;
   });
 
-  // Print table header
-  std::println("{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
-               "{:>10} {:>10}",
-               "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
-               "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%");
+  if (json_output) {
+    // Output JSON for workflow
+    std::println("{{");
+    for (auto i = 0uz; i < results.size(); ++i) {
+      const auto &r = results[i];
+      std::println("  \"{}\": {{", r.symbol);
+      std::println("    \"bar_count\": {},", r.bar_count);
+      std::println("    \"trade_count\": {},", r.trade_count);
+      std::println("    \"best_gain_pct\": {:.2f},", r.best_gain_pct);
+      std::println("    \"best_gain_duration\": {},", r.best_gain_duration);
+      std::println("    \"worst_loss_pct\": {:.2f},", r.worst_loss_pct);
+      std::println("    \"worst_loss_duration\": {},", r.worst_loss_duration);
+      std::println("    \"avg_gain_pct\": {:.2f},", r.avg_gain_pct);
+      std::println("    \"win_rate_pct\": {:.2f},", r.win_rate_pct);
+      std::println("    \"profit_factor\": {:.2f},", r.profit_factor);
+      std::println("    \"suggested_tp_pct\": {:.2f},", r.suggested_tp_pct);
+      std::println("    \"suggested_sl_pct\": {:.2f}", r.suggested_sl_pct);
+      std::println("  }}{}", i < results.size() - 1 ? "," : "");
+    }
+    std::println("}}");
+  } else {
+    // Print table header
+    std::println("{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
+                 "{:>10} {:>10}",
+                 "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
+                 "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%");
 
-  // Print results
-  for (const auto &r : results) {
-    std::println("{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
-                 "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f}",
-                 r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
-                 r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
-                 r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
-                 r.suggested_tp_pct, r.suggested_sl_pct);
+    // Print results
+    for (const auto &r : results) {
+      std::println("{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
+                   "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f}",
+                   r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
+                   r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
+                   r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
+                   r.suggested_tp_pct, r.suggested_sl_pct);
+    }
   }
 
   return 0;
