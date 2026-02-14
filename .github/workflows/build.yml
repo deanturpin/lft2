@@ -70,54 +70,12 @@ jobs:
           with open('docs/index.html', 'r') as f:
               page = f.read()
 
-          # Process JSON price files for charts only
-          chart_data = {}
-          stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx',
-                    'de', 'dia', 'ge', 'googl', 'gs', 'hon', 'ief', 'iwm', 'jnj', 'jpm',
-                    'ko', 'lly', 'lmnd', 'meta', 'ms', 'msft', 'nvda', 'nvo', 'pep', 'pfe',
-                    'pg', 'qqq', 'rsp', 'sap', 'slb', 'spy', 'tlt', 'tsla', 'tsm', 'unh',
-                    'vnq', 'wmt', 'xlf', 'xlk', 'xom']
-
-          from datetime import datetime as dt
-
-          for stock in stocks:
-              json_file = f'prices/{stock}.json'
-              try:
-                  with open(json_file, 'r') as f:
-                      data = json.load(f)
-
-                  # Handle both {"bars": [...]} and [...] formats
-                  bars = data.get('bars', data) if isinstance(data, dict) else data
-
-                  # Convert to lightweight-charts format for visualization only
-                  valid_bars = []
-                  for bar in bars:
-                      # Skip bars with null values
-                      if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
-                          # Convert ISO timestamp to Unix timestamp
-                          timestamp = int(dt.fromisoformat(bar['t'].replace('Z', '+00:00')).timestamp())
-                          valid_bars.append({
-                              'time': timestamp,
-                              'open': float(bar['o']),
-                              'high': float(bar['h']),
-                              'low': float(bar['l']),
-                              'close': float(bar['c'])
-                          })
-
-                  chart_data[stock.upper()] = valid_bars
-                  print(f"Processed {stock.upper()}: {len(valid_bars)} bars for charts")
-              except Exception as e:
-                  print(f"Error processing {stock}: {e}")
-                  import traceback
-                  traceback.print_exc()
-
           # Replace placeholders
           timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
           escaped_output = html.escape(output)
 
           page = page.replace('TIMESTAMP_PLACEHOLDER', timestamp)
           page = page.replace('OUTPUT_PLACEHOLDER', escaped_output)
-          page = page.replace('CHART_DATA_PLACEHOLDER', json.dumps(chart_data))
           page = page.replace('ASSET_STATS_PLACEHOLDER', json.dumps(asset_stats))
 
           # Write updated HTML
@@ -126,7 +84,6 @@ jobs:
 
           print(f"Updated HTML with timestamp: {timestamp}")
           print(f"Program output length: {len(output)} chars")
-          print(f"Chart data for {len(chart_data)} stocks")
           print(f"Backtest statistics for {len(asset_stats)} stocks from C++ backtest")
           PYTHON
 
