@@ -106,11 +106,29 @@ jobs:
 
                   # Calculate statistics for this asset
                   if len(valid_bars) > 1 and len(closes) > 1:
-                      # Find max gain and loss within the period
-                      max_gain = max((max(closes[i:]) - closes[i]) / closes[i] * 100
-                                    for i in range(len(closes) - 1))
-                      max_loss = min((min(closes[i:]) - closes[i]) / closes[i] * 100
-                                    for i in range(len(closes) - 1))
+                      # Realistic intraday gains and losses
+                      # Assuming positions entered at open and closed before EOD
+                      # Look at high-to-close (max intraday gain) and low-to-close (max intraday loss)
+                      intraday_gains = []
+                      intraday_losses = []
+
+                      for bar in bars:
+                          if all(bar.get(k) is not None for k in ['o', 'h', 'l', 'c']):
+                              entry = float(bar['o'])
+                              high = float(bar['h'])
+                              low = float(bar['l'])
+
+                              # Maximum gain if we entered at open and hit the high
+                              max_gain_bar = (high - entry) / entry * 100 if entry > 0 else 0
+                              # Maximum loss if we entered at open and hit the low
+                              max_loss_bar = (low - entry) / entry * 100 if entry > 0 else 0
+
+                              intraday_gains.append(max_gain_bar)
+                              intraday_losses.append(max_loss_bar)
+
+                      # Best and worst single-bar outcomes
+                      max_gain = max(intraday_gains) if intraday_gains else 0
+                      max_loss = min(intraday_losses) if intraday_losses else 0
 
                       # Average intrabar range
                       avg_range = statistics.mean(ranges) if ranges else 0
@@ -120,10 +138,10 @@ jobs:
                                 for i in range(len(closes) - 1)]
                       volatility = statistics.stdev(returns) if len(returns) > 1 else 0
 
-                      # Suggested trading parameters based on data
-                      # TP: 75th percentile of possible gains, capped at conservative level
+                      # Suggested trading parameters based on realistic intraday data
+                      # TP: 75% of best observed intraday gain, capped conservatively
                       suggested_tp = min(max_gain * 0.75, 5.0)
-                      # SL: Use 2x average volatility or 50% of max observed loss
+                      # SL: Use 2x volatility or 50% of worst intraday loss, whichever is tighter
                       suggested_sl = min(abs(max_loss) * 0.5, volatility * 2.0)
 
                       asset_stats[stock.upper()] = {
