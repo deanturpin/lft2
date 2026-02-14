@@ -192,7 +192,7 @@
 
         // Populate statistics table
         const statsBody = document.getElementById('statsTableBody');
-        Object.entries(assetStats).sort((a, b) => a[0].localeCompare(b[0])).forEach(([symbol, stats]) => {
+        Object.entries(assetStats).sort((a, b) => b[1].max_gain_pct - a[1].max_gain_pct).forEach(([symbol, stats]) => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td><strong>${symbol}</strong></td>
