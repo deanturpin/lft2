@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 13 * * 1-5'  # 8am New York (EST/EDT) on weekdays
 
 permissions:
   contents: read
