@@ -130,12 +130,18 @@ jobs:
           print(f"Backtest statistics for {len(asset_stats)} stocks from C++ backtest")
           PYTHON
 
+      - name: Copy stats.json to docs for serving
+        run: |
+          cp stats.json docs/stats.json
+          echo "Copied stats.json to docs/"
+
       - name: Verify HTML output
         run: |
           echo "=== Checking for placeholders in HTML ==="
           grep -o "PLACEHOLDER" docs/index.html || echo "No placeholders found (good!)"
           echo "=== HTML file size ==="
           ls -lh docs/index.html
+          ls -lh docs/stats.json
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
