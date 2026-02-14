@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.h"
 
 // Non-standard library utilities (nstd)
 // Constexpr implementations of standard library functions that aren't yet
@@ -37,16 +38,10 @@ constexpr double sqrt(double x) {
 // Unit tests
 namespace {
 // Test: sqrt of perfect square
-static_assert([] {
-  auto result = sqrt(16.0);
-  return result > 3.99 && result < 4.01; // Approximately 4.0
-}());
+static_assert(utils::near(sqrt(16.0), 4.0));
 
 // Test: sqrt of non-perfect square
-static_assert([] {
-  auto result = sqrt(2.0);
-  return result > 1.41 && result < 1.42; // Approximately 1.414
-}());
+static_assert(utils::near(sqrt(2.0), 1.414, 0.001));
 
 // Test: sqrt of zero
 static_assert(sqrt(0.0) == 0.0);
