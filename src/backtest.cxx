@@ -110,7 +110,33 @@ backtest_result run_backtest(std::string_view symbol,
     return prev_date != curr_date;
   };
 
-  // Run trading simulation
+  // Analyse maximum possible intraday movements from every bar
+  for (auto i = 0uz; i < bars.size(); ++i) {
+    if (!is_valid(bars[i]))
+      continue;
+
+    // For each bar, calculate max gain/loss until end of trading day
+    auto entry_price = bars[i].open;
+    auto max_gain = 0.0;
+    auto max_loss = 0.0;
+
+    for (auto j = i; j < bars.size(); ++j) {
+      if (!is_valid(bars[j]))
+        continue;
+      if (j > i && is_gap(j - 1, j))
+        break; // Stop at end of trading day
+
+      auto gain = (bars[j].high - entry_price) / entry_price * 100.0;
+      auto loss = (bars[j].low - entry_price) / entry_price * 100.0;
+      max_gain = std::max(max_gain, gain);
+      max_loss = std::min(max_loss, loss);
+    }
+
+    max_intraday_gains.push_back(max_gain);
+    max_intraday_losses.push_back(max_loss);
+  }
+
+  // Run trading simulation for actual trade statistics
   for (auto i = 0uz; i < bars.size(); ++i) {
     if (!is_valid(bars[i]))
       continue;
@@ -123,24 +149,6 @@ backtest_result run_backtest(std::string_view symbol,
           // Enter position at next bar's open
           if (i + 1 < bars.size() && is_valid(bars[i + 1])) {
             auto entry_price = bars[i + 1].open;
-
-            // Calculate max favourable/adverse excursion until end of day
-            auto max_gain = 0.0;
-            auto max_loss = 0.0;
-            for (auto j = i + 1; j < bars.size(); ++j) {
-              if (!is_valid(bars[j]))
-                continue;
-              if (is_gap(j - 1, j))
-                break; // Stop at end of trading day
-
-              auto gain = (bars[j].high - entry_price) / entry_price * 100.0;
-              auto loss = (bars[j].low - entry_price) / entry_price * 100.0;
-              max_gain = std::max(max_gain, gain);
-              max_loss = std::min(max_loss, loss);
-            }
-            max_intraday_gains.push_back(max_gain);
-            max_intraday_losses.push_back(max_loss);
-
             auto levels = calculate_levels(entry_price, default_params);
             current_position = position{.entry_price = entry_price,
                                         .take_profit = levels.take_profit,
