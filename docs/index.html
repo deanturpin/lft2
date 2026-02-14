@@ -155,6 +155,8 @@
                     <th>Profit Factor</th>
                     <th>Suggested TP (%)</th>
                     <th>Suggested SL (%)</th>
+                    <th>Max Intraday Gain (%)</th>
+                    <th>Max Intraday Loss (%)</th>
                 </tr>
             </thead>
             <tbody id="statsTableBody"></tbody>
@@ -194,7 +196,7 @@
 
         // Populate statistics table
         const statsBody = document.getElementById('statsTableBody');
-        Object.entries(assetStats).sort((a, b) => b[1].best_gain_pct - a[1].best_gain_pct).forEach(([symbol, stats]) => {
+        Object.entries(assetStats).sort((a, b) => b[1].max_intraday_gain_pct - a[1].max_intraday_gain_pct).forEach(([symbol, stats]) => {
             const row = document.createElement('tr');
 
             // Format durations (5-minute bars to human readable)
@@ -219,6 +221,8 @@
                 <td class="numeric">${stats.profit_factor.toFixed(2)}</td>
                 <td class="numeric positive">${stats.suggested_tp_pct.toFixed(2)}%</td>
                 <td class="numeric negative">${stats.suggested_sl_pct.toFixed(2)}%</td>
+                <td class="numeric positive"><strong>+${stats.max_intraday_gain_pct.toFixed(2)}%</strong></td>
+                <td class="numeric negative">${stats.max_intraday_loss_pct.toFixed(2)}%</td>
             `;
             statsBody.appendChild(row);
         });

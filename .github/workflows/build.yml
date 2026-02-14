@@ -42,7 +42,7 @@ jobs:
 
       - name: Run lft2 and capture output
         run: |
-          ./build/lft2 > output.txt
+          ./build/backtest > output.txt
           cat output.txt
 
       - name: Run backtest and generate statistics JSON

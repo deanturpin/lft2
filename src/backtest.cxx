@@ -76,6 +76,8 @@ struct backtest_result {
   double profit_factor{};
   double suggested_tp_pct{};
   double suggested_sl_pct{};
+  double max_intraday_gain_pct{}; // Best possible gain from entry signal to EOD
+  double max_intraday_loss_pct{}; // Worst drawdown from entry signal to EOD
 };
 
 // Run backtest simulation using actual entry/exit logic
@@ -91,6 +93,10 @@ backtest_result run_backtest(std::string_view symbol,
   auto in_position = false;
   auto current_position = position{};
   auto entry_bar_idx = 0uz;
+
+  // Track maximum possible gains/losses for parameter optimisation
+  auto max_intraday_gains = std::vector<double>{};
+  auto max_intraday_losses = std::vector<double>{};
 
   // Helper to detect gap between bars (overnight or market close)
   // Gaps indicate non-trading periods where we should close positions
@@ -117,6 +123,24 @@ backtest_result run_backtest(std::string_view symbol,
           // Enter position at next bar's open
           if (i + 1 < bars.size() && is_valid(bars[i + 1])) {
             auto entry_price = bars[i + 1].open;
+
+            // Calculate max favourable/adverse excursion until end of day
+            auto max_gain = 0.0;
+            auto max_loss = 0.0;
+            for (auto j = i + 1; j < bars.size(); ++j) {
+              if (!is_valid(bars[j]))
+                continue;
+              if (is_gap(j - 1, j))
+                break; // Stop at end of trading day
+
+              auto gain = (bars[j].high - entry_price) / entry_price * 100.0;
+              auto loss = (bars[j].low - entry_price) / entry_price * 100.0;
+              max_gain = std::max(max_gain, gain);
+              max_loss = std::min(max_loss, loss);
+            }
+            max_intraday_gains.push_back(max_gain);
+            max_intraday_losses.push_back(max_loss);
+
             auto levels = calculate_levels(entry_price, default_params);
             current_position = position{.entry_price = entry_price,
                                         .take_profit = levels.take_profit,
@@ -222,6 +246,16 @@ backtest_result run_backtest(std::string_view symbol,
   result.suggested_sl_pct =
       std::min(std::abs(result.worst_loss_pct) * 0.5, result.best_gain_pct * 0.25);
 
+  // Calculate maximum possible intraday movements from entry signals
+  if (!max_intraday_gains.empty()) {
+    result.max_intraday_gain_pct =
+        *std::ranges::max_element(max_intraday_gains);
+  }
+  if (!max_intraday_losses.empty()) {
+    result.max_intraday_loss_pct =
+        *std::ranges::min_element(max_intraday_losses);
+  }
+
   return result;
 }
 
@@ -292,9 +326,9 @@ int main(int argc, char *argv[]) {
     results.push_back(result);
   }
 
-  // Sort by best gain descending
+  // Sort by max intraday gain descending (best possible movement)
   std::ranges::sort(results, [](const auto &a, const auto &b) {
-    return a.best_gain_pct > b.best_gain_pct;
+    return a.max_intraday_gain_pct > b.max_intraday_gain_pct;
   });
 
   if (json_output) {
@@ -313,25 +347,29 @@ int main(int argc, char *argv[]) {
       std::println("    \"win_rate_pct\": {:.2f},", r.win_rate_pct);
       std::println("    \"profit_factor\": {:.2f},", r.profit_factor);
       std::println("    \"suggested_tp_pct\": {:.2f},", r.suggested_tp_pct);
-      std::println("    \"suggested_sl_pct\": {:.2f}", r.suggested_sl_pct);
+      std::println("    \"suggested_sl_pct\": {:.2f},", r.suggested_sl_pct);
+      std::println("    \"max_intraday_gain_pct\": {:.2f},", r.max_intraday_gain_pct);
+      std::println("    \"max_intraday_loss_pct\": {:.2f}", r.max_intraday_loss_pct);
       std::println("  }}{}", i < results.size() - 1 ? "," : "");
     }
     std::println("}}");
   } else {
     // Print table header
     std::println("{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
-                 "{:>10} {:>10}",
+                 "{:>10} {:>10} {:>12} {:>12}",
                  "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
-                 "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%");
+                 "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%",
+                 "MaxIntGain%", "MaxIntLoss%");
 
     // Print results
     for (const auto &r : results) {
       std::println("{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
-                   "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f}",
+                   "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f} {:>12.2f} {:>12.2f}",
                    r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
                    r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
                    r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
-                   r.suggested_tp_pct, r.suggested_sl_pct);
+                   r.suggested_tp_pct, r.suggested_sl_pct, r.max_intraday_gain_pct,
+                   r.max_intraday_loss_pct);
     }
   }
 
