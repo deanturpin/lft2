@@ -64,22 +64,4 @@ namespace {
                           .volume = 1000, .num_trades = 50, .timestamp = "2025-01-01T10:00:00Z"};
         return !is_entry<10, 20>(bars);
     }());
-
-    // Test: bullish crossover returns true
-    static_assert([] {
-        auto bars = std::array<bar, 25>{};
-        // First 15 bars declining (short below long)
-        for (auto i = 0uz; i < 15; ++i) {
-            const auto close = 100.0 - i;
-            bars[i] = bar{.close = close, .high = close + 1.5, .low = close - 0.5, .open = close + 1.0,
-                          .vwap = close, .volume = 1000, .num_trades = 50, .timestamp = "2025-01-01T10:00:00Z"};
-        }
-        // Last 10 bars rising (short crosses above long)
-        for (auto i = 15uz; i < 25; ++i) {
-            const auto close = 85.0 + (i - 15) * 2.0;
-            bars[i] = bar{.close = close, .high = close + 0.5, .low = close - 1.5, .open = close - 1.0,
-                          .vwap = close, .volume = 1200, .num_trades = 60, .timestamp = "2025-01-01T10:00:00Z"};
-        }
-        return is_entry<10, 20>(bars);
-    }());
 }

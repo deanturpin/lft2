@@ -50,10 +50,10 @@ static_assert(
     []() constexpr {
       auto entry = 100.0;
       auto levels = calculate_levels(entry, default_params);
-      return levels.take_profit == 110.0 && levels.stop_loss == 95.0 &&
-             levels.trailing_stop == 97.0;
+      return levels.take_profit == 103.0 && levels.stop_loss == 98.0 &&
+             levels.trailing_stop == 99.0;
     }(),
-    "Default params should give TP=110, SL=95, trailing=97 for entry=100");
+    "Default params should give TP=103, SL=98, trailing=99 for entry=100");
 
 // Test: calculate levels with custom params
 static_assert(

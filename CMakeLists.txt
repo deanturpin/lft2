@@ -16,8 +16,14 @@ add_compile_options(
 )
 
 add_executable(lft2 src/main.cxx src/test.cxx)
+add_executable(backtest src/backtest.cxx)
 
 target_include_directories(lft2 PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_include_directories(backtest PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )
