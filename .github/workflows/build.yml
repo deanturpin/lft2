@@ -61,8 +61,9 @@ jobs:
           with open('docs/index.html', 'r') as f:
               page = f.read()
 
-          # Process JSON price files for charts
+          # Process JSON price files for charts and statistics
           chart_data = {}
+          asset_stats = {}
           stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx']
 
           for stock in stocks:
@@ -77,8 +78,12 @@ jobs:
                   # Convert to lightweight-charts format, filtering out invalid bars
                   # For intraday data, we need Unix timestamps in seconds
                   from datetime import datetime as dt
+                  import statistics
 
                   valid_bars = []
+                  closes = []
+                  ranges = []
+
                   for bar in bars:
                       # Skip bars with null values
                       if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
@@ -91,6 +96,45 @@ jobs:
                               'low': float(bar['l']),
                               'close': float(bar['c'])
                           })
+
+                          # Collect data for statistics
+                          closes.append(float(bar['c']))
+                          high = float(bar['h'])
+                          low = float(bar['l'])
+                          close = float(bar['c'])
+                          ranges.append((high - low) / close * 100 if close > 0 else 0)
+
+                  # Calculate statistics for this asset
+                  if len(valid_bars) > 1 and len(closes) > 1:
+                      # Find max gain and loss within the period
+                      max_gain = max((max(closes[i:]) - closes[i]) / closes[i] * 100
+                                    for i in range(len(closes) - 1))
+                      max_loss = min((min(closes[i:]) - closes[i]) / closes[i] * 100
+                                    for i in range(len(closes) - 1))
+
+                      # Average intrabar range
+                      avg_range = statistics.mean(ranges) if ranges else 0
+
+                      # Volatility (standard deviation of returns)
+                      returns = [(closes[i+1] - closes[i]) / closes[i] * 100
+                                for i in range(len(closes) - 1)]
+                      volatility = statistics.stdev(returns) if len(returns) > 1 else 0
+
+                      # Suggested trading parameters based on data
+                      # TP: 75th percentile of possible gains, capped at conservative level
+                      suggested_tp = min(max_gain * 0.75, 5.0)
+                      # SL: Use 2x average volatility or 50% of max observed loss
+                      suggested_sl = min(abs(max_loss) * 0.5, volatility * 2.0)
+
+                      asset_stats[stock.upper()] = {
+                          'bar_count': len(valid_bars),
+                          'max_gain_pct': max_gain,
+                          'max_loss_pct': max_loss,
+                          'avg_range_pct': avg_range,
+                          'volatility': volatility,
+                          'suggested_tp_pct': suggested_tp,
+                          'suggested_sl_pct': suggested_sl
+                      }
 
                   chart_data[stock.upper()] = valid_bars
                   print(f"Processed {stock.upper()}: {len(bars)} bars")
@@ -106,6 +150,7 @@ jobs:
           page = page.replace('TIMESTAMP_PLACEHOLDER', timestamp)
           page = page.replace('OUTPUT_PLACEHOLDER', escaped_output)
           page = page.replace('CHART_DATA_PLACEHOLDER', json.dumps(chart_data))
+          page = page.replace('ASSET_STATS_PLACEHOLDER', json.dumps(asset_stats))
 
           # Write updated HTML
           with open('docs/index.html', 'w') as f:
@@ -114,6 +159,7 @@ jobs:
           print(f"Updated HTML with timestamp: {timestamp}")
           print(f"Output length: {len(output)} chars")
           print(f"Chart data for {len(chart_data)} stocks")
+          print(f"Asset statistics for {len(asset_stats)} stocks")
 
           # Verify data was inserted
           if 'CHART_DATA_PLACEHOLDER' in page:
@@ -121,12 +167,21 @@ jobs:
           else:
               print("Chart data successfully inserted")
 
-          # Show sample of chart data
+          if 'ASSET_STATS_PLACEHOLDER' in page:
+              print("WARNING: ASSET_STATS_PLACEHOLDER still present in output!")
+          else:
+              print("Asset statistics successfully inserted")
+
+          # Show sample of chart data and statistics
           for stock in list(chart_data.keys())[:2]:
               print(f"{stock}: {len(chart_data[stock])} bars")
               if chart_data[stock]:
                   print(f"  First bar: {chart_data[stock][0]}")
                   print(f"  Last bar: {chart_data[stock][-1]}")
+              if stock in asset_stats:
+                  stats = asset_stats[stock]
+                  print(f"  Stats: max_gain={stats['max_gain_pct']:.2f}%, max_loss={stats['max_loss_pct']:.2f}%, vol={stats['volatility']:.2f}%")
+                  print(f"  Suggested: TP={stats['suggested_tp_pct']:.2f}%, SL={stats['suggested_sl_pct']:.2f}%")
           PYTHON
 
       - name: Verify HTML output
