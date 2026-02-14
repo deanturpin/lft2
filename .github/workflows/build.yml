@@ -170,6 +170,19 @@ jobs:
                                 for i in range(len(continuous_closes) - 1)]
                       volatility = statistics.stdev(returns) if len(returns) > 1 else 0
 
+                      # Calculate win rate and expectancy metrics
+                      winning_bars = [g for g in intraday_gains if g > 0]
+                      losing_bars = [l for l in intraday_losses if l < 0]
+
+                      win_rate = (len(winning_bars) / len(intraday_gains) * 100) if intraday_gains else 0
+                      avg_win = statistics.mean(winning_bars) if winning_bars else 0
+                      avg_loss = statistics.mean(losing_bars) if losing_bars else 0
+
+                      # Profit factor: sum of gains / sum of losses
+                      total_gains = sum(winning_bars) if winning_bars else 0
+                      total_losses = abs(sum(losing_bars)) if losing_bars else 0
+                      profit_factor = (total_gains / total_losses) if total_losses > 0 else 0
+
                       # Suggested trading parameters based on realistic intraday data
                       # TP: 50% of best observed intraday gain for conservative target
                       suggested_tp = max_gain * 0.5
@@ -182,6 +195,10 @@ jobs:
                           'max_loss_pct': max_loss,
                           'avg_range_pct': avg_range,
                           'volatility': volatility,
+                          'win_rate_pct': win_rate,
+                          'avg_win_pct': avg_win,
+                          'avg_loss_pct': avg_loss,
+                          'profit_factor': profit_factor,
                           'suggested_tp_pct': suggested_tp,
                           'suggested_sl_pct': suggested_sl
                       }

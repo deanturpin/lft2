@@ -151,6 +151,10 @@
                     <th>Worst Intraday Loss (%)</th>
                     <th>Avg Range (%)</th>
                     <th>Volatility (%)</th>
+                    <th>Win Rate (%)</th>
+                    <th>Avg Win (%)</th>
+                    <th>Avg Loss (%)</th>
+                    <th>Profit Factor</th>
                     <th>Suggested TP (%)</th>
                     <th>Suggested SL (%)</th>
                 </tr>
@@ -197,6 +201,10 @@
                 <td class="numeric negative">${stats.max_loss_pct.toFixed(2)}%</td>
                 <td class="numeric">${stats.avg_range_pct.toFixed(2)}%</td>
                 <td class="numeric">${stats.volatility.toFixed(2)}%</td>
+                <td class="numeric">${stats.win_rate_pct.toFixed(1)}%</td>
+                <td class="numeric positive">+${stats.avg_win_pct.toFixed(2)}%</td>
+                <td class="numeric negative">${stats.avg_loss_pct.toFixed(2)}%</td>
+                <td class="numeric">${stats.profit_factor.toFixed(2)}</td>
                 <td class="numeric positive">${stats.suggested_tp_pct.toFixed(2)}%</td>
                 <td class="numeric negative">${stats.suggested_sl_pct.toFixed(2)}%</td>
             `;
