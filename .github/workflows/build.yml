@@ -64,7 +64,11 @@ jobs:
           # Process JSON price files for charts and statistics
           chart_data = {}
           asset_stats = {}
-          stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx']
+          stocks = ['aapl', 'amzn', 'asml', 'baba', 'bac', 'cat', 'cop', 'cost', 'crml', 'cvx',
+                    'de', 'dia', 'ge', 'googl', 'gs', 'hon', 'ief', 'iwm', 'jnj', 'jpm',
+                    'ko', 'lly', 'lmnd', 'meta', 'ms', 'msft', 'nvda', 'nvo', 'pep', 'pfe',
+                    'pg', 'qqq', 'rsp', 'sap', 'slb', 'spy', 'tlt', 'tsla', 'tsm', 'unh',
+                    'vnq', 'wmt', 'xlf', 'xlk', 'xom']
 
           for stock in stocks:
               json_file = f'prices/{stock}.json'
