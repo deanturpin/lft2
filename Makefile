@@ -1,7 +1,8 @@
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/lft2
+BACKTEST := $(BUILD_DIR)/backtest
 
-.PHONY: all build run clean
+.PHONY: all build run clean backtest
 
 all: run
 
@@ -11,6 +12,9 @@ build:
 
 run: build
 	./$(BINARY)
+
+backtest: build
+	./$(BACKTEST)
 
 clean:
 	rm -rf $(BUILD_DIR)
