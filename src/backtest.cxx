@@ -89,6 +89,17 @@ struct backtest_result {
   double max_intraday_gain_pct{}; // Best possible gain from entry signal to EOD
   double max_intraday_loss_pct{}; // Worst drawdown from entry signal to EOD
   best_entry_context top_entry{};  // Context for best entry point
+
+  // Additional useful statistics
+  double avg_intraday_range_pct{};      // Average high-low range
+  double pct_bars_over_1pct{};          // % of bars with >1% movement
+  double avg_volume{};                   // Average volume across all bars
+  std::size_t tradeable_days{};         // Days with >2% movement
+  double max_drawdown_during_win{};     // Biggest pullback during best gain
+  std::size_t avg_bars_to_max_gain{};   // Average time to reach peak
+  double up_bar_ratio{};                 // Ratio of up-bars to total bars
+  std::size_t gap_count{};              // Number of overnight gaps
+  double volume_surge_correlation{};    // Correlation of volume with big moves
 };
 
 // Run backtest simulation using actual entry/exit logic
@@ -121,18 +132,45 @@ backtest_result run_backtest(std::string_view symbol,
     return prev_date != curr_date;
   };
 
-  // Analyse maximum possible intraday movements from every bar
+  // Analyse maximum possible intraday movements and gather statistics
   auto best_entry_idx = 0uz;
   auto best_entry_gain = 0.0;
+  auto total_range = 0.0;
+  auto bars_over_1pct = 0uz;
+  auto total_volume = 0.0;
+  auto valid_bars = 0uz;
+  auto up_bars = 0uz;
+  auto total_bars_to_max = 0uz;
+  auto entries_counted = 0uz;
+  auto max_drawdown_during_best = 0.0;
 
   for (auto i = 0uz; i < bars.size(); ++i) {
     if (!is_valid(bars[i]))
       continue;
 
+    valid_bars++;
+
+    // Calculate intraday range for this bar
+    auto range_pct = (bars[i].high - bars[i].low) / bars[i].open * 100.0;
+    total_range += range_pct;
+
+    // Check if movement >1%
+    if (range_pct > 1.0)
+      bars_over_1pct++;
+
+    // Track volume
+    total_volume += bars[i].volume;
+
+    // Track up/down bars
+    if (bars[i].close > bars[i].open)
+      up_bars++;
+
     // For each bar, calculate max gain/loss until end of trading day
     auto entry_price = bars[i].open;
     auto max_gain = 0.0;
     auto max_loss = 0.0;
+    auto bars_to_max = 0uz;
+    auto peak_reached = false;
 
     for (auto j = i; j < bars.size(); ++j) {
       if (!is_valid(bars[j]))
@@ -142,8 +180,18 @@ backtest_result run_backtest(std::string_view symbol,
 
       auto gain = (bars[j].high - entry_price) / entry_price * 100.0;
       auto loss = (bars[j].low - entry_price) / entry_price * 100.0;
-      max_gain = std::max(max_gain, gain);
+
+      if (gain > max_gain) {
+        max_gain = gain;
+        bars_to_max = j - i;
+        peak_reached = true;
+      }
       max_loss = std::min(max_loss, loss);
+    }
+
+    if (peak_reached) {
+      total_bars_to_max += bars_to_max;
+      entries_counted++;
     }
 
     max_intraday_gains.push_back(max_gain);
@@ -153,8 +201,36 @@ backtest_result run_backtest(std::string_view symbol,
     if (max_gain > best_entry_gain) {
       best_entry_gain = max_gain;
       best_entry_idx = i;
+      max_drawdown_during_best = std::abs(max_loss);
     }
   }
+
+  // Count gaps
+  auto gap_count = 0uz;
+  for (auto i = 1uz; i < bars.size(); ++i) {
+    if (is_gap(i - 1, i))
+      gap_count++;
+  }
+
+  // Calculate tradeable days (days with >2% max intraday movement)
+  auto tradeable_days = 0uz;
+  for (const auto &gain : max_intraday_gains) {
+    if (gain > 2.0)
+      tradeable_days++;
+  }
+
+  // Store additional statistics
+  if (valid_bars > 0) {
+    result.avg_intraday_range_pct = total_range / valid_bars;
+    result.pct_bars_over_1pct = static_cast<double>(bars_over_1pct) / valid_bars * 100.0;
+    result.avg_volume = total_volume / valid_bars;
+    result.up_bar_ratio = static_cast<double>(up_bars) / valid_bars * 100.0;
+  }
+  result.tradeable_days = tradeable_days;
+  result.gap_count = gap_count;
+  result.max_drawdown_during_win = max_drawdown_during_best;
+  if (entries_counted > 0)
+    result.avg_bars_to_max_gain = total_bars_to_max / entries_counted;
 
   // Capture context around best entry point
   if (best_entry_idx < bars.size()) {
@@ -416,26 +492,36 @@ int main(int argc, char *argv[]) {
                    r.max_intraday_loss_pct);
     }
 
-    // Show top 5 best entry contexts
-    std::println("\n=== Top 5 Best Entry Points - What Preceded the Big Moves? ===\n");
+    // Show detailed stats for top 5 stocks
+    std::println("\n=== Top 5 Stocks - Detailed Trading Statistics ===\n");
     for (auto i = 0uz; i < std::min(5uz, results.size()); ++i) {
       const auto &r = results[i];
+      std::println("{} - Max Intraday Potential: {:.2f}%", r.symbol, r.max_intraday_gain_pct);
+      std::println("  Volatility:");
+      std::println("    Avg intraday range: {:.2f}%", r.avg_intraday_range_pct);
+      std::println("    Bars with >1% move: {:.1f}%", r.pct_bars_over_1pct);
+      std::println("    Tradeable days (>2% potential): {}", r.tradeable_days);
+      std::println("  Movement:");
+      std::println("    Up-bar ratio: {:.1f}%", r.up_bar_ratio);
+      std::println("    Avg bars to max gain: {}", r.avg_bars_to_max_gain);
+      std::println("    Max drawdown during best win: {:.2f}%", r.max_drawdown_during_win);
+      std::println("  Liquidity:");
+      std::println("    Avg volume: {:.0f}", r.avg_volume);
+      std::println("    Overnight gaps: {}", r.gap_count);
+
+      // Show best entry context
       auto lookback = std::min(5uz, r.top_entry.bar_idx);
-      std::println("{} - {}% gain at bar {} ({})", r.symbol, r.top_entry.gain_pct,
-                   r.top_entry.bar_idx, r.top_entry.timestamp);
-      std::println("  Entry price: ${:.2f}", r.top_entry.entry_price);
+      std::println("  Best Entry ({}% gain at {}):", r.top_entry.gain_pct, r.top_entry.timestamp);
       if (lookback > 0) {
-        std::print("  Previous {} closes: ", lookback);
+        std::print("    Previous {} closes: ", lookback);
         for (auto j = 0uz; j < lookback; ++j)
           std::print("${:.2f} ", r.top_entry.prev_closes[j]);
         std::println("");
-        std::print("  Previous {} volumes: ", lookback);
+        std::print("    Previous {} volumes: ", lookback);
         for (auto j = 0uz; j < lookback; ++j)
           std::print("{:.0f} ", r.top_entry.prev_volumes[j]);
-        std::println("\n");
-      } else {
-        std::println("  (Entry at first bar - no previous data)\n");
       }
+      std::println("\n");
     }
   }
 
