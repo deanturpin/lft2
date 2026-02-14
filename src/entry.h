@@ -1,30 +1,7 @@
 #pragma once
 #include "json.h"
-#include <cmath>
+#include "nstd.h"
 #include <span>
-
-// Constexpr square root using Newton-Raphson method
-// Needed because std::sqrt isn't constexpr until C++26
-constexpr double constexpr_sqrt(double x) {
-  if (x < 0.0)
-    return 0.0;
-  if (x == 0.0)
-    return 0.0;
-
-  auto guess = x;
-  auto prev_guess = 0.0;
-  constexpr auto epsilon = 0.00001;
-  constexpr auto max_iterations = 100;
-
-  for (auto i = 0; i < max_iterations; ++i) {
-    prev_guess = guess;
-    guess = (guess + x / guess) / 2.0;
-    if (guess - prev_guess < epsilon && prev_guess - guess < epsilon)
-      break;
-  }
-
-  return guess;
-}
 
 // Volume surge with price dip strategy
 // Detects capitulation patterns: high volume selling followed by reversal
@@ -81,7 +58,7 @@ constexpr bool mean_reversion(std::span<const bar> history) {
     auto diff = history[history.size() - lookback + i].close - ma;
     variance += diff * diff;
   }
-  auto std_dev = constexpr_sqrt(variance / lookback);
+  auto std_dev = nstd::sqrt(variance / lookback);
 
   // Avoid division by zero for flat prices
   if (std_dev < 0.0001)
