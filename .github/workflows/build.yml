@@ -171,8 +171,8 @@ jobs:
                       volatility = statistics.stdev(returns) if len(returns) > 1 else 0
 
                       # Suggested trading parameters based on realistic intraday data
-                      # TP: 75% of best observed intraday gain, capped conservatively
-                      suggested_tp = min(max_gain * 0.75, 5.0)
+                      # TP: 50% of best observed intraday gain for conservative target
+                      suggested_tp = max_gain * 0.5
                       # SL: Use 2x volatility or 50% of worst intraday loss, whichever is tighter
                       suggested_sl = min(abs(max_loss) * 0.5, volatility * 2.0)
 
