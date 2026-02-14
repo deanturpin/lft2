@@ -63,6 +63,16 @@ struct trade_result {
   std::size_t duration_bars{};
 };
 
+struct best_entry_context {
+  std::size_t bar_idx{};
+  double gain_pct{};
+  double entry_price{};
+  std::string_view timestamp{};
+  // Previous 5 bars before entry (to analyse what preceded the big move)
+  std::array<double, 5> prev_closes{};
+  std::array<double, 5> prev_volumes{};
+};
+
 struct backtest_result {
   std::string_view symbol;
   std::size_t bar_count{};
@@ -78,6 +88,7 @@ struct backtest_result {
   double suggested_sl_pct{};
   double max_intraday_gain_pct{}; // Best possible gain from entry signal to EOD
   double max_intraday_loss_pct{}; // Worst drawdown from entry signal to EOD
+  best_entry_context top_entry{};  // Context for best entry point
 };
 
 // Run backtest simulation using actual entry/exit logic
@@ -111,6 +122,9 @@ backtest_result run_backtest(std::string_view symbol,
   };
 
   // Analyse maximum possible intraday movements from every bar
+  auto best_entry_idx = 0uz;
+  auto best_entry_gain = 0.0;
+
   for (auto i = 0uz; i < bars.size(); ++i) {
     if (!is_valid(bars[i]))
       continue;
@@ -134,6 +148,27 @@ backtest_result run_backtest(std::string_view symbol,
 
     max_intraday_gains.push_back(max_gain);
     max_intraday_losses.push_back(max_loss);
+
+    // Track best entry point
+    if (max_gain > best_entry_gain) {
+      best_entry_gain = max_gain;
+      best_entry_idx = i;
+    }
+  }
+
+  // Capture context around best entry point
+  if (best_entry_idx >= 5 && best_entry_idx < bars.size()) {
+    result.top_entry.bar_idx = best_entry_idx;
+    result.top_entry.gain_pct = best_entry_gain;
+    result.top_entry.entry_price = bars[best_entry_idx].open;
+    result.top_entry.timestamp = bars[best_entry_idx].timestamp;
+
+    // Get previous 5 bars
+    for (auto k = 0uz; k < 5; ++k) {
+      auto idx = best_entry_idx - 5 + k;
+      result.top_entry.prev_closes[k] = bars[idx].close;
+      result.top_entry.prev_volumes[k] = static_cast<double>(bars[idx].volume);
+    }
   }
 
   // Run trading simulation for actual trade statistics
@@ -378,6 +413,23 @@ int main(int argc, char *argv[]) {
                    r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
                    r.suggested_tp_pct, r.suggested_sl_pct, r.max_intraday_gain_pct,
                    r.max_intraday_loss_pct);
+    }
+
+    // Show top 5 best entry contexts
+    std::println("\n=== Top 5 Best Entry Points - What Preceded the Big Moves? ===\n");
+    for (auto i = 0uz; i < std::min(5uz, results.size()); ++i) {
+      const auto &r = results[i];
+      std::println("{} - {}% gain at bar {} ({})", r.symbol, r.top_entry.gain_pct,
+                   r.top_entry.bar_idx, r.top_entry.timestamp);
+      std::println("  Entry price: ${:.2f}", r.top_entry.entry_price);
+      std::print("  Previous 5 closes: ");
+      for (auto j = 0uz; j < 5; ++j)
+        std::print("${:.2f} ", r.top_entry.prev_closes[j]);
+      std::println("");
+      std::print("  Previous 5 volumes: ");
+      for (auto j = 0uz; j < 5; ++j)
+        std::print("{:.0f} ", r.top_entry.prev_volumes[j]);
+      std::println("\n");
     }
   }
 
