@@ -106,36 +106,68 @@ jobs:
 
                   # Calculate statistics for this asset
                   if len(valid_bars) > 1 and len(closes) > 1:
-                      # Realistic intraday gains and losses
-                      # Assuming positions entered at open and closed before EOD
-                      # Look at high-to-close (max intraday gain) and low-to-close (max intraday loss)
+                      # Realistic intraday gains and losses during normal trading hours
+                      # Filter out bars with gaps (pre-market, post-market, overnight)
                       intraday_gains = []
                       intraday_losses = []
+                      continuous_ranges = []
 
+                      prev_timestamp = None
                       for bar in bars:
-                          if all(bar.get(k) is not None for k in ['o', 'h', 'l', 'c']):
-                              entry = float(bar['o'])
-                              high = float(bar['h'])
-                              low = float(bar['l'])
+                          if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
+                              current_timestamp = bar['t']
 
-                              # Maximum gain if we entered at open and hit the high
-                              max_gain_bar = (high - entry) / entry * 100 if entry > 0 else 0
-                              # Maximum loss if we entered at open and hit the low
-                              max_loss_bar = (low - entry) / entry * 100 if entry > 0 else 0
+                              # Only include bars during continuous trading (no gaps)
+                              # Skip if more than 10 minutes from previous bar (indicates gap)
+                              if prev_timestamp:
+                                  prev_dt = dt.fromisoformat(prev_timestamp.replace('Z', '+00:00'))
+                                  curr_dt = dt.fromisoformat(current_timestamp.replace('Z', '+00:00'))
+                                  gap_minutes = (curr_dt - prev_dt).total_seconds() / 60
 
-                              intraday_gains.append(max_gain_bar)
-                              intraday_losses.append(max_loss_bar)
+                                  # Only count bars within normal 5-minute intervals (allowing for minor timing variations)
+                                  if gap_minutes <= 10:
+                                      entry = float(bar['o'])
+                                      high = float(bar['h'])
+                                      low = float(bar['l'])
+                                      close = float(bar['c'])
 
-                      # Best and worst single-bar outcomes
+                                      # Maximum gain if we entered at open and hit the high
+                                      max_gain_bar = (high - entry) / entry * 100 if entry > 0 else 0
+                                      # Maximum loss if we entered at open and hit the low
+                                      max_loss_bar = (low - entry) / entry * 100 if entry > 0 else 0
+
+                                      intraday_gains.append(max_gain_bar)
+                                      intraday_losses.append(max_loss_bar)
+                                      continuous_ranges.append((high - low) / close * 100 if close > 0 else 0)
+
+                              prev_timestamp = current_timestamp
+
+                      # Best and worst single-bar outcomes (excluding gaps)
                       max_gain = max(intraday_gains) if intraday_gains else 0
                       max_loss = min(intraday_losses) if intraday_losses else 0
 
-                      # Average intrabar range
-                      avg_range = statistics.mean(ranges) if ranges else 0
+                      # Average intrabar range (only continuous trading bars)
+                      avg_range = statistics.mean(continuous_ranges) if continuous_ranges else 0
 
-                      # Volatility (standard deviation of returns)
-                      returns = [(closes[i+1] - closes[i]) / closes[i] * 100
-                                for i in range(len(closes) - 1)]
+                      # Volatility (standard deviation of returns, excluding gaps)
+                      # Recalculate using only continuous bars
+                      continuous_closes = []
+                      prev_timestamp = None
+                      for bar in bars:
+                          if all(bar.get(k) is not None for k in ['t', 'o', 'h', 'l', 'c']):
+                              current_timestamp = bar['t']
+                              if prev_timestamp:
+                                  prev_dt = dt.fromisoformat(prev_timestamp.replace('Z', '+00:00'))
+                                  curr_dt = dt.fromisoformat(current_timestamp.replace('Z', '+00:00'))
+                                  gap_minutes = (curr_dt - prev_dt).total_seconds() / 60
+                                  if gap_minutes <= 10:
+                                      continuous_closes.append(float(bar['c']))
+                              else:
+                                  continuous_closes.append(float(bar['c']))
+                              prev_timestamp = current_timestamp
+
+                      returns = [(continuous_closes[i+1] - continuous_closes[i]) / continuous_closes[i] * 100
+                                for i in range(len(continuous_closes) - 1)]
                       volatility = statistics.stdev(returns) if len(returns) > 1 else 0
 
                       # Suggested trading parameters based on realistic intraday data
