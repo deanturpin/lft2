@@ -12,7 +12,7 @@ namespace nstd {
 
 // Constexpr square root using Newton-Raphson method
 // std::sqrt becomes constexpr in C++26
-// TODO: Replace with std::sqrt when C++26 is available
+// When upgrading to C++26: grep -r "nstd::sqrt" and replace with std::sqrt
 constexpr double sqrt(double x) {
   if (x < 0.0)
     return 0.0;
