@@ -54,22 +54,31 @@
 #include <span>
 #include <vector>
 
+struct trade_result {
+  std::size_t entry_bar{};
+  std::size_t exit_bar{};
+  double entry_price{};
+  double exit_price{};
+  double gain_pct{};
+  std::size_t duration_bars{};
+};
+
 struct backtest_result {
   std::string_view symbol;
   std::size_t bar_count{};
-  double max_gain_pct{};
-  double max_loss_pct{};
-  double avg_range_pct{};
-  double volatility{};
+  std::size_t trade_count{};
+  double best_gain_pct{};
+  std::size_t best_gain_duration{};
+  double worst_loss_pct{};
+  std::size_t worst_loss_duration{};
+  double avg_gain_pct{};
   double win_rate_pct{};
-  double avg_win_pct{};
-  double avg_loss_pct{};
   double profit_factor{};
   double suggested_tp_pct{};
   double suggested_sl_pct{};
 };
 
-// Calculate backtest statistics for a single asset
+// Run backtest simulation using actual entry/exit logic
 template <std::size_t N>
 backtest_result run_backtest(std::string_view symbol,
                               std::span<const bar, N> bars) {
@@ -78,127 +87,108 @@ backtest_result run_backtest(std::string_view symbol,
   if (bars.empty())
     return result;
 
-  // Calculate intraday gains and losses (excluding gaps)
-  auto intraday_gains = std::vector<double>{};
-  auto intraday_losses = std::vector<double>{};
-  auto continuous_ranges = std::vector<double>{};
-  auto continuous_closes = std::vector<double>{};
+  auto trades = std::vector<trade_result>{};
+  auto in_position = false;
+  auto current_position = position{};
+  auto entry_bar_idx = 0uz;
 
+  // Run trading simulation
   for (auto i = 0uz; i < bars.size(); ++i) {
     if (!is_valid(bars[i]))
       continue;
 
-    // Check for gap from previous bar
-    auto is_continuous = true;
-    if (i > 0 && is_valid(bars[i - 1])) {
-      // Parse timestamps to check gap (simplified: assume 5-min bars)
-      // For now, just assume all bars are continuous
-      // TODO: Add proper timestamp gap detection
-    }
+    if (!in_position) {
+      // Check for entry signal using last 21 bars (for SMA calculation)
+      if (i >= 21) {
+        auto history = std::span{bars.data(), i + 1}.last(21);
+        if (is_entry(history)) {
+          // Enter position at next bar's open
+          if (i + 1 < bars.size() && is_valid(bars[i + 1])) {
+            auto entry_price = bars[i + 1].open;
+            auto levels = calculate_levels(entry_price, default_params);
+            current_position = position{.entry_price = entry_price,
+                                        .take_profit = levels.take_profit,
+                                        .stop_loss = levels.stop_loss,
+                                        .trailing_stop = levels.trailing_stop};
+            in_position = true;
+            entry_bar_idx = i + 1;
+          }
+        }
+      }
+    } else {
+      // Update trailing stop
+      auto current_price = bars[i].close;
+      if (current_price > current_position.entry_price) {
+        auto new_trailing = current_price * (1.0 - default_params.trailing_stop_pct);
+        if (new_trailing > current_position.trailing_stop)
+          current_position.trailing_stop = new_trailing;
+      }
 
-    if (is_continuous) {
-      auto entry = bars[i].open;
-      auto high = bars[i].high;
-      auto low = bars[i].low;
-      auto close = bars[i].close;
+      // Check for exit
+      if (is_exit(current_position, bars[i])) {
+        auto exit_price = bars[i].close;
+        auto gain_pct = (exit_price - current_position.entry_price) /
+                        current_position.entry_price * 100.0;
+        auto duration = i - entry_bar_idx;
 
-      // Maximum gain if entered at open and hit high
-      auto max_gain_bar =
-          entry > 0.0 ? (high - entry) / entry * 100.0 : 0.0;
-      // Maximum loss if entered at open and hit low
-      auto max_loss_bar = entry > 0.0 ? (low - entry) / entry * 100.0 : 0.0;
+        trades.push_back(trade_result{
+            .entry_bar = entry_bar_idx,
+            .exit_bar = i,
+            .entry_price = current_position.entry_price,
+            .exit_price = exit_price,
+            .gain_pct = gain_pct,
+            .duration_bars = duration,
+        });
 
-      intraday_gains.push_back(max_gain_bar);
-      intraday_losses.push_back(max_loss_bar);
-      continuous_ranges.push_back(close > 0.0 ? (high - low) / close * 100.0
-                                              : 0.0);
-      continuous_closes.push_back(close);
+        in_position = false;
+      }
     }
   }
 
-  if (intraday_gains.empty())
+  if (trades.empty())
     return result;
 
-  // Best and worst single-bar outcomes
-  result.max_gain_pct = *std::ranges::max_element(intraday_gains);
-  result.max_loss_pct = *std::ranges::min_element(intraday_losses);
+  // Calculate statistics from completed trades
+  result.trade_count = trades.size();
 
-  // Average intrabar range
-  auto range_sum = 0.0;
-  for (auto r : continuous_ranges)
-    range_sum += r;
-  result.avg_range_pct = range_sum / continuous_ranges.size();
+  // Find best and worst trades
+  auto best_trade_it = std::ranges::max_element(
+      trades, [](const auto &a, const auto &b) { return a.gain_pct < b.gain_pct; });
+  auto worst_trade_it = std::ranges::min_element(
+      trades, [](const auto &a, const auto &b) { return a.gain_pct < b.gain_pct; });
 
-  // Volatility (standard deviation of returns)
-  if (continuous_closes.size() > 1) {
-    auto returns = std::vector<double>{};
-    for (auto i = 0uz; i < continuous_closes.size() - 1; ++i) {
-      auto ret = (continuous_closes[i + 1] - continuous_closes[i]) /
-                 continuous_closes[i] * 100.0;
-      returns.push_back(ret);
-    }
+  result.best_gain_pct = best_trade_it->gain_pct;
+  result.best_gain_duration = best_trade_it->duration_bars;
+  result.worst_loss_pct = worst_trade_it->gain_pct;
+  result.worst_loss_duration = worst_trade_it->duration_bars;
 
-    auto mean = 0.0;
-    for (auto r : returns)
-      mean += r;
-    mean /= returns.size();
+  // Average gain
+  auto total_gain = 0.0;
+  for (const auto &t : trades)
+    total_gain += t.gain_pct;
+  result.avg_gain_pct = total_gain / trades.size();
 
-    auto variance = 0.0;
-    for (auto r : returns)
-      variance += (r - mean) * (r - mean);
-    variance /= returns.size();
-
-    result.volatility = std::sqrt(variance);
-  }
-
-  // Win rate and expectancy metrics
-  auto winning_bars = std::vector<double>{};
-  auto losing_bars = std::vector<double>{};
-
-  for (auto g : intraday_gains)
-    if (g > 0.0)
-      winning_bars.push_back(g);
-
-  for (auto l : intraday_losses)
-    if (l < 0.0)
-      losing_bars.push_back(l);
-
-  result.win_rate_pct = !intraday_gains.empty()
-                            ? (static_cast<double>(winning_bars.size()) /
-                               intraday_gains.size() * 100.0)
-                            : 0.0;
-
-  // Average win and loss
-  if (!winning_bars.empty()) {
-    auto sum = 0.0;
-    for (auto w : winning_bars)
-      sum += w;
-    result.avg_win_pct = sum / winning_bars.size();
-  }
-
-  if (!losing_bars.empty()) {
-    auto sum = 0.0;
-    for (auto l : losing_bars)
-      sum += l;
-    result.avg_loss_pct = sum / losing_bars.size();
-  }
+  // Win rate
+  auto winning_trades =
+      std::ranges::count_if(trades, [](const auto &t) { return t.gain_pct > 0.0; });
+  result.win_rate_pct =
+      static_cast<double>(winning_trades) / trades.size() * 100.0;
 
   // Profit factor
-  auto total_gains = 0.0;
-  for (auto w : winning_bars)
-    total_gains += w;
-
+  auto total_wins = 0.0;
   auto total_losses = 0.0;
-  for (auto l : losing_bars)
-    total_losses += std::abs(l);
+  for (const auto &t : trades) {
+    if (t.gain_pct > 0.0)
+      total_wins += t.gain_pct;
+    else
+      total_losses += std::abs(t.gain_pct);
+  }
+  result.profit_factor = total_losses > 0.0 ? total_wins / total_losses : 0.0;
 
-  result.profit_factor =
-      total_losses > 0.0 ? total_gains / total_losses : 0.0;
-
-  // Suggested trading parameters
-  result.suggested_tp_pct = result.max_gain_pct * 0.5;
-  result.suggested_sl_pct = std::min(std::abs(result.max_loss_pct) * 0.5,
-                                     result.volatility * 2.0);
+  // Suggested parameters based on actual trades
+  result.suggested_tp_pct = result.best_gain_pct * 0.5;
+  result.suggested_sl_pct =
+      std::min(std::abs(result.worst_loss_pct) * 0.5, result.best_gain_pct * 0.25);
 
   return result;
 }
@@ -263,26 +253,25 @@ int main() {
     results.push_back(result);
   }
 
-  // Sort by max gain descending
+  // Sort by best gain descending
   std::ranges::sort(results, [](const auto &a, const auto &b) {
-    return a.max_gain_pct > b.max_gain_pct;
+    return a.best_gain_pct > b.best_gain_pct;
   });
 
   // Print table header
-  std::println(
-      "{:<8} {:>6} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10} {:>12} "
-      "{:>10} {:>10}",
-      "Symbol", "Bars", "MaxGain%", "MaxLoss%", "AvgRng%", "Vol%", "WinRate%",
-      "AvgWin%", "AvgLoss%", "ProfitFact", "SugTP%", "SugSL%");
+  std::println("{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
+               "{:>10} {:>10}",
+               "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
+               "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%");
 
   // Print results
   for (const auto &r : results) {
-    std::println("{:<8} {:>6} {:>10.2f} {:>10.2f} {:>10.2f} {:>10.2f} {:>10.1f} "
-                 "{:>10.2f} {:>10.2f} {:>12.2f} {:>10.2f} {:>10.2f}",
-                 r.symbol, r.bar_count, r.max_gain_pct, r.max_loss_pct,
-                 r.avg_range_pct, r.volatility, r.win_rate_pct, r.avg_win_pct,
-                 r.avg_loss_pct, r.profit_factor, r.suggested_tp_pct,
-                 r.suggested_sl_pct);
+    std::println("{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
+                 "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f}",
+                 r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
+                 r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
+                 r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
+                 r.suggested_tp_pct, r.suggested_sl_pct);
   }
 
   return 0;
