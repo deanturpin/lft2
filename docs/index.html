@@ -133,15 +133,11 @@
     <div class="output">OUTPUT_PLACEHOLDER</div>
 
     <div class="tabs">
-        <div class="tab active" onclick="showTab('charts')">Price Charts</div>
-        <div class="tab" onclick="showTab('stats')">Asset Statistics</div>
+        <div class="tab active" onclick="showTab('stats')">Asset Statistics</div>
+        <div class="tab" onclick="showTab('charts')">Price Charts</div>
     </div>
 
-    <div id="charts" class="tab-content active">
-        <div class="charts-grid" id="chartsGrid"></div>
-    </div>
-
-    <div id="stats" class="tab-content">
+    <div id="stats" class="tab-content active">
         <table class="stats-table">
             <thead>
                 <tr>
@@ -161,6 +157,10 @@
             </thead>
             <tbody id="statsTableBody"></tbody>
         </table>
+    </div>
+
+    <div id="charts" class="tab-content">
+        <div class="charts-grid" id="chartsGrid"></div>
     </div>
 
     <script>
