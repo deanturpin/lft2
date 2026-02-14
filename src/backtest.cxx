@@ -92,6 +92,18 @@ backtest_result run_backtest(std::string_view symbol,
   auto current_position = position{};
   auto entry_bar_idx = 0uz;
 
+  // Helper to detect gap between bars (overnight or market close)
+  // Gaps indicate non-trading periods where we should close positions
+  auto is_gap = [&bars](std::size_t prev_idx, std::size_t curr_idx) {
+    if (prev_idx >= bars.size() || curr_idx >= bars.size())
+      return false;
+
+    // Check if dates differ (YYYY-MM-DD portion of timestamp)
+    auto prev_date = bars[prev_idx].timestamp.substr(0, 10);
+    auto curr_date = bars[curr_idx].timestamp.substr(0, 10);
+    return prev_date != curr_date;
+  };
+
   // Run trading simulation
   for (auto i = 0uz; i < bars.size(); ++i) {
     if (!is_valid(bars[i]))
@@ -116,6 +128,26 @@ backtest_result run_backtest(std::string_view symbol,
         }
       }
     } else {
+      // Check for overnight gap - close position at last bar before gap
+      if (i > entry_bar_idx && is_gap(i - 1, i)) {
+        auto exit_price = bars[i - 1].close;
+        auto gain_pct = (exit_price - current_position.entry_price) /
+                        current_position.entry_price * 100.0;
+        auto duration = (i - 1) - entry_bar_idx;
+
+        trades.push_back(trade_result{
+            .entry_bar = entry_bar_idx,
+            .exit_bar = i - 1,
+            .entry_price = current_position.entry_price,
+            .exit_price = exit_price,
+            .gain_pct = gain_pct,
+            .duration_bars = duration,
+        });
+
+        in_position = false;
+        continue;
+      }
+
       // Update trailing stop
       auto current_price = bars[i].close;
       if (current_price > current_position.entry_price) {
