@@ -150,15 +150,16 @@
 <main>
   <h1>Low Frequency Trader</h1>
 
-  {#if dashboard}
+  {#if dashboard && dashboard.clock}
     <div class="timestamp">
-      Last updated: {formatTimestamp(dashboard.account.last_fetched)}
-      {#if dashboard.clock}
-        | Market: <span class={dashboard.clock.is_open ? 'positive' : 'negative'}>
-          {dashboard.clock.is_open ? 'OPEN' : 'CLOSED'}
-        </span>
-        | Server time: {new Date(dashboard.clock.timestamp).toLocaleString('en-US', { timeStyle: 'medium', timeZone: 'America/New_York' })}
-      {/if}
+      Market: <span class={dashboard.clock.is_open ? 'positive' : 'negative'}>
+        {dashboard.clock.is_open ? 'OPEN' : 'CLOSED'}
+      </span>
+      | {new Date(dashboard.clock.timestamp).toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'medium',
+        timeZone: 'America/New_York'
+      })}
     </div>
   {/if}
 
