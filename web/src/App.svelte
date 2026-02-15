@@ -170,10 +170,11 @@
         timeZone: 'America/New_York',
         timeZoneName: 'short'
       })}
+      {#if error}
+        <span style="color: #f85149;"> (offline)</span>
+      {/if}
     </div>
-  {/if}
-
-  {#if error}
+  {:else if error}
     <div class="timestamp" style="color: #f85149;">
       (offline)
     </div>
