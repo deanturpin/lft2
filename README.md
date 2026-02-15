@@ -38,7 +38,17 @@ LFTv1 was a good proof-of-concept, but when you get into the details of _why_ a 
 
 ## System architecture
 
-The trading system is decomposed into focused modules that communicate via JSON:
+The trading system is decomposed into focused modules:
+
+### Infrastructure
+
+- **Frontend**: Svelte 5 SPA with Chart.js for portfolio visualisation
+- **API Layer**: Cloudflare Workers for serverless API endpoints
+- **Hosting**: Cloudflare Pages with automatic GitHub deployments
+- **Trading Engine**: C++26 application running on Fasthosts VPS
+- **Data Source**: Alpaca paper trading API (transitioning to live trading)
+
+### Modules
 
 |Module|Description|Input Data|Output Data|Frequency|Tech Stack|
 |------|-----------|----------|-----------|---------|----------|
@@ -49,19 +59,19 @@ The trading system is decomposed into focused modules that communicate via JSON:
 |**fetch**|Retrieve latest market data|Alpaca API|`snapshots.json` (latest bars for selected symbols)|Every 5min (market hours)|Go, Alpaca API, JSON|
 |**evaluate**|Generate trading signals from market data|`snapshots.json`, `strategies.json`, `positions.json`|`signals.json` (entry/exit signals)|Every 5min (market hours)|C++26, JSON|
 |**execute**|Place orders based on signals|`signals.json`, Alpaca account state|`positions.json` (updated positions), order confirmations|Every 5min (market hours)|Go, Alpaca API, JSON|
-|**account**|Account monitoring and data aggregation|Alpaca account history, all JSON outputs|`dashboard.json` (aggregated metrics)|Hourly|Go, Alpaca API, JSON|
-|**website**|Interactive dashboard and performance visualisation|All JSON files (stats, positions, account, signals)|Multi-page SPA with live charts|On every data update|Svelte, Chart.js, D3.js, GitHub Pages|
+|**account**|Account monitoring and data aggregation (Cloudflare Worker)|Alpaca API|Real-time dashboard data via `/api/dashboard` and `/api/history`|Every 60s (frontend poll)|JavaScript, Cloudflare Workers|
+|**website**|Interactive dashboard and performance visualisation|API endpoints|Multi-page SPA with live charts and navigation|Real-time updates|Svelte 5, Chart.js, svelte-spa-router|
 
 ### Data flow
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│  Daily (pre-market)                                         │
+│  Daily (pre-market) - VPS                                   │
 │  filter → backtest → strategies.json                        │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│  Every 5min (market hours)                                  │
+│  Every 5min (market hours) - VPS                            │
 │  fetch → evaluate → execute → positions.json                │
 │           ↑          ↑                                       │
 │           │          └── strategies.json                    │
@@ -69,29 +79,34 @@ The trading system is decomposed into focused modules that communicate via JSON:
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│  Hourly                                                      │
-│  account → account.json → GitHub Pages                      │
+│  Real-time dashboard - Cloudflare                           │
+│  Browser → Cloudflare Pages (Svelte)                        │
+│              ↓                                               │
+│         Cloudflare Worker (/api/*)                          │
+│              ↓                                               │
+│         Alpaca API → JSON → Browser (auto-refresh 60s)     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Design principles
 
-- **JSON as lingua franca** - All modules communicate via JSON files, enabling language flexibility
+- **JSON as lingua franca** - All modules communicate via JSON, enabling language flexibility
 - **Platform isolation** - Alpaca-specific code contained in fetch/execute/account modules
 - **Pure trading logic** - Core strategies (evaluate) are platform-agnostic and testable
 - **Incremental builds** - Each module can be developed/tested independently
-- **Web-first output** - All data formatted for GitHub Pages visualisation
-- **Right tool for the job** - C++ for constexpr guarantees, Go for API/data processing, Svelte for reactive UI
+- **Edge-first delivery** - Cloudflare's global network for sub-100ms dashboard response times
+- **Right tool for the job** - C++ for constexpr guarantees, Cloudflare Workers for serverless APIs, Svelte for reactive UI
 
 ### Technology rationale
 
-**C++26 modules** (test, profile, evaluate):
+**C++26 modules** (test, profile, evaluate - running on Fasthosts VPS):
 
 - Constexpr guarantees ensure trading logic correctness at compile-time
 - Zero runtime overhead for strategy calculations
 - Static assertions catch bugs before deployment
+- VPS deployment for live trading execution
 
-**Go modules** (filter, backtest, fetch, execute, account):
+**Go modules** (filter, backtest, fetch, execute - planned):
 
 - Native JSON marshaling with struct tags
 - Built-in HTTP client for Alpaca API
@@ -99,23 +114,30 @@ The trading system is decomposed into focused modules that communicate via JSON:
 - Excellent error handling for API failures
 - Goroutines for concurrent symbol processing
 
-**Svelte website**:
+**Cloudflare Workers** (account API):
 
-- Reactive components update automatically when JSON changes
+- Serverless API endpoints with zero cold starts
+- Secret management for Alpaca API credentials
+- Global edge network for low-latency responses
+- Automatic scaling with zero infrastructure management
+
+**Svelte 5 website** (deployed to Cloudflare Pages):
+
+- Reactive components with automatic updates
 - Minimal bundle size (compiles to vanilla JS)
-- Chart.js for standard charts (equity curve, P&L)
-- D3.js for custom trading visualisations (candlesticks, indicators)
+- Chart.js for portfolio history visualisation
+- svelte-spa-router for client-side navigation
 - Vite for fast development and optimised builds
-- Static site deployment to GitHub Pages
+- Automatic deployments on git push
 
 ### Implementation status
 
 - [x] test - Compile-time unit tests operational
-- [x] profile - Backtest with historical data working, publishing to Pages
+- [x] profile - Backtest with historical data working
+- [x] account - Cloudflare Worker providing `/api/dashboard` and `/api/history` endpoints
+- [x] website - Svelte 5 SPA with real-time dashboard, portfolio chart, and navigation
 - [ ] filter - Not yet implemented (Go)
 - [ ] backtest - Not yet implemented (Go, daily strategy evaluation)
 - [ ] fetch - C++ stub exists, needs rewrite in Go
 - [ ] evaluate - C++ stub exists, needs signal generation logic
 - [ ] execute - C++ stub exists, needs rewrite in Go
-- [ ] account - Not yet implemented (Go, data aggregation)
-- [ ] website - Basic HTML exists, needs Svelte migration
