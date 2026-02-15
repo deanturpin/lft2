@@ -6,7 +6,8 @@
   let loading = true;
   let interval;
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  const API_URL = import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD ? 'https://lft.turpin.dev' : 'http://localhost:8080');
 
   async function fetchDashboard() {
     try {
@@ -58,7 +59,7 @@
 </script>
 
 <main>
-  <h1>Low Frequency Trader v2</h1>
+  <h1>Low Frequency Trader</h1>
 
   {#if dashboard}
     <div class="timestamp">

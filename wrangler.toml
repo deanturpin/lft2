@@ -1,0 +1,20 @@
+name = "lft-api"
+main = "workers/account.js"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Workers configuration
+# Deploy with: npx wrangler deploy
+
+[env.production]
+routes = [
+  { pattern = "lft.turpin.dev/api/*", zone_name = "turpin.dev" }
+]
+
+# Environment variables (set via: npx wrangler secret put ALPACA_API_KEY)
+# Required secrets:
+# - ALPACA_API_KEY
+# - ALPACA_API_SECRET
+# - ALPACA_DATA_API_KEY
+# - ALPACA_DATA_API_SECRET
+# - ALPACA_BASE_URL (default: https://paper-api.alpaca.markets)
+# - ALPACA_DATA_URL (default: https://data.alpaca.markets)
