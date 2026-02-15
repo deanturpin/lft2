@@ -18,7 +18,7 @@ add_compile_options(
 add_executable(lft2 src/main.cxx src/test.cxx)
 add_executable(profile src/profile.cxx)
 add_executable(fetch src/fetch.cxx)
-add_executable(trade src/trade.cxx)
+add_executable(evaluate src/evaluate.cxx)
 add_executable(execute src/execute.cxx)
 
 target_include_directories(lft2 PRIVATE
@@ -48,7 +48,7 @@ target_include_directories(fetch PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
-target_include_directories(trade PRIVATE
+target_include_directories(evaluate PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )
