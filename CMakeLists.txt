@@ -17,7 +17,9 @@ add_compile_options(
 
 add_executable(lft2 src/main.cxx src/test.cxx)
 add_executable(profile src/profile.cxx)
+add_executable(fetch src/fetch.cxx)
 add_executable(trade src/trade.cxx)
+add_executable(execute src/execute.cxx)
 
 target_include_directories(lft2 PRIVATE
     ${CMAKE_SOURCE_DIR}
@@ -41,7 +43,17 @@ if(UNIX AND NOT APPLE)
     target_link_options(profile PRIVATE -pg)
 endif()
 
+target_include_directories(fetch PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
 target_include_directories(trade PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_include_directories(execute PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )

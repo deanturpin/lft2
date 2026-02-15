@@ -1,9 +1,11 @@
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/lft2
 PROFILE := $(BUILD_DIR)/profile
+FETCH := $(BUILD_DIR)/fetch
 TRADE := $(BUILD_DIR)/trade
+EXECUTE := $(BUILD_DIR)/execute
 
-.PHONY: all build run clean profile trade
+.PHONY: all build run clean profile fetch trade execute
 
 all: run
 
@@ -17,8 +19,14 @@ run: build
 profile: build
 	./$(PROFILE)
 
+fetch: build
+	./$(FETCH)
+
 trade: build
 	./$(TRADE)
+
+execute: build
+	./$(EXECUTE)
 
 clean:
 	rm -rf $(BUILD_DIR)
