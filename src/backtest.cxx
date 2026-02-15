@@ -382,12 +382,18 @@ backtest_result run_backtest(std::string_view symbol,
 int main(int argc, char *argv[]) {
   using namespace std::string_view_literals;
 
-  // Check for --json flag
+  // Check for command line flags
   auto json_output = false;
-  if (argc > 1 && std::string_view{argv[1]} == "--json")
-    json_output = true;
+  auto top_only = false;
+  if (argc > 1) {
+    auto arg = std::string_view{argv[1]};
+    if (arg == "--json")
+      json_output = true;
+    else if (arg == "--top")
+      top_only = true;
+  }
 
-  if (!json_output)
+  if (!json_output && !top_only)
     std::println("Low Frequency Trader v2 - Backtest\n");
 
   // All stocks
@@ -451,7 +457,16 @@ int main(int argc, char *argv[]) {
     return a.max_intraday_gain_pct > b.max_intraday_gain_pct;
   });
 
-  if (json_output) {
+  if (top_only) {
+    // Output simple JSON array of top stock symbols (quick reference)
+    constexpr auto top_count = 10uz;
+    std::println("[");
+    for (auto i = 0uz; i < std::min(top_count, results.size()); ++i) {
+      const auto &r = results[i];
+      std::println("  \"{}\"{}",  r.symbol, i < std::min(top_count, results.size()) - 1 ? "," : "");
+    }
+    std::println("]");
+  } else if (json_output) {
     // Output JSON for workflow
     std::println("{{");
     for (auto i = 0uz; i < results.size(); ++i) {

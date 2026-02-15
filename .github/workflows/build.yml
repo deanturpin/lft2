@@ -50,8 +50,12 @@ jobs:
       - name: Run backtest and generate statistics JSON
         run: |
           ./build/backtest --json > stats.json
-          echo "Generated statistics:"
+          ./build/backtest --top > top_stocks.json
+          echo "Generated full statistics (stats.json):"
           cat stats.json
+          echo ""
+          echo "Generated top stocks (top_stocks.json):"
+          cat top_stocks.json
 
       - name: Update HTML with output and charts
         run: |
@@ -89,10 +93,11 @@ jobs:
           print(f"Backtest statistics for {len(asset_stats)} stocks from C++ backtest")
           PYTHON
 
-      - name: Copy stats.json to docs for serving
+      - name: Copy JSON files to docs for serving
         run: |
           cp stats.json docs/stats.json
-          echo "Copied stats.json to docs/"
+          cp top_stocks.json docs/top_stocks.json
+          echo "Copied stats.json and top_stocks.json to docs/"
 
       - name: Verify HTML output
         run: |
