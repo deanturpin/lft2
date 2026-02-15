@@ -1,10 +1,14 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import Chart from 'chart.js/auto';
 
   let dashboard = null;
+  let history = [];
   let error = null;
   let loading = true;
   let interval;
+  let chartCanvas;
+  let chart;
 
   const API_URL = import.meta.env.VITE_API_URL ||
     (import.meta.env.PROD ? 'https://lft.turpin.dev' : 'http://localhost:8080');
@@ -25,14 +29,84 @@
     }
   }
 
+  async function fetchHistory() {
+    try {
+      const response = await fetch(`${API_URL}/api/history?days=7`);
+      if (!response.ok) return;
+      history = await response.json();
+      updateChart();
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    }
+  }
+
+  function updateChart() {
+    if (!chartCanvas || history.length === 0) return;
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    const ctx = chartCanvas.getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: history.map(h => new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+        datasets: [{
+          label: 'Portfolio Value',
+          data: history.map(h => parseFloat(h.portfolio_value)),
+          borderColor: '#58a6ff',
+          backgroundColor: 'rgba(88, 166, 255, 0.1)',
+          tension: 0.1,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toLocaleString();
+              },
+              color: '#8b949e'
+            },
+            grid: {
+              color: '#30363d'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#8b949e'
+            },
+            grid: {
+              color: '#30363d'
+            }
+          }
+        }
+      }
+    });
+  }
+
   onMount(() => {
     fetchDashboard();
+    fetchHistory();
     // Refresh every minute
-    interval = setInterval(fetchDashboard, 60000);
+    interval = setInterval(() => {
+      fetchDashboard();
+      fetchHistory();
+    }, 60000);
   });
 
   onDestroy(() => {
     if (interval) clearInterval(interval);
+    if (chart) chart.destroy();
   });
 
   function formatCurrency(value) {
@@ -116,6 +190,15 @@
         </div>
       </div>
     </div>
+
+    {#if history.length > 0}
+      <div class="card">
+        <h2>Portfolio History (7 days)</h2>
+        <div class="chart-container">
+          <canvas bind:this={chartCanvas}></canvas>
+        </div>
+      </div>
+    {/if}
 
     {#if dashboard.positions && dashboard.positions.length > 0}
       <div class="card">

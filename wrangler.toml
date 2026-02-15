@@ -5,10 +5,18 @@ compatibility_date = "2024-01-01"
 # Cloudflare Workers configuration
 # Deploy with: npx wrangler deploy
 
+[[kv_namespaces]]
+binding = "HISTORY"
+id = "placeholder"
+
 [env.production]
 routes = [
   { pattern = "lft.turpin.dev/api/*", zone_name = "turpin.dev" }
 ]
+
+[[env.production.kv_namespaces]]
+binding = "HISTORY"
+id = "127188e3826a42f2bc3b159dc7c2d0d7"
 
 # Environment variables (set via: npx wrangler secret put ALPACA_API_KEY)
 # Required secrets:

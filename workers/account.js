@@ -21,7 +21,41 @@ export default {
     if (url.pathname === '/api/dashboard') {
       try {
         const dashboard = await fetchDashboard(env);
+
+        // Store snapshot in KV (once per hour to avoid excessive writes)
+        if (env.HISTORY) {
+          const now = new Date();
+          const hourKey = `snapshot-${now.toISOString().substring(0, 13)}`; // YYYY-MM-DDTHH
+          await env.HISTORY.put(hourKey, JSON.stringify({
+            timestamp: now.toISOString(),
+            equity: dashboard.account.equity,
+            cash: dashboard.account.cash,
+            portfolio_value: dashboard.account.portfolio_value,
+          }));
+        }
+
         return new Response(JSON.stringify(dashboard), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+    }
+
+    if (url.pathname === '/api/history') {
+      try {
+        const days = parseInt(url.searchParams.get('days') || '30');
+        const history = await fetchHistory(env, days);
+        return new Response(JSON.stringify(history), {
           headers: {
             'Content-Type': 'application/json',
             ...corsHeaders,
@@ -94,4 +128,26 @@ async function fetchDashboard(env) {
       next_close: clock.next_close,
     },
   };
+}
+
+async function fetchHistory(env, days) {
+  if (!env.HISTORY) {
+    return [];
+  }
+
+  const history = [];
+  const now = new Date();
+
+  // Fetch hourly snapshots for the requested number of days
+  for (let i = 0; i < days * 24; i++) {
+    const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+    const hourKey = `snapshot-${time.toISOString().substring(0, 13)}`;
+    const snapshot = await env.HISTORY.get(hourKey);
+
+    if (snapshot) {
+      history.push(JSON.parse(snapshot));
+    }
+  }
+
+  return history.reverse(); // Oldest first
 }

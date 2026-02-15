@@ -140,3 +140,9 @@ tr:hover {
   background: linear-gradient(135deg, #ff6b6b 0%, #f85149 100%);
   box-shadow: 0 6px 16px rgba(248, 81, 73, 0.6);
 }
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  margin-top: 1rem;
+}
