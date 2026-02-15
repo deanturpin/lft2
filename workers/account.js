@@ -47,6 +47,9 @@ async function fetchDashboard(env) {
   const apiKey = env.ALPACA_API_KEY;
   const apiSecret = env.ALPACA_API_SECRET;
 
+  console.log('Debug - API Key exists:', !!apiKey, 'API Secret exists:', !!apiSecret);
+  console.log('Debug - env keys:', Object.keys(env));
+
   if (!apiKey || !apiSecret) {
     throw new Error('Alpaca API credentials not configured');
   }
