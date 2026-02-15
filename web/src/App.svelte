@@ -51,9 +51,10 @@
   }
 
   function formatTimestamp(timestamp) {
-    return new Date(timestamp).toLocaleString('en-GB', {
+    return new Date(timestamp).toLocaleString('en-US', {
       dateStyle: 'medium',
-      timeStyle: 'medium'
+      timeStyle: 'medium',
+      timeZone: 'America/New_York'
     });
   }
 </script>
@@ -72,7 +73,7 @@
         | Market: <span class={dashboard.clock.is_open ? 'positive' : 'negative'}>
           {dashboard.clock.is_open ? 'OPEN' : 'CLOSED'}
         </span>
-        | Server time: {new Date(dashboard.clock.timestamp).toLocaleString('en-GB', { timeStyle: 'medium' })}
+        | Server time: {new Date(dashboard.clock.timestamp).toLocaleString('en-US', { timeStyle: 'medium', timeZone: 'America/New_York' })}
       {/if}
     </div>
   {/if}
@@ -160,29 +161,5 @@
         <p style="color: #8b949e;">No open positions</p>
       </div>
     {/if}
-
-    <div class="card">
-      <h2>Account Details</h2>
-      <div class="grid">
-        <div class="metric">
-          <div class="metric-label">Status</div>
-          <div class="metric-value" style="font-size: 1rem;">
-            {dashboard.account.status}
-          </div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Currency</div>
-          <div class="metric-value" style="font-size: 1rem;">
-            {dashboard.account.currency}
-          </div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Day Trading Buying Power</div>
-          <div class="metric-value">
-            {formatCurrency(dashboard.account.daytrading_buying_power)}
-          </div>
-        </div>
-      </div>
-    </div>
   {/if}
 </main>
