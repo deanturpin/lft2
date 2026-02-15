@@ -58,6 +58,10 @@
   }
 </script>
 
+<a href="https://github.com/deanturpin/lft2" class="github-ribbon" target="_blank" rel="noopener noreferrer">
+  Fork me on GitHub
+</a>
+
 <main>
   <h1>Low Frequency Trader</h1>
 
