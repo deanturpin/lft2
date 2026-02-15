@@ -147,10 +147,6 @@
   }
 </script>
 
-<a href="https://github.com/deanturpin/lft2" class="github-ribbon" target="_blank" rel="noopener noreferrer">
-  Fork me on GitHub
-</a>
-
 <main>
   <h1>Low Frequency Trader</h1>
 
@@ -179,9 +175,9 @@
       <h2>Account Summary</h2>
       <div class="grid">
         <div class="metric">
-          <div class="metric-label">Portfolio Value</div>
+          <div class="metric-label">Equity</div>
           <div class="metric-value">
-            {formatCurrency(dashboard.account.portfolio_value)}
+            {formatCurrency(dashboard.account.equity)}
           </div>
         </div>
         <div class="metric">
@@ -194,12 +190,6 @@
           <div class="metric-label">Buying Power</div>
           <div class="metric-value">
             {formatCurrency(dashboard.account.buying_power)}
-          </div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Equity</div>
-          <div class="metric-value">
-            {formatCurrency(dashboard.account.equity)}
           </div>
         </div>
       </div>
