@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Build outputs
+build/
+web/dist/
+docs/
+
+# Lock files
+package-lock.json
+web/package-lock.json
+go.sum
+
+# Environment files
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Compiled binaries
+*.o
+*.a
+cmd/*/account
+cmd/*/fetch
+cmd/*/execute
+cmd/*/filter
+cmd/*/backtest
+
+# Example data (large headers)
+prices/*.h
+
+# Git
+.git/
