@@ -16,3 +16,6 @@ cmd/*/backtest
 node_modules/
 web/node_modules/
 web/dist/
+
+# Built website and ephemeral data
+public/

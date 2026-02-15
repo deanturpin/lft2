@@ -45,7 +45,7 @@ npm install
 npm run build
 
 # Deploy to Pages
-npx wrangler pages deploy ../docs --project-name=lft
+npx wrangler pages deploy ../public --project-name=lft
 ```
 
 ### Option B: GitHub Integration (Recommended)
@@ -54,7 +54,7 @@ npx wrangler pages deploy ../docs --project-name=lft
 2. Connect to GitHub repository: `deanturpin/lft2`
 3. Configure build settings:
    - **Build command**: `cd web && npm install && npm run build`
-   - **Build output directory**: `docs`
+   - **Build output directory**: `public`
    - **Root directory**: `/`
 4. Set custom domain: `lft.turpin.dev`
 5. Deploy
@@ -112,7 +112,7 @@ cd workers && npm run deploy
 
 **Pages**:
 - Automatic via GitHub integration
-- Or: `cd web && npm run build && npx wrangler pages deploy ../docs`
+- Or: `cd web && npm run build && npx wrangler pages deploy ../public`
 
 ## Monitoring
 
