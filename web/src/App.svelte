@@ -61,7 +61,7 @@
       data: {
         labels: history.map(h => {
           const date = new Date(h.timestamp * 1000); // Unix timestamp to milliseconds
-          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
+          return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'America/New_York' });
         }),
         datasets: [{
           label: 'Equity',
