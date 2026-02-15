@@ -68,6 +68,12 @@
   {#if dashboard}
     <div class="timestamp">
       Last updated: {formatTimestamp(dashboard.account.last_fetched)}
+      {#if dashboard.clock}
+        | Market: <span class={dashboard.clock.is_open ? 'positive' : 'negative'}>
+          {dashboard.clock.is_open ? 'OPEN' : 'CLOSED'}
+        </span>
+        | Server time: {new Date(dashboard.clock.timestamp).toLocaleString('en-GB', { timeStyle: 'medium' })}
+      {/if}
     </div>
   {/if}
 

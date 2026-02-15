@@ -56,10 +56,11 @@ async function fetchDashboard(env) {
     'APCA-API-SECRET-KEY': apiSecret,
   };
 
-  // Fetch account and positions in parallel
-  const [accountRes, positionsRes] = await Promise.all([
+  // Fetch account, positions, and clock in parallel
+  const [accountRes, positionsRes, clockRes] = await Promise.all([
     fetch(`${baseUrl}/v2/account`, { headers }),
     fetch(`${baseUrl}/v2/positions`, { headers }),
+    fetch(`${baseUrl}/v2/clock`, { headers }),
   ]);
 
   if (!accountRes.ok) {
@@ -70,9 +71,14 @@ async function fetchDashboard(env) {
     throw new Error(`Alpaca positions API returned ${positionsRes.status}`);
   }
 
-  const [account, positions] = await Promise.all([
+  if (!clockRes.ok) {
+    throw new Error(`Alpaca clock API returned ${clockRes.status}`);
+  }
+
+  const [account, positions, clock] = await Promise.all([
     accountRes.json(),
     positionsRes.json(),
+    clockRes.json(),
   ]);
 
   return {
@@ -81,5 +87,11 @@ async function fetchDashboard(env) {
       last_fetched: new Date().toISOString(),
     },
     positions,
+    clock: {
+      timestamp: clock.timestamp,
+      is_open: clock.is_open,
+      next_open: clock.next_open,
+      next_close: clock.next_close,
+    },
   };
 }
