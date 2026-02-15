@@ -4,3 +4,15 @@ build/
 *.a
 .DS_Store
 .env
+
+# Go
+cmd/*/account
+cmd/*/fetch
+cmd/*/execute
+cmd/*/filter
+cmd/*/backtest
+
+# Node/Svelte
+node_modules/
+web/node_modules/
+web/dist/

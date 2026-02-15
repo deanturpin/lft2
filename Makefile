@@ -5,7 +5,7 @@ FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
 EXECUTE := $(BUILD_DIR)/execute
 
-.PHONY: all build run clean profile fetch evaluate execute
+.PHONY: all build run clean profile fetch evaluate execute account web-dev web-build
 
 all: run
 
@@ -27,6 +27,17 @@ evaluate: build
 
 execute: build
 	./$(EXECUTE)
+
+account:
+	@echo "Starting account service..."
+	@if [ ! -f .env ]; then echo "Error: .env file not found"; exit 1; fi
+	@export $$(cat .env | xargs) && go run cmd/account/main.go
+
+web-dev:
+	cd web && npm install && npm run dev
+
+web-build:
+	cd web && npm install && npm run build
 
 clean:
 	rm -rf $(BUILD_DIR)
