@@ -96,7 +96,8 @@
             ticks: {
               color: '#8b949e',
               maxRotation: 45,
-              minRotation: 45
+              minRotation: 45,
+              maxTicksLimit: 8
             },
             grid: {
               color: '#30363d'
