@@ -158,7 +158,8 @@
       | {new Date(dashboard.clock.timestamp).toLocaleString('en-US', {
         dateStyle: 'medium',
         timeStyle: 'medium',
-        timeZone: 'America/New_York'
+        timeZone: 'America/New_York',
+        timeZoneName: 'short'
       })}
     </div>
   {/if}
