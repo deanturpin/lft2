@@ -32,17 +32,23 @@
   async function fetchHistory() {
     try {
       const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1H`);
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error('History API error:', response.status, await response.text());
+        return;
+      }
       const data = await response.json();
+      console.log('History data received:', data);
 
       // Alpaca returns arrays: timestamp[], equity[], profit_loss[]
-      if (data.timestamp && data.equity) {
+      if (data.timestamp && data.equity && data.timestamp.length > 0) {
         history = data.timestamp.map((ts, i) => ({
           timestamp: ts,
           equity: data.equity[i],
           profit_loss: data.profit_loss ? data.profit_loss[i] : 0
         }));
-        updateChart();
+        // Chart will update reactively via $: statement
+      } else {
+        console.log('No history data available:', data);
       }
     } catch (err) {
       console.error('Error fetching history:', err);
@@ -50,7 +56,10 @@
   }
 
   function updateChart() {
-    if (!chartCanvas || history.length === 0) return;
+    if (!chartCanvas || history.length === 0) {
+      console.log('Cannot update chart:', { chartCanvas: !!chartCanvas, historyLength: history.length });
+      return;
+    }
 
     if (chart) {
       chart.destroy();
@@ -122,6 +131,11 @@
     if (interval) clearInterval(interval);
     if (chart) chart.destroy();
   });
+
+  // Reactively update chart when history or chartCanvas changes
+  $: if (chartCanvas && history.length > 0) {
+    updateChart();
+  }
 
   function formatCurrency(value) {
     return new Intl.NumberFormat('en-GB', {
