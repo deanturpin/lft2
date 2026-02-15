@@ -2,6 +2,10 @@
 
 LFT is a fully automated algorithmic trading platform, written in the latest C++ (26) and designed from the ground up to be `constexpr`, thereby allowing compile-time unit testing and guaranteed memory safety.
 
+**Live Dashboard**: <https://lft.turpin.dev>
+
+**Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
+
 ## Constexpr-first architecture
 
 All core trading logic is implemented as `constexpr` functions:
