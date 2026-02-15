@@ -16,14 +16,32 @@ add_compile_options(
 )
 
 add_executable(lft2 src/main.cxx src/test.cxx)
-add_executable(backtest src/backtest.cxx)
+add_executable(profile src/profile.cxx)
+add_executable(trade src/trade.cxx)
 
 target_include_directories(lft2 PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )
 
-target_include_directories(backtest PRIVATE
+target_include_directories(profile PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# Profile target gets debug and profiling flags
+target_compile_options(profile PRIVATE
+    -g3                      # Maximum debug information
+    -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
+)
+
+# Add gprof profiling flags on Linux (not supported on macOS)
+if(UNIX AND NOT APPLE)
+    target_compile_options(profile PRIVATE -pg)
+    target_link_options(profile PRIVATE -pg)
+endif()
+
+target_include_directories(trade PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )

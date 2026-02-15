@@ -44,13 +44,13 @@ jobs:
 
       - name: Run lft2 and capture output
         run: |
-          ./build/backtest > output.txt
+          ./build/profile > output.txt
           cat output.txt
 
       - name: Run backtest and generate statistics JSON
         run: |
-          ./build/backtest --json > stats.json
-          ./build/backtest --top > top_stocks.json
+          ./build/profile --json > stats.json
+          ./build/profile --top > top_stocks.json
           echo "Generated full statistics (stats.json):"
           cat stats.json
           echo ""

@@ -1,8 +1,9 @@
 BUILD_DIR := build
 BINARY := $(BUILD_DIR)/lft2
-BACKTEST := $(BUILD_DIR)/backtest
+PROFILE := $(BUILD_DIR)/profile
+TRADE := $(BUILD_DIR)/trade
 
-.PHONY: all build run clean backtest
+.PHONY: all build run clean profile trade
 
 all: run
 
@@ -13,8 +14,11 @@ build:
 run: build
 	./$(BINARY)
 
-backtest: build
-	./$(BACKTEST)
+profile: build
+	./$(PROFILE)
+
+trade: build
+	./$(TRADE)
 
 clean:
 	rm -rf $(BUILD_DIR)
