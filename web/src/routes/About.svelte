@@ -9,7 +9,7 @@
     <li>Frontend: Svelte 5 with Chart.js for portfolio visualisation</li>
     <li>Backend: Cloudflare Workers for serverless API endpoints</li>
     <li>Hosting: Cloudflare Pages with automatic deployments</li>
-    <li>C++ Analysis: GitHub Pages for static build outputs and reports</li>
+    <li>C++ Trading Engine: Fasthosts VPS for live trading execution</li>
     <li>Data: Alpaca paper trading API integration</li>
   </ul>
 
