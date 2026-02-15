@@ -174,8 +174,8 @@
   {/if}
 
   {#if error}
-    <div class="error">
-      Error: {error}
+    <div class="timestamp" style="color: #f85149;">
+      (offline)
     </div>
   {/if}
 
