@@ -125,17 +125,18 @@ tr:hover {
   right: 0;
   z-index: 1000;
   padding: 0.5rem 3rem;
-  background: linear-gradient(135deg, #58a6ff 0%, #1f6feb 100%);
+  background: linear-gradient(135deg, #f85149 0%, #da3633 100%);
   color: #ffffff;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 600;
   transform: rotate(45deg) translate(30%, -50%);
   transform-origin: top right;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: background 0.3s ease;
+  box-shadow: 0 4px 12px rgba(248, 81, 73, 0.4);
+  transition: all 0.3s ease;
 }
 
 .github-ribbon:hover {
-  background: linear-gradient(135deg, #79c0ff 0%, #388bfd 100%);
+  background: linear-gradient(135deg, #ff6b6b 0%, #f85149 100%);
+  box-shadow: 0 6px 16px rgba(248, 81, 73, 0.6);
 }
