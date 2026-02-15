@@ -1,7 +1,7 @@
 <div class="card">
   <h2>About Low Frequency Trader</h2>
   <p style="margin-bottom: 1rem;">
-    LFT2 is a real-time portfolio dashboard for algorithmic trading, built with modern web technologies and deployed on Cloudflare's edge network.
+    LFT is a real-time portfolio dashboard for algorithmic trading, built with modern web technologies and deployed on Cloudflare's edge network.
   </p>
 
   <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #8b949e;">Architecture</h3>
@@ -9,6 +9,7 @@
     <li>Frontend: Svelte 5 with Chart.js for portfolio visualisation</li>
     <li>Backend: Cloudflare Workers for serverless API endpoints</li>
     <li>Hosting: Cloudflare Pages with automatic deployments</li>
+    <li>C++ Backend: GitHub Pages (WebAssembly compilation)</li>
     <li>Data: Alpaca paper trading API integration</li>
   </ul>
 
