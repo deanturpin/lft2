@@ -160,8 +160,12 @@
         {dashboard.clock.is_open ? 'OPEN' : 'CLOSED'}
       </span>
       | {new Date(dashboard.clock.timestamp).toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'medium',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
         timeZone: 'America/New_York',
         timeZoneName: 'short'
       })}
