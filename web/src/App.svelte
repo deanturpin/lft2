@@ -165,12 +165,6 @@
       <h2>Account Details</h2>
       <div class="grid">
         <div class="metric">
-          <div class="metric-label">Account Number</div>
-          <div class="metric-value" style="font-size: 1rem;">
-            {dashboard.account.account_number}
-          </div>
-        </div>
-        <div class="metric">
           <div class="metric-label">Status</div>
           <div class="metric-value" style="font-size: 1rem;">
             {dashboard.account.status}
