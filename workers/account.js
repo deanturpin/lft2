@@ -21,19 +21,6 @@ export default {
     if (url.pathname === '/api/dashboard') {
       try {
         const dashboard = await fetchDashboard(env);
-
-        // Store snapshot in KV (once per hour to avoid excessive writes)
-        if (env.HISTORY) {
-          const now = new Date();
-          const hourKey = `snapshot-${now.toISOString().substring(0, 13)}`; // YYYY-MM-DDTHH
-          await env.HISTORY.put(hourKey, JSON.stringify({
-            timestamp: now.toISOString(),
-            equity: dashboard.account.equity,
-            cash: dashboard.account.cash,
-            portfolio_value: dashboard.account.portfolio_value,
-          }));
-        }
-
         return new Response(JSON.stringify(dashboard), {
           headers: {
             'Content-Type': 'application/json',
@@ -53,8 +40,9 @@ export default {
 
     if (url.pathname === '/api/history') {
       try {
-        const days = parseInt(url.searchParams.get('days') || '30');
-        const history = await fetchHistory(env, days);
+        const period = url.searchParams.get('period') || '1W';
+        const timeframe = url.searchParams.get('timeframe') || '1H';
+        const history = await fetchPortfolioHistory(env, period, timeframe);
         return new Response(JSON.stringify(history), {
           headers: {
             'Content-Type': 'application/json',
@@ -130,24 +118,26 @@ async function fetchDashboard(env) {
   };
 }
 
-async function fetchHistory(env, days) {
-  if (!env.HISTORY) {
-    return [];
+async function fetchPortfolioHistory(env, period, timeframe) {
+  const baseUrl = env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
+  const apiKey = env.ALPACA_API_KEY;
+  const apiSecret = env.ALPACA_API_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    throw new Error('Alpaca API credentials not configured');
   }
 
-  const history = [];
-  const now = new Date();
+  const headers = {
+    'APCA-API-KEY-ID': apiKey,
+    'APCA-API-SECRET-KEY': apiSecret,
+  };
 
-  // Fetch hourly snapshots for the requested number of days
-  for (let i = 0; i < days * 24; i++) {
-    const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-    const hourKey = `snapshot-${time.toISOString().substring(0, 13)}`;
-    const snapshot = await env.HISTORY.get(hourKey);
+  const url = `${baseUrl}/v2/account/portfolio/history?period=${period}&timeframe=${timeframe}`;
+  const response = await fetch(url, { headers });
 
-    if (snapshot) {
-      history.push(JSON.parse(snapshot));
-    }
+  if (!response.ok) {
+    throw new Error(`Alpaca portfolio history API returned ${response.status}`);
   }
 
-  return history.reverse(); // Oldest first
+  return response.json();
 }

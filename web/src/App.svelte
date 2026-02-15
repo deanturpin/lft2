@@ -31,10 +31,19 @@
 
   async function fetchHistory() {
     try {
-      const response = await fetch(`${API_URL}/api/history?days=7`);
+      const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1H`);
       if (!response.ok) return;
-      history = await response.json();
-      updateChart();
+      const data = await response.json();
+
+      // Alpaca returns arrays: timestamp[], equity[], profit_loss[]
+      if (data.timestamp && data.equity) {
+        history = data.timestamp.map((ts, i) => ({
+          timestamp: ts,
+          equity: data.equity[i],
+          profit_loss: data.profit_loss ? data.profit_loss[i] : 0
+        }));
+        updateChart();
+      }
     } catch (err) {
       console.error('Error fetching history:', err);
     }
@@ -51,10 +60,13 @@
     chart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: history.map(h => new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+        labels: history.map(h => {
+          const date = new Date(h.timestamp * 1000); // Unix timestamp to milliseconds
+          return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
+        }),
         datasets: [{
-          label: 'Portfolio Value',
-          data: history.map(h => parseFloat(h.portfolio_value)),
+          label: 'Equity',
+          data: history.map(h => h.equity),
           borderColor: '#58a6ff',
           backgroundColor: 'rgba(88, 166, 255, 0.1)',
           tension: 0.1,
@@ -83,7 +95,9 @@
           },
           x: {
             ticks: {
-              color: '#8b949e'
+              color: '#8b949e',
+              maxRotation: 45,
+              minRotation: 45
             },
             grid: {
               color: '#30363d'
