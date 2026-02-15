@@ -32,12 +32,8 @@
   async function fetchHistory() {
     try {
       const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1H`);
-      if (!response.ok) {
-        console.error('History API error:', response.status, await response.text());
-        return;
-      }
+      if (!response.ok) return;
       const data = await response.json();
-      console.log('History data received:', data);
 
       // Alpaca returns arrays: timestamp[], equity[], profit_loss[]
       if (data.timestamp && data.equity && data.timestamp.length > 0) {
@@ -46,9 +42,6 @@
           equity: data.equity[i],
           profit_loss: data.profit_loss ? data.profit_loss[i] : 0
         }));
-        // Chart will update reactively via $: statement
-      } else {
-        console.log('No history data available:', data);
       }
     } catch (err) {
       console.error('Error fetching history:', err);
@@ -56,10 +49,7 @@
   }
 
   function updateChart() {
-    if (!chartCanvas || history.length === 0) {
-      console.log('Cannot update chart:', { chartCanvas: !!chartCanvas, historyLength: history.length });
-      return;
-    }
+    if (!chartCanvas || history.length === 0) return;
 
     if (chart) {
       chart.destroy();
