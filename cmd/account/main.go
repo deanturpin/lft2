@@ -169,6 +169,11 @@ func main() {
 	fmt.Printf("  Portfolio Value: $%s\n", account.PortfolioValue)
 	fmt.Printf("  Equity:          $%s\n", account.Equity)
 
+	// Ensure docs directory exists
+	if err := os.MkdirAll("docs", 0755); err != nil {
+		log.Fatalf("Error creating docs directory: %v", err)
+	}
+
 	// Write account.json for entries module
 	accountFile, err := os.Create("docs/account.json")
 	if err != nil {
