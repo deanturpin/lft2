@@ -16,6 +16,15 @@ pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
 	@echo "Generated docs/pipeline-metadata.json"
+	@echo "Generating tech stack metadata..."
+	@echo "{" > docs/tech-stack.json
+	@echo "  \"go\": \"$$(go version | cut -d' ' -f3)\"," >> docs/tech-stack.json
+	@echo "  \"gcc\": \"$$(g++ --version | head -1 | awk '{print $$NF}')\"," >> docs/tech-stack.json
+	@echo "  \"cmake\": \"$$(cmake --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
+	@echo "  \"make\": \"$$(make --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
+	@echo "  \"os\": \"$$(uname -s) $$(uname -r)\"" >> docs/tech-stack.json
+	@echo "}" >> docs/tech-stack.json
+	@echo "Generated docs/tech-stack.json"
 
 # Backtest target: full pipeline (fetch → filter → backtest)
 backtest: fetch-go filter-go backtest-cpp
