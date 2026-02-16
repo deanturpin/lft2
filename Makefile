@@ -3,10 +3,9 @@ BINARY := $(BUILD_DIR)/lft2
 PROFILE := $(BUILD_DIR)/profile
 FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
-EXECUTE := $(BUILD_DIR)/execute
 BACKTEST := $(BUILD_DIR)/backtest
 
-.PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate execute account web-dev web-build pipeline help
+.PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate account web-dev web-build pipeline help
 
 # Default: CMake build for legacy C++ code
 all: run
