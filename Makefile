@@ -22,7 +22,8 @@ pipeline: fetch-go filter-go backtest-cpp
 	@echo "  \"gcc\": \"$$(g++ --version | head -1 | awk '{print $$NF}')\"," >> docs/tech-stack.json
 	@echo "  \"cmake\": \"$$(cmake --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
 	@echo "  \"make\": \"$$(make --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
-	@echo "  \"os\": \"$$(uname -s) $$(uname -r)\"" >> docs/tech-stack.json
+	@echo "  \"os\": \"$$(if [ -f /etc/os-release ]; then . /etc/os-release && echo $$PRETTY_NAME; else uname -s; fi)\"," >> docs/tech-stack.json
+	@echo "  \"kernel\": \"$$(uname -r)\"" >> docs/tech-stack.json
 	@echo "}" >> docs/tech-stack.json
 	@echo "Generated docs/tech-stack.json"
 
