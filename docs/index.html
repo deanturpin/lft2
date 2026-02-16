@@ -93,6 +93,7 @@
 <body>
   <h1>Low Frequency Trader</h1>
   <p class="subtitle">Analysis & Historical Data</p>
+  <p class="subtitle" id="last-updated" style="font-size: 0.875rem; margin-top: 0.5rem;">Loading...</p>
 
   <a href="https://lft.turpin.dev" class="dashboard-link">View Live Dashboard →</a>
 
@@ -111,10 +112,34 @@
   </div>
 
   <script>
+    async function loadMetadata() {
+      try {
+        const response = await fetch('pipeline-metadata.json');
+        if (response.ok) {
+          const metadata = await response.json();
+          const date = new Date(metadata.timestamp);
+          const formatted = date.toLocaleString('en-GB', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'UTC',
+            timeZoneName: 'short'
+          });
+          document.getElementById('last-updated').textContent =
+            `Last updated: ${formatted} | Commit: ${metadata.git_commit}`;
+        }
+      } catch (err) {
+        document.getElementById('last-updated').textContent = 'Pipeline not yet run';
+      }
+    }
+
     async function loadFiles() {
       const analysisFiles = [
         { name: 'candidates.json', description: 'Filtered candidate stocks' },
         { name: 'strategies.json', description: 'Backtested strategy recommendations' },
+        { name: 'pipeline-metadata.json', description: 'Pipeline execution metadata' },
         { name: 'stats.json', description: 'Performance statistics' },
         { name: 'top_stocks.json', description: 'Top performing stocks' }
       ];
@@ -181,6 +206,7 @@
       }
     }
 
+    loadMetadata();
     loadFiles();
   </script>
 </body>

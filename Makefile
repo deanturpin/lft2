@@ -13,6 +13,8 @@ all: run
 # New analysis pipeline: fetch (Go) → filter (Go) → backtest (C++) → docs/
 pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
+	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"git_commit\": \"$$(git rev-parse --short HEAD)\"}" > docs/pipeline-metadata.json
+	@echo "Generated docs/pipeline-metadata.json"
 
 # Backtest target: full pipeline (fetch → filter → backtest)
 backtest: fetch-go filter-go backtest-cpp
