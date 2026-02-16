@@ -1,6 +1,11 @@
 // Backtest module - tests strategies against historical bar data
 // Uses the same constexpr entry/exit code as live trading
 
+#include "../bar.h"
+#include "../entry.h"
+#include "../exit.h"
+#include "../json.h"
+#include <algorithm>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -17,21 +22,163 @@ struct StrategyResult {
 	double win_rate = 0.0;
 	double avg_profit = 0.0;
 	int trade_count = 0;
+	double total_return = 0.0;
 };
 
-// Placeholder for actual strategy logic (will integrate with existing constexpr code)
-auto test_strategy(std::string_view symbol, std::string_view strategy_name) -> StrategyResult {
-	// TODO: Load bars from docs/bars/{symbol}.json
-	// TODO: Apply constexpr entry/exit logic
-	// TODO: Calculate performance metrics
+struct Trade {
+	double entry_price;
+	double exit_price;
+	double profit_pct;
+	bool win;
+};
 
-	return StrategyResult{
-		.symbol = std::string{symbol},
-		.strategy_name = std::string{strategy_name},
-		.win_rate = 0.65,
-		.avg_profit = 0.023,
-		.trade_count = 42
-	};
+// Simple runtime JSON bar parser (not constexpr like json.h)
+auto load_bars(const std::filesystem::path& file_path) -> std::vector<bar> {
+	auto ifs = std::ifstream{file_path};
+	if (!ifs)
+		return {};
+
+	auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
+	auto bars = std::vector<bar>{};
+
+	// Find the "bars" array
+	auto pos = json_str.find("\"bars\"");
+	if (pos == std::string::npos)
+		return {};
+
+	auto array_start = json_str.find('[', pos);
+	if (array_start == std::string::npos)
+		return {};
+
+	// Parse each bar object
+	pos = array_start + 1;
+	while (pos < json_str.size()) {
+		// Find next object start
+		auto obj_start = json_str.find('{', pos);
+		if (obj_start == std::string::npos)
+			break;
+
+		auto obj_end = json_str.find('}', obj_start);
+		if (obj_end == std::string::npos)
+			break;
+
+		// Extract bar fields
+		auto b = bar{};
+		auto obj = json_str.substr(obj_start, obj_end - obj_start + 1);
+
+		// Simple field extraction (assumes specific order isn't required)
+		auto extract_double = [&obj](std::string_view key) -> double {
+			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
+			if (key_pos == std::string::npos)
+				return 0.0;
+			auto colon = obj.find(':', key_pos);
+			auto comma = obj.find_first_of(",}", colon);
+			return std::stod(obj.substr(colon + 1, comma - colon - 1));
+		};
+
+		auto extract_int = [&obj](std::string_view key) -> std::uint32_t {
+			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
+			if (key_pos == std::string::npos)
+				return 0;
+			auto colon = obj.find(':', key_pos);
+			auto comma = obj.find_first_of(",}", colon);
+			return static_cast<std::uint32_t>(std::stoul(obj.substr(colon + 1, comma - colon - 1)));
+		};
+
+		auto extract_string = [&obj](std::string_view key) -> std::string {
+			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
+			if (key_pos == std::string::npos)
+				return "";
+			auto colon = obj.find(':', key_pos);
+			auto quote1 = obj.find('"', colon);
+			auto quote2 = obj.find('"', quote1 + 1);
+			return obj.substr(quote1 + 1, quote2 - quote1 - 1);
+		};
+
+		b.close = extract_double("c");
+		b.high = extract_double("h");
+		b.low = extract_double("l");
+		b.open = extract_double("o");
+		b.vwap = extract_double("vw");
+		b.volume = extract_int("v");
+		b.num_trades = extract_int("n");
+
+		auto ts = extract_string("t");
+		// Store timestamp in a static buffer (simple approach for backtest)
+		static std::vector<std::string> timestamp_storage;
+		timestamp_storage.push_back(ts);
+		b.timestamp = timestamp_storage.back();
+
+		if (is_valid(b))
+			bars.push_back(b);
+
+		pos = obj_end + 1;
+	}
+
+	return bars;
+}
+
+// Backtest a specific strategy on bar data
+template <typename EntryFunc>
+auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) -> StrategyResult {
+	auto result = StrategyResult{};
+	result.strategy_name = std::string{strategy_name};
+
+	auto trades = std::vector<Trade>{};
+	auto position = std::optional<::position>{};
+
+	// Walk through bars simulating live trading
+	for (auto i = 0uz; i < bars.size(); ++i) {
+		auto history = std::span{bars.data(), i + 1};
+
+		// Check for entry signal when not in position
+		if (!position && i >= 20 && entry_func(history)) {
+			auto entry_price = bars[i].close;
+
+			// Set position parameters (10% take profit, 5% stop loss)
+			position = ::position{
+				.entry_price = entry_price,
+				.take_profit = entry_price * 1.10,
+				.stop_loss = entry_price * 0.95,
+				.trailing_stop = entry_price * 0.95
+			};
+		}
+		// Check for exit when in position
+		else if (position && is_exit(*position, bars[i])) {
+			auto exit_price = bars[i].close;
+			auto profit_pct = (exit_price - position->entry_price) / position->entry_price;
+
+			trades.push_back(Trade{
+				.entry_price = position->entry_price,
+				.exit_price = exit_price,
+				.profit_pct = profit_pct,
+				.win = profit_pct > 0.0
+			});
+
+			position.reset();
+		}
+	}
+
+	// Calculate metrics
+	if (trades.empty()) {
+		return result;
+	}
+
+	auto wins = 0uz;
+	auto total_profit = 0.0;
+
+	for (const auto& trade : trades) {
+		if (trade.win)
+			wins++;
+		total_profit += trade.profit_pct;
+	}
+
+	result.trade_count = static_cast<int>(trades.size());
+	result.win_rate = static_cast<double>(wins) / trades.size();
+	result.avg_profit = total_profit / trades.size();
+	result.total_return = total_profit;
+
+	return result;
 }
 
 auto get_iso_timestamp() -> std::string {
@@ -46,7 +193,7 @@ auto main() -> int {
 	std::println("Backtest Module - Testing strategies");
 	std::println("");
 
-	// Load candidates
+	// Load candidates from filter output
 	auto candidates_file = std::filesystem::path{"../../docs/candidates.json"};
 	if (!std::filesystem::exists(candidates_file)) {
 		std::println("Error: candidates.json not found");
@@ -54,34 +201,114 @@ auto main() -> int {
 		return 1;
 	}
 
-	// For now, hardcode some test candidates
-	// TODO: Parse candidates.json properly
-	auto candidates = std::vector<std::string>{"AAPL", "GOOGL", "MSFT"};
-	auto strategies = std::vector<std::string>{"mean_reversion", "sma_crossover", "volume_surge"};
+	// Parse candidates.json to get symbol list
+	auto ifs = std::ifstream{candidates_file};
+	auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
 
-	auto results = std::vector<StrategyResult>{};
+	// Simple JSON parsing to extract symbols array
+	auto candidates = std::vector<std::string>{};
+	auto pos = json_str.find("\"symbols\"");
+	if (pos != std::string::npos) {
+		auto start = json_str.find('[', pos);
+		auto end = json_str.find(']', start);
+		auto symbols_str = json_str.substr(start + 1, end - start - 1);
 
-	for (const auto& symbol : candidates) {
-		for (const auto& strategy : strategies) {
-			std::println("Testing {} with {}...", symbol, strategy);
-			auto result = test_strategy(symbol, strategy);
-			results.push_back(result);
+		// Extract individual symbols
+		auto current = 0uz;
+		while (current < symbols_str.size()) {
+			auto quote1 = symbols_str.find('"', current);
+			if (quote1 == std::string::npos)
+				break;
+			auto quote2 = symbols_str.find('"', quote1 + 1);
+			if (quote2 == std::string::npos)
+				break;
+
+			candidates.push_back(symbols_str.substr(quote1 + 1, quote2 - quote1 - 1));
+			current = quote2 + 1;
 		}
 	}
 
-	// Filter to profitable strategies (win rate > 60%, avg profit > 1%)
-	auto recommendations = std::vector<StrategyResult>{};
-	for (const auto& result : results) {
-		if (result.win_rate >= 0.60 && result.avg_profit >= 0.01) {
-			recommendations.push_back(result);
-			std::println("✓ {} / {} - Win rate: {:.1f}%, Avg profit: {:.2f}%",
-				result.symbol, result.strategy_name,
-				result.win_rate * 100.0, result.avg_profit * 100.0);
+	std::println("Testing {} candidates from filter", candidates.size());
+	std::println("");
+
+	auto all_results = std::vector<StrategyResult>{};
+
+	// Test each candidate with all three strategies
+	for (const auto& symbol : candidates) {
+		auto bar_file = std::filesystem::path{"../../docs/bars"} / (symbol + ".json");
+
+		if (!std::filesystem::exists(bar_file)) {
+			std::println("✗ {} - bar data not found", symbol);
+			continue;
+		}
+
+		auto bars = load_bars(bar_file);
+		if (bars.size() < 100) {
+			std::println("✗ {} - insufficient bars ({})", symbol, bars.size());
+			continue;
+		}
+
+		// Test all three strategies
+		auto results = std::vector<StrategyResult>{};
+
+		results.push_back(backtest_strategy(bars, volume_surge_dip, "volume_surge"));
+		results[0].symbol = symbol;
+
+		results.push_back(backtest_strategy(bars, mean_reversion, "mean_reversion"));
+		results[1].symbol = symbol;
+
+		results.push_back(backtest_strategy(bars, sma_crossover<10, 20>, "sma_crossover"));
+		results[2].symbol = symbol;
+
+		// Debug output showing trade counts and win rates
+		for (const auto& r : results) {
+			if (r.trade_count > 0) {
+				std::println("    {} - {}: {} trades, {:.1f}% win, {:.2f}% avg profit",
+					symbol, r.strategy_name, r.trade_count,
+					r.win_rate * 100.0, r.avg_profit * 100.0);
+			}
+		}
+
+		// Find best strategy for this symbol
+		auto best = std::max_element(results.begin(), results.end(),
+			[](const auto& a, const auto& b) {
+				// Prefer strategies with more trades and higher win rate
+				if (a.trade_count == 0 && b.trade_count == 0)
+					return false;
+				if (a.trade_count == 0)
+					return true;
+				if (b.trade_count == 0)
+					return false;
+
+				// Score = win_rate * avg_profit * sqrt(trade_count)
+				auto score_a = a.win_rate * a.avg_profit * std::sqrt(static_cast<double>(a.trade_count));
+				auto score_b = b.win_rate * b.avg_profit * std::sqrt(static_cast<double>(b.trade_count));
+				return score_a < score_b;
+			});
+
+		// Include if it meets minimum criteria
+		// Accept: (1 trade with 100% win and >5% profit) OR (2+ trades with 40% win and >0.1% profit)
+		bool passes = (best->trade_count >= 1 && best->win_rate == 1.0 && best->avg_profit >= 0.05) ||
+		              (best->trade_count >= 2 && best->win_rate >= 0.40 && best->avg_profit >= 0.001);
+
+		if (passes) {
+			std::println("✓ {} - {} (win: {:.1f}%, profit: {:.2f}%, trades: {})",
+				symbol, best->strategy_name,
+				best->win_rate * 100.0,
+				best->avg_profit * 100.0,
+				best->trade_count);
+			all_results.push_back(*best);
+		} else {
+			std::println("✗ {} - no profitable strategy found", symbol);
 		}
 	}
 
 	std::println("");
-	std::println("Profitable strategies: {}/{}", recommendations.size(), results.size());
+	std::println("Profitable strategies: {}/{}", all_results.size(), candidates.size());
+
+	// Sort by total return (best first)
+	std::sort(all_results.begin(), all_results.end(),
+		[](const auto& a, const auto& b) { return a.total_return > b.total_return; });
 
 	// Write strategies.json
 	auto output_file = std::filesystem::path{"../../docs/strategies.json"};
@@ -96,8 +323,8 @@ auto main() -> int {
 	ofs << std::format("  \"timestamp\": \"{}\",\n", get_iso_timestamp());
 	ofs << "  \"recommendations\": [\n";
 
-	for (auto i = 0uz; i < recommendations.size(); ++i) {
-		const auto& rec = recommendations[i];
+	for (auto i = 0uz; i < all_results.size(); ++i) {
+		const auto& rec = all_results[i];
 		ofs << "    {\n";
 		ofs << std::format("      \"symbol\": \"{}\",\n", rec.symbol);
 		ofs << std::format("      \"strategy\": \"{}\",\n", rec.strategy_name);
@@ -105,7 +332,7 @@ auto main() -> int {
 		ofs << std::format("      \"avg_profit\": {:.4f},\n", rec.avg_profit);
 		ofs << std::format("      \"trade_count\": {}\n", rec.trade_count);
 		ofs << "    }";
-		if (i < recommendations.size() - 1)
+		if (i < all_results.size() - 1)
 			ofs << ",";
 		ofs << "\n";
 	}
