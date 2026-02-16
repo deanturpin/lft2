@@ -4,6 +4,8 @@ PROFILE := $(BUILD_DIR)/profile
 FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
 BACKTEST := $(BUILD_DIR)/backtest
+EXITS := $(BUILD_DIR)/exits
+ENTRIES := $(BUILD_DIR)/entries
 
 .PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate account web-dev web-build pipeline help
 
@@ -61,8 +63,14 @@ fetch: build
 evaluate: build
 	./$(EVALUATE)
 
+exits: build
+	./$(EXITS)
+
+entries: build
+	./$(ENTRIES)
+
 execute: build
-	./$(EXECUTE)
+	cd cmd/execute && $(MAKE) run
 
 account:
 	@echo "Starting account service..."

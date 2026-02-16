@@ -20,6 +20,8 @@ add_executable(profile src/profile.cxx)
 add_executable(fetch src/fetch.cxx)
 add_executable(evaluate src/evaluate.cxx)
 add_executable(backtest src/backtest.cxx)
+add_executable(exits src/exits.cxx)
+add_executable(entries src/entries.cxx)
 
 target_include_directories(lft2 PRIVATE
     ${CMAKE_SOURCE_DIR}
@@ -54,6 +56,16 @@ target_include_directories(evaluate PRIVATE
 )
 
 target_include_directories(backtest PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_include_directories(exits PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+target_include_directories(entries PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )

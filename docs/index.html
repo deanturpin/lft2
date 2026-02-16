@@ -107,6 +107,26 @@
     </ul>
   </div>
 
+  <h2>About</h2>
+  <div class="card">
+    <p style="margin-bottom: 1rem;">
+      LFT2 is a low-frequency algorithmic trading system combining constexpr C++26 strategy logic
+      with Go-based API interactions and FIX 5.0 SP2 protocol messages.
+    </p>
+    <p style="margin-bottom: 1rem; color: #8b949e;">
+      <strong style="color: #c9d1d9;">Architecture:</strong><br>
+      • <strong>Go</strong> - Data fetching (Alpaca API), account management, candidate filtering, order execution<br>
+      • <strong>C++26</strong> - Constexpr strategy logic (entries/exits), backtesting, FIX message generation<br>
+      • <strong>FIX 5.0 SP2</strong> - Exchange-agnostic order protocol (buy.fix, sell.fix)<br>
+      • <strong>GitHub Actions</strong> - Automated CI/CD pipeline<br>
+      • <strong>GitHub Pages</strong> - Static result hosting
+    </p>
+    <p style="color: #8b949e;">
+      <strong style="color: #c9d1d9;">Tech Stack:</strong>
+      <span id="tech-stack" style="margin-left: 0.5rem;">Loading...</span>
+    </p>
+  </div>
+
   <script>
     async function loadMetadata() {
       try {
@@ -128,6 +148,19 @@
         }
       } catch (err) {
         document.getElementById('last-updated').textContent = 'Pipeline not yet run';
+      }
+    }
+
+    async function loadTechStack() {
+      try {
+        const response = await fetch('tech-stack.json');
+        if (response.ok) {
+          const stack = await response.json();
+          document.getElementById('tech-stack').innerHTML =
+            `Go ${stack.go?.replace('go', '')} • GCC ${stack.gcc} • CMake ${stack.cmake} • ${stack.os}`;
+        }
+      } catch (err) {
+        document.getElementById('tech-stack').textContent = 'Not available';
       }
     }
 
@@ -167,6 +200,7 @@
     }
 
     loadMetadata();
+    loadTechStack();
     loadFiles();
   </script>
 </body>
