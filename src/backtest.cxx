@@ -40,7 +40,7 @@ struct Trade {
 };
 
 // Simple runtime JSON bar parser (not constexpr like json.h)
-auto load_bars(const std::filesystem::path& file_path) -> std::vector<bar> {
+std::vector<bar> load_bars(const std::filesystem::path& file_path) {
 	auto ifs = std::ifstream{file_path};
 	if (!ifs)
 		return {};
@@ -127,7 +127,7 @@ auto load_bars(const std::filesystem::path& file_path) -> std::vector<bar> {
 
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
-auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) -> StrategyResult {
+StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) {
 	auto result = StrategyResult{};
 	result.strategy_name = std::string{strategy_name};
 
@@ -204,7 +204,7 @@ auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::str
 	return result;
 }
 
-auto get_iso_timestamp() -> std::string {
+std::string get_iso_timestamp() {
 	auto now = std::chrono::system_clock::now();
 	auto time = std::chrono::system_clock::to_time_t(now);
 	auto ss = std::ostringstream{};
@@ -212,7 +212,7 @@ auto get_iso_timestamp() -> std::string {
 	return ss.str();
 }
 
-auto main() -> int {
+int main() {
 	std::println("Backtest Module - Testing strategies");
 	std::println("");
 

@@ -2,7 +2,7 @@
 
 // Test parsing empty bars array
 namespace {
-constexpr auto test_empty_bars() -> bool {
+constexpr bool test_empty_bars() {
   constexpr auto json = std::string_view{R"({"bars":[]})"};
   constexpr auto bars = parse_bars<5>(json);
 
@@ -14,7 +14,7 @@ static_assert(test_empty_bars());
 
 // Test parsing single bar
 namespace {
-constexpr auto test_single_bar() -> bool {
+constexpr bool test_single_bar() {
   constexpr auto json = std::string_view{R"({
     "bars": [{
       "c": 150.25,
@@ -38,7 +38,7 @@ static_assert(test_single_bar());
 
 // Test parsing multiple bars
 namespace {
-constexpr auto test_multiple_bars() -> bool {
+constexpr bool test_multiple_bars() {
   constexpr auto json = std::string_view{R"({
     "bars": [
       {"c": 100.0, "h": 101.0, "l": 99.0, "o": 100.5, "t": "2026-01-01T10:00:00Z", "v": 1000, "vw": 100.2, "n": 10},
@@ -59,7 +59,7 @@ static_assert(test_multiple_bars());
 
 // Test parsing with large values
 namespace {
-constexpr auto test_large_values() -> bool {
+constexpr bool test_large_values() {
   constexpr auto json = std::string_view{R"({
     "bars": [{
       "c": 9999999.99,
@@ -83,7 +83,7 @@ static_assert(test_large_values());
 // Test parsing with negative values (validates parser handles negatives,
 // not realistic for stock prices)
 namespace {
-constexpr auto test_negative_values() -> bool {
+constexpr bool test_negative_values() {
   constexpr auto json = std::string_view{R"({
     "bars": [{
       "c": -50.25,
@@ -106,7 +106,7 @@ static_assert(test_negative_values());
 
 // Test array size mismatch (requesting more bars than available)
 namespace {
-constexpr auto test_size_mismatch() -> bool {
+constexpr bool test_size_mismatch() {
   constexpr auto json = std::string_view{R"({
     "bars": [
       {"c": 100.0, "h": 101.0, "l": 99.0, "o": 100.5, "t": "2026-01-01T10:00:00Z", "v": 1000, "vw": 100.2, "n": 10}
