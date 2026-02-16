@@ -4,6 +4,7 @@ PROFILE := $(BUILD_DIR)/profile
 FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
 EXECUTE := $(BUILD_DIR)/execute
+BACKTEST := $(BUILD_DIR)/backtest
 
 .PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate execute account web-dev web-build pipeline help
 
@@ -30,9 +31,9 @@ filter-go:
 	cd cmd/filter && $(MAKE) run
 
 # Backtest strategies using C++ (constexpr entry/exit logic)
-backtest-cpp:
+backtest-cpp: build
 	@echo "→ Backtesting strategies..."
-	cd src/backtest && $(MAKE) run
+	./$(BACKTEST)
 
 # Legacy CMake build
 build:
@@ -69,7 +70,6 @@ clean:
 	rm -rf $(BUILD_DIR)
 	cd cmd/fetch && $(MAKE) clean
 	cd cmd/filter && $(MAKE) clean
-	cd src/backtest && $(MAKE) clean
 
 help:
 	@echo "LFT2 Build System"

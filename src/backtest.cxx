@@ -1,11 +1,12 @@
 // Backtest module - tests strategies against historical bar data
 // Uses the same constexpr entry/exit code as live trading
 
-#include "../bar.h"
-#include "../entry.h"
-#include "../exit.h"
-#include "../json.h"
+#include "bar.h"
+#include "entry.h"
+#include "exit.h"
+#include "json.h"
 #include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -194,7 +195,7 @@ auto main() -> int {
 	std::println("");
 
 	// Load candidates from filter output
-	auto candidates_file = std::filesystem::path{"../../docs/candidates.json"};
+	auto candidates_file = std::filesystem::path{"docs/candidates.json"};
 	if (!std::filesystem::exists(candidates_file)) {
 		std::println("Error: candidates.json not found");
 		std::println("Run filter module first");
@@ -235,7 +236,7 @@ auto main() -> int {
 
 	// Test each candidate with all three strategies
 	for (const auto& symbol : candidates) {
-		auto bar_file = std::filesystem::path{"../../docs/bars"} / (symbol + ".json");
+		auto bar_file = std::filesystem::path{"docs/bars"} / (symbol + ".json");
 
 		if (!std::filesystem::exists(bar_file)) {
 			std::println("✗ {} - bar data not found", symbol);
@@ -311,7 +312,7 @@ auto main() -> int {
 		[](const auto& a, const auto& b) { return a.total_return > b.total_return; });
 
 	// Write strategies.json
-	auto output_file = std::filesystem::path{"../../docs/strategies.json"};
+	auto output_file = std::filesystem::path{"docs/strategies.json"};
 	auto ofs = std::ofstream{output_file};
 
 	if (!ofs) {
