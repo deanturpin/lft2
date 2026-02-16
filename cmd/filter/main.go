@@ -91,7 +91,7 @@ func main() {
 	log.Println("Filter Module - Identifying candidate stocks")
 	log.Println("")
 
-	barsDir := "docs/bars"
+	barsDir := "../../docs/bars"
 
 	if _, err := os.Stat(barsDir); os.IsNotExist(err) {
 		log.Fatalf("Error: bars directory not found: %s", barsDir)
@@ -160,7 +160,7 @@ func main() {
 		TotalCandidates: len(candidates),
 	}
 
-	outputFile := "docs/candidates.json"
+	outputFile := "../../docs/candidates.json"
 	file, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v", err)

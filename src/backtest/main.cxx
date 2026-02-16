@@ -1,16 +1,15 @@
 // Backtest module - tests strategies against historical bar data
 // Uses the same constexpr entry/exit code as live trading
 
+#include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <print>
+#include <sstream>
 #include <string>
 #include <vector>
-
-// Simple JSON generation
-namespace json {
-	auto quote(std::string_view s) { return std::format("\"{}\"", s); }
-}
 
 struct StrategyResult {
 	std::string symbol;
@@ -35,12 +34,20 @@ auto test_strategy(std::string_view symbol, std::string_view strategy_name) -> S
 	};
 }
 
+auto get_iso_timestamp() -> std::string {
+	auto now = std::chrono::system_clock::now();
+	auto time = std::chrono::system_clock::to_time_t(now);
+	auto ss = std::ostringstream{};
+	ss << std::put_time(std::gmtime(&time), "%Y-%m-%dT%H:%M:%SZ");
+	return ss.str();
+}
+
 auto main() -> int {
 	std::println("Backtest Module - Testing strategies");
 	std::println("");
 
 	// Load candidates
-	auto candidates_file = std::filesystem::path{"docs/candidates.json"};
+	auto candidates_file = std::filesystem::path{"../../docs/candidates.json"};
 	if (!std::filesystem::exists(candidates_file)) {
 		std::println("Error: candidates.json not found");
 		std::println("Run filter module first");
@@ -77,7 +84,7 @@ auto main() -> int {
 	std::println("Profitable strategies: {}/{}", recommendations.size(), results.size());
 
 	// Write strategies.json
-	auto output_file = std::filesystem::path{"docs/strategies.json"};
+	auto output_file = std::filesystem::path{"../../docs/strategies.json"};
 	auto ofs = std::ofstream{output_file};
 
 	if (!ofs) {
@@ -86,7 +93,7 @@ auto main() -> int {
 	}
 
 	ofs << "{\n";
-	ofs << std::format("  \"timestamp\": \"{}\",\n", std::chrono::system_clock::now());
+	ofs << std::format("  \"timestamp\": \"{}\",\n", get_iso_timestamp());
 	ofs << "  \"recommendations\": [\n";
 
 	for (auto i = 0uz; i < recommendations.size(); ++i) {
