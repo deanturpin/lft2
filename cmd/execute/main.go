@@ -25,6 +25,12 @@ type AccountInfo struct {
 	PortfolioValue float64 `json:"portfolio_value"`
 }
 
+type Position struct {
+	Symbol string  `json:"symbol"`
+	Qty    float64 `json:"qty"`
+	Side   string  `json:"side"`
+}
+
 func loadSignals() ([]Signal, error) {
 	data, err := os.ReadFile("docs/signals.json")
 	if err != nil {
@@ -55,6 +61,17 @@ func fetchAccountInfo(apiKey, apiSecret string) (*AccountInfo, error) {
 	}, nil
 }
 
+func fetchOpenPositions(apiKey, apiSecret string) ([]Position, error) {
+	// In production, this would call:
+	// GET https://paper-api.alpaca.markets/v2/positions
+	// Headers: APCA-API-KEY-ID, APCA-API-SECRET-KEY
+
+	fmt.Println("Fetching open positions from Alpaca...")
+
+	// Placeholder - return empty positions for now
+	return []Position{}, nil
+}
+
 func main() {
 	fmt.Println("Low Frequency Trader v2 - Trade Executor\n")
 
@@ -80,6 +97,23 @@ func main() {
 	fmt.Printf("  Buying Power:    $%.2f\n", account.BuyingPower)
 	fmt.Printf("  Portfolio Value: $%.2f\n", account.PortfolioValue)
 
+	// Fetch open positions
+	positions, err := fetchOpenPositions(apiKey, apiSecret)
+	if err != nil {
+		log.Fatal("Error fetching positions:", err)
+	}
+
+	// Build set of symbols we already have positions in
+	existingPositions := make(map[string]bool)
+	for _, pos := range positions {
+		existingPositions[pos.Symbol] = true
+	}
+
+	fmt.Printf("Currently holding %d position(s)\n", len(positions))
+	for _, pos := range positions {
+		fmt.Printf("  %s: %.0f shares (%s)\n", pos.Symbol, pos.Qty, pos.Side)
+	}
+
 	// Calculate position size (2% of portfolio value)
 	positionSize := account.PortfolioValue * 0.02
 	fmt.Printf("\nPosition Size (2%% of portfolio): $%.2f\n", positionSize)
@@ -104,6 +138,12 @@ func main() {
 
 		if signal.Action != "entry" {
 			fmt.Println("   ⏭️  Skipping non-entry signal")
+			continue
+		}
+
+		// Skip if we already have a position in this symbol
+		if existingPositions[signal.Symbol] {
+			fmt.Printf("   ⏭️  Already holding position in %s\n", signal.Symbol)
 			continue
 		}
 
