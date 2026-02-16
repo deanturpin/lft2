@@ -2,6 +2,7 @@
 #include "entry.h"
 #include "fix.h"
 #include "json.h"
+#include "market.h"
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -263,23 +264,12 @@ void sleep_until_next_interval() {
 	}
 }
 
-// Check if it's market close time (20:00 UTC = 4:00 PM ET)
-bool is_market_close() {
-	auto now = std::chrono::system_clock::now();
-	auto tt = std::chrono::system_clock::to_time_t(now);
-	auto tm = *std::gmtime(&tt);
-	return tm.tm_hour >= 20;
-}
+// NOTE: Removed is_market_close - now using market::is_risk_on() from market.h
 
 int main() {
 	std::println("Low Frequency Trader v2 - Entry Module\n");
 
-	// Don't enter new positions near market close
-	if (is_market_close()) {
-		std::println("⚠️  Market close detected - no new entries");
-		auto ofs = std::ofstream{"docs/buy.fix"};
-		return 0;
-	}
+	// NOTE: Risk-on check moved to per-candidate evaluation using bar timestamps
 
 	// Wait until next 5-minute interval for fresh data
 	sleep_until_next_interval();
@@ -331,6 +321,12 @@ int main() {
 
 		auto latest_price = bars.back().close;
 		std::println("   Current price: ${:.2f}", latest_price);
+
+		// Check if we're in risk-on period (1 hour after open, 30 min before close)
+		if (!market::is_risk_on(bars.back().timestamp)) {
+			std::println("   ⏭️  Risk-off period (too close to open/close)");
+			continue;
+		}
 
 		// Check entry signal using recommended strategy
 		auto should_enter = false;

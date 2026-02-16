@@ -2,6 +2,7 @@
 #include "exit.h"
 #include "fix.h"
 #include "json.h"
+#include "market.h"
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -96,13 +97,7 @@ std::vector<Position> load_positions() {
 	return positions;
 }
 
-// Check if it's market close time (20:00 UTC = 4:00 PM ET)
-bool is_market_close() {
-	auto now = std::chrono::system_clock::now();
-	auto tt = std::chrono::system_clock::to_time_t(now);
-	auto tm = *std::gmtime(&tt);
-	return tm.tm_hour >= 20;
-}
+// NOTE: Removed is_market_close - now using market::is_liquidation_time() from market.h
 
 // Load latest bars for a symbol
 std::vector<bar> load_bars(std::string_view symbol) {
@@ -208,10 +203,8 @@ int main() {
 
 	std::println("Checking {} position(s) for exit signals...", positions.size());
 
-	// Check if we need to liquidate everything at market close
-	auto is_eod = is_market_close();
-	if (is_eod)
-		std::println("⚠️  Market close detected - will liquidate all positions");
+	// Check if we need to liquidate everything (using latest bar timestamp)
+	// We'll check per-position using the bar timestamp
 
 	// Collect sell orders
 	auto sell_orders = std::vector<std::string>{};
@@ -238,10 +231,14 @@ int main() {
 		auto should_exit = false;
 		auto exit_reason = std::string{};
 
-		// Force exit at market close
-		if (is_eod) {
+		// Check liquidation time using bar timestamp
+		auto should_liquidate = market::is_liquidation_time(bars.back().timestamp);
+
+		// Force exit at liquidation time
+		if (should_liquidate) {
 			should_exit = true;
-			exit_reason = "market_close";
+			exit_reason = "liquidation_time";
+			std::println("⚠️  Liquidation time detected at {}", std::string{bars.back().timestamp});
 		}
 		// Check normal exit conditions using our exit logic
 		else {
