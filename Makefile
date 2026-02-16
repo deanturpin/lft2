@@ -5,27 +5,27 @@ FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
 EXECUTE := $(BUILD_DIR)/execute
 
-.PHONY: all build run clean profile cmake-build fetch-go filter-cpp backtest-cpp backtest evaluate execute account web-dev web-build pipeline help
+.PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate execute account web-dev web-build pipeline help
 
 # Default: CMake build for legacy C++ code
 all: run
 
 # New analysis pipeline: fetch (Go) → filter (C++) → backtest (C++) → docs/
-pipeline: fetch-go filter-cpp backtest-cpp
+pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 
 # Backtest target: build C++ and run pipeline
-backtest: fetch-go filter-cpp backtest-cpp
+backtest: fetch-go filter-go backtest-cpp
 
 # Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
 fetch-go:
 	@echo "→ Fetching bar data (1000 bars per symbol - Alpaca limit)..."
 	cd cmd/fetch && $(MAKE) run
 
-# Filter candidates using C++
-filter-cpp:
+# Filter candidates using Go
+filter-go:
 	@echo "→ Filtering candidate stocks..."
-	cd src/filter && $(MAKE) run
+	cd cmd/filter && $(MAKE) run
 
 # Backtest strategies using C++ (constexpr entry/exit logic)
 backtest-cpp:
@@ -66,7 +66,7 @@ web-build:
 clean:
 	rm -rf $(BUILD_DIR)
 	cd cmd/fetch && $(MAKE) clean
-	cd src/filter && $(MAKE) clean
+	cd cmd/filter && $(MAKE) clean
 	cd src/backtest && $(MAKE) clean
 
 help:

@@ -19,8 +19,8 @@ make help
 
 ```
 lft2/
-├── cmd/          # Go executables (fetch, execute)
-├── src/          # C++ modules (filter, backtest, evaluate)
+├── cmd/          # Go executables (fetch, filter, execute)
+├── src/          # C++ modules (backtest, evaluate)
 ├── web/          # Svelte dashboard
 ├── workers/      # Cloudflare Workers API
 └── docs/         # GitHub Pages output

@@ -7,10 +7,10 @@ build/
 
 # Go binaries
 cmd/*/fetch
+cmd/*/filter
 cmd/*/execute
 
 # C++ binaries
-src/*/filter
 src/*/backtest
 src/*/evaluate
 
