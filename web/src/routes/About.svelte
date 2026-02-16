@@ -37,13 +37,35 @@
   <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #8b949e;">System Modules</h3>
   <ul style="color: #8b949e; margin-left: 1.5rem; margin-bottom: 1rem;">
     <li><strong>fetch</strong> (Go) - Retrieves 1000 bars per symbol from Alpaca (pagination limit)</li>
-    <li><strong>filter</strong> (C++) - Identifies candidate stocks from bar data</li>
+    <li><strong>filter</strong> (Go) - Identifies candidate stocks from bar data</li>
     <li><strong>backtest</strong> (C++) - Tests strategies using constexpr entry/exit logic</li>
     <li><strong>evaluate</strong> (C++) - Generates trading signals from market data</li>
     <li><strong>execute</strong> (Go) - Places orders with Alpaca</li>
     <li><strong>account</strong> (Worker) - Real-time API for dashboard</li>
     <li><strong>website</strong> (Svelte) - Interactive dashboard with live charts</li>
   </ul>
+
+  <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #8b949e;">Filter Criteria</h3>
+  <p style="color: #8b949e; margin-bottom: 0.5rem;">
+    The filter module uses data-driven criteria calculated from the entire watchlist to select trading candidates. Instead of arbitrary thresholds, criteria are derived from market statistics:
+  </p>
+  <ul style="color: #8b949e; margin-left: 1.5rem; margin-bottom: 1rem;">
+    <li><strong>Volume</strong>: Minimum 50% of median volume (ensures reasonable liquidity)</li>
+    <li><strong>Price</strong>: Between $10 and maximum observed price + 10% (avoids penny stocks)</li>
+    <li><strong>Volatility</strong>: Minimum 50% of median volatility (requires sufficient price movement)</li>
+    <li><strong>Bar count</strong>: Minimum 100 bars (ensures adequate historical data)</li>
+  </ul>
+  <p style="color: #8b949e; margin-bottom: 0.5rem;">
+    Current market statistics across the 45-symbol watchlist:
+  </p>
+  <ul style="color: #8b949e; margin-left: 1.5rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.875rem;">
+    <li>Volume range: 922 - 50,215 (median: 5,503)</li>
+    <li>Price range: $13.79 - $1,414.42 (median: $210.50)</li>
+    <li>Volatility range: 0.012% - 1.003% (median: 0.187%)</li>
+  </ul>
+  <p style="color: #8b949e; margin-bottom: 1rem;">
+    This approach filters out low-liquidity stocks (COST, GS), low-volatility instruments (IEF, TLT, SPY), and maintains 30/45 candidates (67%) for backtesting.
+  </p>
 
   <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #8b949e;">Data Flow</h3>
   <p style="color: #8b949e; margin-bottom: 0.5rem;">
@@ -106,7 +128,7 @@
     <li>✓ <strong>account</strong> - Worker providing /api/dashboard and /api/history</li>
     <li>✓ <strong>website</strong> - Svelte 5 SPA with real-time dashboard</li>
     <li>✓ <strong>fetch</strong> - Go module fetching 1000 bars per symbol</li>
-    <li>⚙ <strong>filter</strong> - C++ module (basic implementation, needs full JSON parsing)</li>
+    <li>✓ <strong>filter</strong> - Go module with data-driven criteria and market statistics</li>
     <li>⚙ <strong>backtest</strong> - C++ module (skeleton, needs strategy integration)</li>
     <li>○ <strong>evaluate</strong> - Signal generation logic needed</li>
     <li>○ <strong>execute</strong> - Order execution not yet implemented</li>
