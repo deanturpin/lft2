@@ -231,14 +231,11 @@ int main() {
 		auto should_exit = false;
 		auto exit_reason = std::string{};
 
-		// Check liquidation time using bar timestamp
-		auto should_liquidate = market::is_liquidation_time(bars.back().timestamp);
-
-		// Force exit at liquidation time
-		if (should_liquidate) {
+		// Force exit during risk-off period (last 30 min of trading day)
+		if (market::risk_off(bars.back().timestamp)) {
 			should_exit = true;
-			exit_reason = "liquidation_time";
-			std::println("⚠️  Liquidation time detected at {}", std::string{bars.back().timestamp});
+			exit_reason = "risk_off_liquidation";
+			std::println("⚠️  Risk-off period - liquidating at {}", std::string{bars.back().timestamp});
 		}
 		// Check normal exit conditions using our exit logic
 		else {

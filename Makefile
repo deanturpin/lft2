@@ -31,10 +31,10 @@ pipeline: fetch-go filter-go backtest-cpp
 # Backtest target: full pipeline (fetch → filter → backtest)
 backtest: fetch-go filter-go backtest-cpp
 
-# Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
+# Fetch 1000 bars per symbol using Go (backtest mode)
 fetch-go:
-	@echo "→ Fetching bar data (1000 bars per symbol - Alpaca limit)..."
-	cd cmd/fetch && $(MAKE) run
+	@echo "→ Fetching bar data for backtest (1000 bars per symbol)..."
+	cd cmd/fetch && $(MAKE) run-backtest
 
 # Filter candidates using Go
 filter-go:

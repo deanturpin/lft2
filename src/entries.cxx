@@ -323,7 +323,7 @@ int main() {
 		std::println("   Current price: ${:.2f}", latest_price);
 
 		// Check if we're in risk-on period (1 hour after open, 30 min before close)
-		if (!market::is_risk_on(bars.back().timestamp)) {
+		if (!market::risk_on(bars.back().timestamp)) {
 			std::println("   ⏭️  Risk-off period (too close to open/close)");
 			continue;
 		}

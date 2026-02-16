@@ -126,7 +126,7 @@ std::vector<bar> load_bars(const std::filesystem::path& file_path) {
 	return bars;
 }
 
-// NOTE: Removed is_market_close - now using market::is_liquidation_time() from market.h
+// NOTE: Removed is_market_close - now using market::liquidation_time() from market.h
 
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
@@ -147,7 +147,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 	// Walk through bars simulating live trading
 	for (auto i = 0uz; i < bars.size(); ++i) {
 		auto history = std::span{bars.data(), i + 1};
-		auto should_liquidate = market::is_liquidation_time(bars[i].timestamp);
+		auto should_liquidate = market::liquidation_time(bars[i].timestamp);
 
 		// Check for exit when in position (including forced liquidation)
 		if (position && (is_exit(*position, bars[i]) || should_liquidate)) {
@@ -166,7 +166,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 			position.reset();
 		}
 		// Check for entry signal when not in position (only during risk-on period)
-		else if (!position && i >= 20 && market::is_risk_on(bars[i].timestamp) && entry_func(history)) {
+		else if (!position && i >= 20 && market::risk_on(bars[i].timestamp) && entry_func(history)) {
 			auto entry_price = bars[i].close;
 
 			// Set position parameters (10% take profit, 5% stop loss)

@@ -1,9 +1,16 @@
-.PHONY: build run clean test
+.PHONY: build run run-live run-backtest clean test
 
 build:
 	go build -o fetch .
 
-run: build
+# Live trading mode: fetch latest 25 bars for strategy candidates
+run: run-live
+
+run-live: build
+	./fetch -live -strategies ../../docs/strategies.json -output ../../docs/bars
+
+# Backtest mode: fetch 1000 bars for watchlist symbols
+run-backtest: build
 	./fetch -watchlist ../../watchlist.json -output ../../docs/bars
 
 test:

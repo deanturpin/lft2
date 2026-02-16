@@ -12,17 +12,29 @@ import (
 )
 
 type Config struct {
-	APIKey       string
-	APISecret    string
-	DataURL      string
+	APIKey        string
+	APISecret     string
+	DataURL       string
 	WatchlistFile string
-	OutputDir    string
+	StrategyFile  string
+	OutputDir     string
 	BarsPerSymbol int
-	TimeframeMin int
+	TimeframeMin  int
+	LiveMode      bool
 }
 
 type Watchlist struct {
 	Symbols []string `json:"symbols"`
+}
+
+type StrategyRecommendation struct {
+	Symbol   string  `json:"symbol"`
+	Strategy string  `json:"strategy"`
+	WinRate  float64 `json:"win_rate"`
+}
+
+type StrategyFile struct {
+	Recommendations []StrategyRecommendation `json:"recommendations"`
 }
 
 type AlpacaBar struct {
@@ -56,9 +68,11 @@ type FetchResult struct {
 func loadConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.WatchlistFile, "watchlist", "watchlist.json", "Path to watchlist JSON file")
+	flag.StringVar(&cfg.StrategyFile, "strategies", "docs/strategies.json", "Path to strategies JSON file")
 	flag.StringVar(&cfg.OutputDir, "output", "docs/bars", "Output directory for bar data")
 	flag.IntVar(&cfg.BarsPerSymbol, "bars", 1000, "Number of bars to fetch per symbol")
 	flag.IntVar(&cfg.TimeframeMin, "timeframe", 5, "Timeframe in minutes")
+	flag.BoolVar(&cfg.LiveMode, "live", false, "Live trading mode (fetch latest bars for strategy candidates)")
 	flag.Parse()
 
 	cfg.APIKey = os.Getenv("ALPACA_API_KEY")
@@ -71,6 +85,11 @@ func loadConfig() Config {
 
 	if cfg.APIKey == "" || cfg.APISecret == "" {
 		log.Fatal("ALPACA_API_KEY and ALPACA_API_SECRET environment variables required")
+	}
+
+	// In live mode, fetch fewer bars and use strategies file
+	if cfg.LiveMode {
+		cfg.BarsPerSymbol = 25  // Latest 25 bars for live trading
 	}
 
 	return cfg
@@ -88,6 +107,26 @@ func loadWatchlist(path string) (*Watchlist, error) {
 	}
 
 	return &watchlist, nil
+}
+
+func loadStrategies(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading strategies: %w", err)
+	}
+
+	var stratFile StrategyFile
+	if err := json.Unmarshal(data, &stratFile); err != nil {
+		return nil, fmt.Errorf("parsing strategies: %w", err)
+	}
+
+	// Extract unique symbols
+	symbols := make([]string, 0, len(stratFile.Recommendations))
+	for _, rec := range stratFile.Recommendations {
+		symbols = append(symbols, rec.Symbol)
+	}
+
+	return symbols, nil
 }
 
 func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
@@ -179,14 +218,26 @@ func processSymbol(cfg Config, symbol string, resultChan chan<- FetchResult, wg 
 func main() {
 	cfg := loadConfig()
 
-	log.Printf("Loading watchlist from %s", cfg.WatchlistFile)
-	watchlist, err := loadWatchlist(cfg.WatchlistFile)
-	if err != nil {
-		log.Fatalf("Failed to load watchlist: %v", err)
+	var symbols []string
+	var err error
+
+	if cfg.LiveMode {
+		log.Printf("Live mode: Loading candidates from %s", cfg.StrategyFile)
+		symbols, err = loadStrategies(cfg.StrategyFile)
+		if err != nil {
+			log.Fatalf("Failed to load strategies: %v", err)
+		}
+	} else {
+		log.Printf("Backtest mode: Loading watchlist from %s", cfg.WatchlistFile)
+		watchlist, err := loadWatchlist(cfg.WatchlistFile)
+		if err != nil {
+			log.Fatalf("Failed to load watchlist: %v", err)
+		}
+		symbols = watchlist.Symbols
 	}
 
-	if len(watchlist.Symbols) == 0 {
-		log.Fatal("Watchlist is empty")
+	if len(symbols) == 0 {
+		log.Fatal("No symbols to fetch")
 	}
 
 	log.Printf("Creating output directory: %s", cfg.OutputDir)
@@ -194,15 +245,19 @@ func main() {
 		log.Fatalf("Failed to create output directory: %v", err)
 	}
 
-	log.Printf("Fetching %d bars for %d symbols (timeframe: %dMin)",
-		cfg.BarsPerSymbol, len(watchlist.Symbols), cfg.TimeframeMin)
+	mode := "backtest"
+	if cfg.LiveMode {
+		mode = "live"
+	}
+	log.Printf("Mode: %s | Fetching %d bars for %d symbols (timeframe: %dMin)",
+		mode, cfg.BarsPerSymbol, len(symbols), cfg.TimeframeMin)
 	log.Println()
 
 	var wg sync.WaitGroup
-	resultChan := make(chan FetchResult, len(watchlist.Symbols))
+	resultChan := make(chan FetchResult, len(symbols))
 
 	// Process symbols concurrently
-	for _, symbol := range watchlist.Symbols {
+	for _, symbol := range symbols {
 		wg.Add(1)
 		go processSymbol(cfg, symbol, resultChan, &wg)
 	}
