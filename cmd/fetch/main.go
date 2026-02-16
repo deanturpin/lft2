@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -159,41 +158,6 @@ func saveJSON(data *SymbolData, outputDir string) error {
 	return nil
 }
 
-func saveCSV(data *SymbolData, outputDir string) error {
-	filename := filepath.Join(outputDir, fmt.Sprintf("%s.csv", data.Symbol))
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("creating file: %w", err)
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Write header
-	if err := writer.Write([]string{"timestamp", "open", "high", "low", "close", "volume"}); err != nil {
-		return fmt.Errorf("writing header: %w", err)
-	}
-
-	// Write bars
-	for _, bar := range data.Bars {
-		record := []string{
-			bar.Timestamp,
-			fmt.Sprintf("%.2f", bar.Open),
-			fmt.Sprintf("%.2f", bar.High),
-			fmt.Sprintf("%.2f", bar.Low),
-			fmt.Sprintf("%.2f", bar.Close),
-			fmt.Sprintf("%d", bar.Volume),
-		}
-		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("writing bar: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func processSymbol(cfg Config, symbol string, resultChan chan<- FetchResult, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -206,12 +170,6 @@ func processSymbol(cfg Config, symbol string, resultChan chan<- FetchResult, wg 
 	// Save JSON
 	if err := saveJSON(data, cfg.OutputDir); err != nil {
 		resultChan <- FetchResult{Symbol: symbol, Error: fmt.Errorf("saving JSON: %w", err)}
-		return
-	}
-
-	// Save CSV
-	if err := saveCSV(data, cfg.OutputDir); err != nil {
-		resultChan <- FetchResult{Symbol: symbol, Error: fmt.Errorf("saving CSV: %w", err)}
 		return
 	}
 
