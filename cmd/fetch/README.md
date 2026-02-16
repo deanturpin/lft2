@@ -19,10 +19,10 @@ export ALPACA_API_KEY="your_key"
 export ALPACA_API_SECRET="your_secret"
 
 # Run with defaults (1000 bars, 5min timeframe)
-go run . -watchlist ../watchlist.json -output ../docs/bars
+go run . -watchlist ../../watchlist.json -output ../../docs/bars
 
 # Customise parameters
-go run . -watchlist ../watchlist.json -output ../docs/bars -bars 2000 -timeframe 15
+go run . -watchlist ../../watchlist.json -output ../../docs/bars -bars 2000 -timeframe 15
 ```
 
 ## Command-line Flags
