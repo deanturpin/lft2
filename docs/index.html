@@ -129,7 +129,7 @@
             timeZoneName: 'short'
           });
           document.getElementById('last-updated').textContent =
-            `Last updated: ${formatted} | Commit: ${metadata.git_commit}`;
+            `Last updated: ${formatted}`;
         }
       } catch (err) {
         document.getElementById('last-updated').textContent = 'Pipeline not yet run';
