@@ -1,6 +1,6 @@
 .PHONY: build run clean
 
-CXX := g++-15
+CXX := g++
 CXXFLAGS := -std=c++26 -Wall -Wextra -O3
 
 build: backtest
