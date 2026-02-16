@@ -14,8 +14,8 @@ all: run
 pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 
-# Backtest target: analysis only (skip fetch to avoid API limits)
-backtest: filter-go backtest-cpp
+# Backtest target: full pipeline (fetch → filter → backtest)
+backtest: fetch-go filter-go backtest-cpp
 
 # Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
 fetch-go:
