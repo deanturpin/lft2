@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <print>
 #include <sstream>
 #include <string>
@@ -24,6 +25,10 @@ struct StrategyResult {
 	double avg_profit = 0.0;
 	int trade_count = 0;
 	double total_return = 0.0;
+	int min_duration_bars = 0;
+	int max_duration_bars = 0;
+	std::string first_timestamp;
+	std::string last_timestamp;
 };
 
 struct Trade {
@@ -31,6 +36,7 @@ struct Trade {
 	double exit_price;
 	double profit_pct;
 	bool win;
+	int duration_bars;
 };
 
 // Simple runtime JSON bar parser (not constexpr like json.h)
@@ -125,8 +131,15 @@ auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::str
 	auto result = StrategyResult{};
 	result.strategy_name = std::string{strategy_name};
 
+	// Capture data range
+	if (!bars.empty()) {
+		result.first_timestamp = std::string{bars.front().timestamp};
+		result.last_timestamp = std::string{bars.back().timestamp};
+	}
+
 	auto trades = std::vector<Trade>{};
 	auto position = std::optional<::position>{};
+	auto entry_bar_index = 0uz;
 
 	// Walk through bars simulating live trading
 	for (auto i = 0uz; i < bars.size(); ++i) {
@@ -143,17 +156,20 @@ auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::str
 				.stop_loss = entry_price * 0.95,
 				.trailing_stop = entry_price * 0.95
 			};
+			entry_bar_index = i;
 		}
 		// Check for exit when in position
 		else if (position && is_exit(*position, bars[i])) {
 			auto exit_price = bars[i].close;
 			auto profit_pct = (exit_price - position->entry_price) / position->entry_price;
+			auto duration = static_cast<int>(i - entry_bar_index);
 
 			trades.push_back(Trade{
 				.entry_price = position->entry_price,
 				.exit_price = exit_price,
 				.profit_pct = profit_pct,
-				.win = profit_pct > 0.0
+				.win = profit_pct > 0.0,
+				.duration_bars = duration
 			});
 
 			position.reset();
@@ -167,17 +183,23 @@ auto backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::str
 
 	auto wins = 0uz;
 	auto total_profit = 0.0;
+	auto min_duration = std::numeric_limits<int>::max();
+	auto max_duration = 0;
 
 	for (const auto& trade : trades) {
 		if (trade.win)
 			wins++;
 		total_profit += trade.profit_pct;
+		min_duration = std::min(min_duration, trade.duration_bars);
+		max_duration = std::max(max_duration, trade.duration_bars);
 	}
 
 	result.trade_count = static_cast<int>(trades.size());
 	result.win_rate = static_cast<double>(wins) / trades.size();
 	result.avg_profit = total_profit / trades.size();
 	result.total_return = total_profit;
+	result.min_duration_bars = min_duration;
+	result.max_duration_bars = max_duration;
 
 	return result;
 }
@@ -331,7 +353,11 @@ auto main() -> int {
 		ofs << std::format("      \"strategy\": \"{}\",\n", rec.strategy_name);
 		ofs << std::format("      \"win_rate\": {:.3f},\n", rec.win_rate);
 		ofs << std::format("      \"avg_profit\": {:.4f},\n", rec.avg_profit);
-		ofs << std::format("      \"trade_count\": {}\n", rec.trade_count);
+		ofs << std::format("      \"trade_count\": {},\n", rec.trade_count);
+		ofs << std::format("      \"min_duration_bars\": {},\n", rec.min_duration_bars);
+		ofs << std::format("      \"max_duration_bars\": {},\n", rec.max_duration_bars);
+		ofs << std::format("      \"first_timestamp\": \"{}\",\n", rec.first_timestamp);
+		ofs << std::format("      \"last_timestamp\": \"{}\"\n", rec.last_timestamp);
 		ofs << "    }";
 		if (i < all_results.size() - 1)
 			ofs << ",";
