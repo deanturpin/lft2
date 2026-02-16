@@ -10,12 +10,12 @@ EXECUTE := $(BUILD_DIR)/execute
 # Default: CMake build for legacy C++ code
 all: run
 
-# New analysis pipeline: fetch (Go) → filter (C++) → backtest (C++) → docs/
+# New analysis pipeline: fetch (Go) → filter (Go) → backtest (C++) → docs/
 pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 
-# Backtest target: build C++ and run pipeline
-backtest: fetch-go filter-go backtest-cpp
+# Backtest target: analysis only (skip fetch to avoid API limits)
+backtest: filter-go backtest-cpp
 
 # Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
 fetch-go:
