@@ -5,9 +5,9 @@ build/
 .DS_Store
 .env
 
-# Go
+# Go binaries
+fetch/fetch
 cmd/*/account
-cmd/*/fetch
 cmd/*/execute
 cmd/*/filter
 cmd/*/backtest
