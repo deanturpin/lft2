@@ -14,16 +14,8 @@ all: run
 pipeline: fetch-go filter-cpp backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 
-# Convenience target: build C++ modules then run fetch → filter → backtest
-backtest:
-	@echo "→ Building C++ modules..."
-	cd src/filter && $(MAKE) build
-	cd src/backtest && $(MAKE) build
-	@echo "→ Running backtest pipeline..."
-	$(MAKE) fetch-go
-	$(MAKE) filter-cpp
-	$(MAKE) backtest-cpp
-	@echo "✓ Backtest complete! Results in docs/"
+# Backtest target: build C++ and run pipeline
+backtest: fetch-go filter-cpp backtest-cpp
 
 # Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
 fetch-go:
