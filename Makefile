@@ -9,10 +9,10 @@ ENTRIES := $(BUILD_DIR)/entries
 
 .PHONY: all build run clean profile cmake-build fetch-go filter-go backtest-cpp backtest evaluate account web-dev web-build pipeline help
 
-# Default: CMake build for legacy C++ code
+# Default: live trading loop (account → exits → fetch → entries → execute)
 all: run
 
-# New analysis pipeline: fetch (Go) → filter (Go) → backtest (C++) → docs/
+# Analysis pipeline: fetch (Go) → filter (Go) → backtest (C++) → docs/
 pipeline: fetch-go filter-go backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
@@ -51,8 +51,26 @@ build:
 	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=g++-15
 	cmake --build $(BUILD_DIR) -j
 
+# Live trading loop: account → exits → fetch → entries → execute
 run: build
-	./$(BINARY)
+	@echo "=== Low Frequency Trader v2 - Live Trading Loop ==="
+	@echo ""
+	@echo "→ Step 1: Account (fetch account info and positions)"
+	@cd cmd/account && $(MAKE) run
+	@echo ""
+	@echo "→ Step 2: Exits (check positions for exit signals)"
+	@./$(EXITS)
+	@echo ""
+	@echo "→ Step 3: Fetch (get latest bar data for candidates)"
+	@cd cmd/fetch && $(MAKE) run
+	@echo ""
+	@echo "→ Step 4: Entries (evaluate entry signals)"
+	@./$(ENTRIES)
+	@echo ""
+	@echo "→ Step 5: Execute (process FIX orders)"
+	@cd cmd/execute && $(MAKE) run
+	@echo ""
+	@echo "✓ Live trading loop complete!"
 
 profile: build
 	./$(PROFILE)

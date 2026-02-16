@@ -155,14 +155,85 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	fmt.Println("Low Frequency Trader v2 - Account Module\n")
+
+	// Fetch account info
+	account, err := fetchAccount()
+	if err != nil {
+		log.Fatalf("Error fetching account: %v", err)
 	}
 
-	http.HandleFunc("/api/dashboard", handleDashboard)
+	fmt.Printf("Account Status: %s\n", account.Status)
+	fmt.Printf("  Cash:            $%s\n", account.Cash)
+	fmt.Printf("  Buying Power:    $%s\n", account.BuyingPower)
+	fmt.Printf("  Portfolio Value: $%s\n", account.PortfolioValue)
+	fmt.Printf("  Equity:          $%s\n", account.Equity)
 
-	log.Printf("Account service starting on port %s", port)
-	log.Printf("Using Alpaca base URL: %s", baseURL)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Write account.json for entries module
+	accountFile, err := os.Create("docs/account.json")
+	if err != nil {
+		log.Fatalf("Error creating account.json: %v", err)
+	}
+	defer accountFile.Close()
+
+	// Simplified account info for entries module
+	accountData := map[string]interface{}{
+		"cash":            account.Cash,
+		"buying_power":    account.BuyingPower,
+		"portfolio_value": account.PortfolioValue,
+		"equity":          account.Equity,
+	}
+
+	encoder := json.NewEncoder(accountFile)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(accountData); err != nil {
+		log.Fatalf("Error writing account.json: %v", err)
+	}
+
+	fmt.Println("\n✓ Wrote docs/account.json")
+
+	// Fetch positions
+	positions, err := fetchPositions()
+	if err != nil {
+		log.Fatalf("Error fetching positions: %v", err)
+	}
+
+	fmt.Printf("\nCurrently holding %d position(s):\n", len(positions))
+	for _, pos := range positions {
+		fmt.Printf("  %s: %s shares @ $%s (P/L: $%s / %s%%)\n",
+			pos.Symbol, pos.Qty, pos.AvgEntryPrice, pos.UnrealizedPL, pos.UnrealizedPLPC)
+	}
+
+	// Write positions.json for exits module
+	positionsFile, err := os.Create("docs/positions.json")
+	if err != nil {
+		log.Fatalf("Error creating positions.json: %v", err)
+	}
+	defer positionsFile.Close()
+
+	// Simplified position data for exits module
+	type SimplePosition struct {
+		Symbol        string `json:"symbol"`
+		Qty           string `json:"qty"`
+		AvgEntryPrice string `json:"avg_entry_price"`
+		Side          string `json:"side"`
+	}
+
+	simplePositions := make([]SimplePosition, len(positions))
+	for i, pos := range positions {
+		simplePositions[i] = SimplePosition{
+			Symbol:        pos.Symbol,
+			Qty:           pos.Qty,
+			AvgEntryPrice: pos.AvgEntryPrice,
+			Side:          pos.Side,
+		}
+	}
+
+	encoder = json.NewEncoder(positionsFile)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(simplePositions); err != nil {
+		log.Fatalf("Error writing positions.json: %v", err)
+	}
+
+	fmt.Println("\n✓ Wrote docs/positions.json")
 }
