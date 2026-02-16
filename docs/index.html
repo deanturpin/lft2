@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="refresh" content="3600">
   <title>LFT2 - Analysis & Data</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
   <style>
     * {
       margin: 0;
@@ -97,6 +98,7 @@
   <p class="subtitle" id="last-updated" style="font-size: 0.875rem; margin-top: 0.5rem;">Loading...</p>
 
   <a href="https://lft.turpin.dev" class="dashboard-link">View Live Dashboard →</a>
+  <a href="https://github.com/deanturpin/lft2" class="dashboard-link" style="margin-left: 1rem;">View on GitHub →</a>
 
   <h2>Analysis Results</h2>
   <div class="card">
@@ -107,9 +109,12 @@
 
   <h2>Historical Bar Data</h2>
   <div class="card">
-    <ul class="file-list" id="bar-files">
-      <li class="loading">Loading bar data...</li>
-    </ul>
+    <p style="color: #8b949e; margin-bottom: 0.5rem;">
+      Individual stock bar data is available in the <a href="bars/" style="color: #58a6ff; text-decoration: none;">bars/</a> directory.
+    </p>
+    <p style="color: #8b949e; font-size: 0.875rem;">
+      Files are named by symbol (e.g., AAPL.json, TSLA.json) and contain up to 1000 bars of historical price data.
+    </p>
   </div>
 
   <script>
@@ -141,9 +146,7 @@
         { name: 'candidates.json', description: 'Filtered candidate stocks' },
         { name: 'strategies.json', description: 'Backtested strategy recommendations' },
         { name: 'pipeline-metadata.json', description: 'Pipeline execution metadata' },
-        { name: 'tech-stack.json', description: 'Build environment and tool versions' },
-        { name: 'stats.json', description: 'Performance statistics' },
-        { name: 'top_stocks.json', description: 'Top performing stocks' }
+        { name: 'tech-stack.json', description: 'Build environment and tool versions' }
       ];
 
       // Load analysis files
@@ -170,41 +173,6 @@
 
       if (analysisContainer.children.length === 0) {
         analysisContainer.innerHTML = '<li class="loading">No analysis files available yet</li>';
-      }
-
-      // Load bar data files from bars/ directory
-      const barContainer = document.getElementById('bar-files');
-      try {
-        const response = await fetch('bars/');
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        const links = Array.from(doc.querySelectorAll('a'))
-          .map(a => a.getAttribute('href'))
-          .filter(href => href && (href.endsWith('.json') || href.endsWith('.csv')))
-          .sort();
-
-        if (links.length > 0) {
-          barContainer.innerHTML = '';
-          links.forEach(href => {
-            const filename = href.split('/').pop();
-            const symbol = filename.replace(/\.(json|csv)$/, '');
-            const type = filename.endsWith('.json') ? 'JSON' : 'CSV';
-
-            const li = document.createElement('li');
-            li.innerHTML = `
-              <a href="bars/${filename}" class="file-link">
-                <span>${symbol}</span>
-                <span class="file-type">${type}</span>
-              </a>
-            `;
-            barContainer.appendChild(li);
-          });
-        } else {
-          barContainer.innerHTML = '<li class="loading">No bar data available yet</li>';
-        }
-      } catch (err) {
-        barContainer.innerHTML = '<li class="loading">No bar data available yet</li>';
       }
     }
 
