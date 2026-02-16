@@ -4,14 +4,14 @@ build:
 	go build -o fetch .
 
 run: build
-	./fetch -watchlist ../watchlist.json -output ../public/bars
+	./fetch -watchlist ../watchlist.json -output ../docs/bars
 
 test:
 	go test -v ./...
 
 clean:
 	rm -f fetch
-	rm -rf ../public/bars/*.json ../public/bars/*.csv
+	rm -rf ../docs/bars/*.json ../docs/bars/*.csv
 
 fmt:
 	go fmt ./...

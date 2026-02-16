@@ -54,9 +54,9 @@ The trading system is decomposed into focused modules:
 |------|-----------|----------|-----------|---------|----------|
 |**test**|Static unit testing of all trading logic|Source code|Compiler errors/success|On every build|C++26, constexpr, static_assert|
 |**profile**|Performance analysis of core trading logic|`prices/*.h` (precompiled historical data)|Performance metrics, backtest results, `stats.json`, `top_stocks.json`|On demand (development)|C++26, CMake, gprof, JSON|
-|**filter**|Identify candidate stocks with suitable price action|Live snapshots for all assets (from Alpaca)|`candidates.json` (filtered stock symbols)|Continuous (every 5min)|Go, Alpaca API, JSON|
-|**backtest**|Daily strategy evaluation on live data|`candidates.json`, live historical bars|`strategies.json` (profitable strategy/symbol pairs)|Daily (pre-market)|Go, Alpaca API, JSON|
 |**fetch**|Retrieve latest market data|Alpaca API|`snapshots.json` (latest bars for selected symbols)|Every 5min (market hours)|Go, Alpaca API, JSON|
+|**filter**|Identify candidate stocks with suitable price action|Live snapshots for all assets (from Alpaca)|`candidates.json` (filtered stock symbols)|Continuous (every 5min)|Go, JSON|
+|**backtest**|Daily strategy evaluation on live data|`candidates.json`, live historical bars|`strategies.json` (profitable strategy/symbol pairs)|Daily (pre-market)|C++, JSON|
 |**evaluate**|Generate trading signals from market data|`snapshots.json`, `strategies.json`, `positions.json`|`signals.json` (entry/exit signals)|Every 5min (market hours)|C++26, JSON|
 |**execute**|Place orders based on signals|`signals.json`, Alpaca account state|`positions.json` (updated positions), order confirmations|Every 5min (market hours)|Go, Alpaca API, JSON|
 |**account**|Account monitoring and data aggregation (Cloudflare Worker)|Alpaca API|Real-time dashboard data via `/api/dashboard` and `/api/history`|Every 60s (frontend poll)|JavaScript, Cloudflare Workers|

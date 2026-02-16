@@ -19,22 +19,23 @@ export ALPACA_API_KEY="your_key"
 export ALPACA_API_SECRET="your_secret"
 
 # Run with defaults (1000 bars, 5min timeframe)
-go run . -watchlist ../watchlist.json -output ../public/bars
+go run . -watchlist ../watchlist.json -output ../docs/bars
 
 # Customise parameters
-go run . -watchlist ../watchlist.json -output ../public/bars -bars 2000 -timeframe 15
+go run . -watchlist ../watchlist.json -output ../docs/bars -bars 2000 -timeframe 15
 ```
 
 ## Command-line Flags
 
 - `-watchlist` - Path to watchlist JSON file (default: `watchlist.json`)
-- `-output` - Output directory for bar data (default: `public/bars`)
+- `-output` - Output directory for bar data (default: `docs/bars`)
 - `-bars` - Number of bars to fetch per symbol (default: 1000)
 - `-timeframe` - Timeframe in minutes (default: 5)
 
 ## Input Format
 
 Watchlist JSON file:
+
 ```json
 {
   "symbols": ["AAPL", "GOOGL", "MSFT"]
@@ -46,6 +47,7 @@ Watchlist JSON file:
 For each symbol, creates two files:
 
 **JSON** (`AAPL.json`):
+
 ```json
 {
   "symbol": "AAPL",
@@ -65,6 +67,7 @@ For each symbol, creates two files:
 ```
 
 **CSV** (`AAPL.csv`):
+
 ```csv
 timestamp,open,high,low,close,volume
 2026-02-15T14:30:00Z,175.10,175.50,175.00,175.23,1234567
@@ -72,9 +75,10 @@ timestamp,open,high,low,close,volume
 
 ## Integration
 
-Output files in `public/bars/` can be:
-- Served by Cloudflare Pages
-- Accessed by the website for additional visualisations
+Output files in `docs/bars/` can be:
+
+- Served by GitHub Pages
+- Accessed from the web for analysis
 - Used by the evaluate module for signal generation
 - Archived for backtesting
 

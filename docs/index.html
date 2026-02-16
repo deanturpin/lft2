@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LFT2 - Analysis & Data</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Monaco', 'Courier New', monospace;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    h1 {
+      color: #58a6ff;
+      margin-bottom: 0.5rem;
+    }
+    h2 {
+      color: #58a6ff;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      color: #8b949e;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .file-list {
+      list-style: none;
+    }
+    .file-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #21262d;
+    }
+    .file-list li:last-child {
+      border-bottom: none;
+    }
+    .file-link {
+      color: #58a6ff;
+      text-decoration: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .file-link:hover {
+      text-decoration: underline;
+    }
+    .file-type {
+      color: #8b949e;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+    }
+    .loading {
+      color: #8b949e;
+      font-style: italic;
+    }
+    .error {
+      color: #f85149;
+      padding: 1rem;
+      background: rgba(248, 81, 73, 0.1);
+      border-radius: 6px;
+    }
+    .dashboard-link {
+      display: inline-block;
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #58a6ff 0%, #1f6feb 100%);
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .dashboard-link:hover {
+      background: linear-gradient(135deg, #6cb6ff 0%, #58a6ff 100%);
+      box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <h1>Low Frequency Trader</h1>
+  <p class="subtitle">Analysis & Historical Data</p>
+
+  <a href="https://lft.turpin.dev" class="dashboard-link">View Live Dashboard →</a>
+
+  <h2>Analysis Results</h2>
+  <div class="card">
+    <ul class="file-list" id="analysis-files">
+      <li class="loading">Loading analysis files...</li>
+    </ul>
+  </div>
+
+  <h2>Historical Bar Data</h2>
+  <div class="card">
+    <ul class="file-list" id="bar-files">
+      <li class="loading">Loading bar data...</li>
+    </ul>
+  </div>
+
+  <script>
+    async function loadFiles() {
+      const analysisFiles = [
+        { name: 'candidates.json', description: 'Filtered candidate stocks' },
+        { name: 'strategies.json', description: 'Backtested strategy recommendations' },
+        { name: 'stats.json', description: 'Performance statistics' },
+        { name: 'top_stocks.json', description: 'Top performing stocks' }
+      ];
+
+      // Load analysis files
+      const analysisContainer = document.getElementById('analysis-files');
+      analysisContainer.innerHTML = '';
+
+      for (const file of analysisFiles) {
+        try {
+          const response = await fetch(file.name);
+          if (response.ok) {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <a href="${file.name}" class="file-link">
+                <span>${file.description}</span>
+                <span class="file-type">JSON</span>
+              </a>
+            `;
+            analysisContainer.appendChild(li);
+          }
+        } catch (err) {
+          // File doesn't exist yet, skip it
+        }
+      }
+
+      if (analysisContainer.children.length === 0) {
+        analysisContainer.innerHTML = '<li class="loading">No analysis files available yet</li>';
+      }
+
+      // Load bar data files from bars/ directory
+      const barContainer = document.getElementById('bar-files');
+      try {
+        const response = await fetch('bars/');
+        const text = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a'))
+          .map(a => a.getAttribute('href'))
+          .filter(href => href && (href.endsWith('.json') || href.endsWith('.csv')))
+          .sort();
+
+        if (links.length > 0) {
+          barContainer.innerHTML = '';
+          links.forEach(href => {
+            const filename = href.split('/').pop();
+            const symbol = filename.replace(/\.(json|csv)$/, '');
+            const type = filename.endsWith('.json') ? 'JSON' : 'CSV';
+
+            const li = document.createElement('li');
+            li.innerHTML = `
+              <a href="bars/${filename}" class="file-link">
+                <span>${symbol}</span>
+                <span class="file-type">${type}</span>
+              </a>
+            `;
+            barContainer.appendChild(li);
+          });
+        } else {
+          barContainer.innerHTML = '<li class="loading">No bar data available yet</li>';
+        }
+      } catch (err) {
+        barContainer.innerHTML = '<li class="loading">No bar data available yet</li>';
+      }
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>
