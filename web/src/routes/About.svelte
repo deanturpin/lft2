@@ -129,7 +129,7 @@
     <li>✓ <strong>website</strong> - Svelte 5 SPA with real-time dashboard</li>
     <li>✓ <strong>fetch</strong> - Go module fetching 1000 bars per symbol</li>
     <li>✓ <strong>filter</strong> - Go module with data-driven criteria and market statistics</li>
-    <li>⚙ <strong>backtest</strong> - C++ module (skeleton, needs strategy integration)</li>
+    <li>✓ <strong>backtest</strong> - C++ module testing all strategies and selecting best per symbol</li>
     <li>○ <strong>evaluate</strong> - Signal generation logic needed</li>
     <li>○ <strong>execute</strong> - Order execution not yet implemented</li>
   </ul>
@@ -137,6 +137,7 @@
   <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #8b949e;">Project Links</h3>
   <p style="color: #8b949e;">
     <a href="https://github.com/deanturpin/lft2" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Source Code (GitHub)</a><br>
-    <a href="https://deanturpin.github.io/lft2/" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Analysis Results (GitHub Pages)</a>
+    <a href="https://deanturpin.github.io/lft2/" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Analysis Results (GitHub Pages)</a><br>
+    <a href="https://deanturpin.github.io/lft2/candidates.json" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Unfiltered Candidates (JSON)</a>
   </p>
 </div>
