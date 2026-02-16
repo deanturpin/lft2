@@ -125,6 +125,20 @@ std::vector<bar> load_bars(const std::filesystem::path& file_path) {
 	return bars;
 }
 
+// Check if current bar is at or near market close (4:00 PM ET = 20:00 UTC)
+// Market close bars have timestamps like "2026-02-11T20:00:00Z" or later
+bool is_market_close(std::string_view timestamp) {
+	if (timestamp.size() < 14)
+		return false;
+
+	// Extract hour from "YYYY-MM-DDTHH:MM:SSZ" format (positions 11-12)
+	auto hour_str = timestamp.substr(11, 2);
+	auto hour = std::stoi(std::string{hour_str});
+
+	// Market close is 20:00 UTC (4:00 PM ET) or later
+	return hour >= 20;
+}
+
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
 StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) {
@@ -144,22 +158,10 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 	// Walk through bars simulating live trading
 	for (auto i = 0uz; i < bars.size(); ++i) {
 		auto history = std::span{bars.data(), i + 1};
+		auto is_eod = is_market_close(bars[i].timestamp);
 
-		// Check for entry signal when not in position
-		if (!position && i >= 20 && entry_func(history)) {
-			auto entry_price = bars[i].close;
-
-			// Set position parameters (10% take profit, 5% stop loss)
-			position = ::position{
-				.entry_price = entry_price,
-				.take_profit = entry_price * 1.10,
-				.stop_loss = entry_price * 0.95,
-				.trailing_stop = entry_price * 0.95
-			};
-			entry_bar_index = i;
-		}
-		// Check for exit when in position
-		else if (position && is_exit(*position, bars[i])) {
+		// Check for exit when in position (including forced EOD close)
+		if (position && (is_exit(*position, bars[i]) || is_eod)) {
 			auto exit_price = bars[i].close;
 			auto profit_pct = (exit_price - position->entry_price) / position->entry_price;
 			auto duration = static_cast<int>(i - entry_bar_index);
@@ -173,6 +175,19 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 			});
 
 			position.reset();
+		}
+		// Check for entry signal when not in position (but not at EOD)
+		else if (!position && i >= 20 && !is_eod && entry_func(history)) {
+			auto entry_price = bars[i].close;
+
+			// Set position parameters (10% take profit, 5% stop loss)
+			position = ::position{
+				.entry_price = entry_price,
+				.take_profit = entry_price * 1.10,
+				.stop_loss = entry_price * 0.95,
+				.trailing_stop = entry_price * 0.95
+			};
+			entry_bar_index = i;
 		}
 	}
 
