@@ -5,7 +5,7 @@ FETCH := $(BUILD_DIR)/fetch
 EVALUATE := $(BUILD_DIR)/evaluate
 EXECUTE := $(BUILD_DIR)/execute
 
-.PHONY: all build run clean profile cmake-build fetch-go filter-cpp backtest-cpp evaluate execute account web-dev web-build pipeline help
+.PHONY: all build run clean profile cmake-build fetch-go filter-cpp backtest-cpp backtest evaluate execute account web-dev web-build pipeline help
 
 # Default: CMake build for legacy C++ code
 all: run
@@ -13,6 +13,14 @@ all: run
 # New analysis pipeline: fetch (Go) → filter (C++) → backtest (C++) → docs/
 pipeline: fetch-go filter-cpp backtest-cpp
 	@echo "✓ Pipeline complete! Generated files in docs/"
+
+# Convenience target: build C++ modules then run pipeline
+backtest:
+	@echo "→ Building C++ modules..."
+	cd src/filter && $(MAKE) build
+	cd src/backtest && $(MAKE) build
+	@echo "→ Running pipeline..."
+	$(MAKE) pipeline
 
 # Fetch 1000 bars per symbol using Go (Alpaca pagination limit)
 fetch-go:
