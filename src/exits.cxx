@@ -3,6 +3,7 @@
 #include "fix.h"
 #include "json.h"
 #include "market.h"
+#include "params.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -106,13 +107,13 @@ int main() {
     }
     // Check normal exit conditions using our exit logic
     else {
-      // Create position with take profit (+10%), stop loss (-5%), trailing stop
+      // Create position using shared params from params.h
+      auto levels = calculate_levels(pos.avg_entry_price, default_params);
       auto mock_position = position{
           .entry_price = pos.avg_entry_price,
-          .take_profit = pos.avg_entry_price * 1.10,
-          .stop_loss = pos.avg_entry_price * 0.95,
-          .trailing_stop =
-              pos.avg_entry_price * 0.95 // Start at stop loss level
+          .take_profit = levels.take_profit,
+          .stop_loss = levels.stop_loss,
+          .trailing_stop = levels.trailing_stop,
       };
 
       // Check exit strategy
@@ -120,9 +121,9 @@ int main() {
         should_exit = true;
 
         // Determine which condition triggered
-        if (profit_pct >= 10.0)
+        if (profit_pct >= default_params.take_profit_pct * 100.0)
           exit_reason = "take_profit";
-        else if (profit_pct <= -5.0)
+        else if (profit_pct <= -default_params.stop_loss_pct * 100.0)
           exit_reason = "stop_loss";
         else
           exit_reason = "trailing_stop";
