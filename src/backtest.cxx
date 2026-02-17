@@ -6,6 +6,7 @@
 #include "exit.h"
 #include "json.h"
 #include "market.h"
+#include "paths.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -153,7 +154,7 @@ int main() {
   std::println("");
 
   // Load candidates from filter output
-  auto candidates_file = std::filesystem::path{"docs/candidates.json"};
+  auto candidates_file = std::filesystem::path{paths::candidates};
   if (!std::filesystem::exists(candidates_file)) {
     std::println("Error: candidates.json not found");
     std::println("Run filter module first");
@@ -259,7 +260,7 @@ int main() {
             });
 
   // Write strategies.json
-  auto output_file = std::filesystem::path{"docs/strategies.json"};
+  auto output_file = std::filesystem::path{paths::strategies};
   auto ofs = std::ofstream{output_file};
 
   if (!ofs) {

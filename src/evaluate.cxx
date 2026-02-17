@@ -7,6 +7,7 @@
 #include "entry.h"
 #include "exit.h"
 #include "json.h"
+#include "paths.h"
 #include <filesystem>
 #include <fstream>
 #include <print>
@@ -27,7 +28,7 @@ struct Signal {
 };
 
 std::vector<Candidate> load_strategies() {
-  auto ifs = std::ifstream{"docs/strategies.json"};
+  auto ifs = std::ifstream{paths::strategies};
   if (!ifs) {
     std::println("Error: strategies.json not found");
     return {};
@@ -108,7 +109,7 @@ int main() {
 
   std::println("\nGenerated {} entry signals", signals.size());
 
-  auto ofs = std::ofstream{"docs/signals.json"};
+  auto ofs = std::ofstream{paths::signals};
   if (!ofs) {
     std::println("Error: Could not write signals.json");
     return 1;
