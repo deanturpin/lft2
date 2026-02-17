@@ -209,20 +209,14 @@ int main() {
     account.cash -= order_value;
   }
 
-  // Write buy.fix file
-  if (!buy_orders.empty()) {
-    auto ofs = std::ofstream{paths::buy_fix};
-    for (const auto &order : buy_orders)
-      ofs << order;
+  // Write buy.fix — heartbeat always first so execute knows the module ran
+  auto ofs = std::ofstream{paths::buy_fix};
+  ofs << fix::heartbeat(std::format("{} buy order(s)", buy_orders.size()));
+  for (const auto &order : buy_orders)
+    ofs << order;
 
-    std::println("\n✓ Generated {} buy order(s) in docs/buy.fix",
-                 buy_orders.size());
-  } else {
-    std::println("\n✓ No entry signals");
-
-    // Create empty file to indicate module ran
-    auto ofs = std::ofstream{paths::buy_fix};
-  }
+  std::println("\n✓ Generated {} buy order(s) in docs/buy.fix",
+               buy_orders.size());
 
   std::println("Remaining cash: ${:.2f}", account.cash);
   return 0;

@@ -42,4 +42,10 @@ std::string new_order_single(std::string_view order_id, std::string_view symbol,
   return build(NEW_ORDER_SINGLE, body, seq_num);
 }
 
+// Heartbeat with a free-text status field (tag 58).
+// Always written as seq_num=0 to distinguish from order messages.
+std::string heartbeat(std::string_view text) {
+  return build(HEARTBEAT, std::format("{}={}|", TEXT, text), 0);
+}
+
 } // namespace fix

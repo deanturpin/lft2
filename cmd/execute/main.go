@@ -75,13 +75,18 @@ func submitFIX(path string) error {
 			continue
 		}
 		fields := parseFIX(line)
+		// Heartbeat (35=0) is a session status message, not an order
+		if fields["35"] == "0" {
+			fmt.Printf("  ✓ heartbeat: %s\n", fields["58"])
+			continue
+		}
 		side := map[string]string{"1": "buy", "2": "sell"}[fields["54"]]
 		fmt.Printf("  %-6s %s qty=%s id=%s\n",
 			side, fields["55"], fields["38"], fields["11"])
 		count++
 	}
 	if count == 0 {
-		fmt.Println("  no orders in file")
+		fmt.Println("  no orders")
 	}
 	return scanner.Err()
 }

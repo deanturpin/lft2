@@ -3,8 +3,8 @@
 #include "fix.h"
 #include "json.h"
 #include "market.h"
-#include "paths.h"
 #include "params.h"
+#include "paths.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -148,20 +148,14 @@ int main() {
     }
   }
 
-  // Write sell.fix file
-  if (!sell_orders.empty()) {
-    auto ofs = std::ofstream{paths::sell_fix};
-    for (const auto &order : sell_orders)
-      ofs << order;
+  // Write sell.fix — heartbeat always first so execute knows the module ran
+  auto ofs = std::ofstream{paths::sell_fix};
+  ofs << fix::heartbeat(std::format("{} sell order(s)", sell_orders.size()));
+  for (const auto &order : sell_orders)
+    ofs << order;
 
-    std::println("\n✓ Generated {} sell order(s) in docs/sell.fix",
-                 sell_orders.size());
-  } else {
-    std::println("\n✓ No exit signals - all positions held");
-
-    // Create empty file to indicate module ran
-    auto ofs = std::ofstream{paths::sell_fix};
-  }
+  std::println("\n✓ Generated {} sell order(s) in docs/sell.fix",
+               sell_orders.size());
 
   return 0;
 }

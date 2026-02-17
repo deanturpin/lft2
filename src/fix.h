@@ -9,6 +9,7 @@
 namespace fix {
 
 // FIX message types
+constexpr auto HEARTBEAT = "0"; // Session alive / pipeline status
 constexpr auto NEW_ORDER_SINGLE = "D";
 constexpr auto ORDER_CANCEL_REQUEST = "F";
 
@@ -48,6 +49,10 @@ constexpr auto TIME_IN_FORCE_FOK = "4"; // Fill or kill
 // Build a complete FIX message from a pre-assembled body string.
 // Adds standard header (BeginString, BodyLength) and trailer (Checksum).
 std::string build(std::string_view, std::string_view, int = 1);
+
+// Heartbeat message — prepended to every .fix file so execute can confirm
+// the C++ binary ran successfully even when there are no orders.
+std::string heartbeat(std::string_view);
 
 // Build a NewOrderSingle (D) FIX message for a market or limit order.
 // price > 0 adds tag 44; text non-empty adds tag 58.
