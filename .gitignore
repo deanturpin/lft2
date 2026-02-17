@@ -17,6 +17,7 @@ cmd/wait-for-bar/wait-for-bar
 # C++ binaries
 src/*/backtest
 src/*/evaluate
+docs/*.fix
 
 # Coverage and profiling output
 *.gcda

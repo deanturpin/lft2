@@ -26,7 +26,7 @@ const auto signals    = path("signals.json");
 const auto buy_fix    = path("buy.fix");
 const auto sell_fix   = path("sell.fix");
 
-// Correctness guaranteed structurally — all paths are built via path()
+// All paths share the same root prefix by construction
 
 // Per-symbol bar data written by the fetch module
 constexpr std::string bars(std::string_view symbol) {
