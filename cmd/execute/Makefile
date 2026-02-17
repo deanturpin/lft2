@@ -1,7 +1,7 @@
 .PHONY: run build clean
 
 run: build
-	./execute
+	cd ../.. && cmd/execute/execute
 
 build:
 	go build -o execute
