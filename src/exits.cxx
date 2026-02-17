@@ -3,6 +3,7 @@
 #include "fix.h"
 #include "json.h"
 #include "market.h"
+#include "paths.h"
 #include "params.h"
 #include <chrono>
 #include <fstream>
@@ -21,7 +22,7 @@ struct Position {
 
 // Parse positions.json from account module
 std::vector<Position> load_positions() {
-  auto ifs = std::ifstream{"docs/positions.json"};
+  auto ifs = std::ifstream{paths::positions};
   if (!ifs)
     return {};
 
@@ -149,7 +150,7 @@ int main() {
 
   // Write sell.fix file
   if (!sell_orders.empty()) {
-    auto ofs = std::ofstream{"docs/sell.fix"};
+    auto ofs = std::ofstream{paths::sell_fix};
     for (const auto &order : sell_orders)
       ofs << order;
 
@@ -159,7 +160,7 @@ int main() {
     std::println("\n✓ No exit signals - all positions held");
 
     // Create empty file to indicate module ran
-    auto ofs = std::ofstream{"docs/sell.fix"};
+    auto ofs = std::ofstream{paths::sell_fix};
   }
 
   return 0;
