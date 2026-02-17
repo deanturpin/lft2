@@ -137,17 +137,9 @@ int main() {
           "EXIT_{}_{}_{}", pos.symbol, seq_num,
           std::chrono::system_clock::now().time_since_epoch().count());
 
-      auto msg = fix::message{fix::NEW_ORDER_SINGLE}
-                     .add(fix::CL_ORD_ID, order_id)
-                     .add(fix::HANDL_INST, "1")
-                     .add(fix::SYMBOL, pos.symbol)
-                     .add(fix::SIDE, fix::SIDE_SELL)
-                     .add(fix::ORDER_QTY, static_cast<int>(pos.qty))
-                     .add(fix::ORD_TYPE, fix::ORD_TYPE_MARKET)
-                     .add(fix::TIME_IN_FORCE, fix::TIME_IN_FORCE_DAY)
-                     .add(fix::TEXT, exit_reason);
-
-      sell_orders.push_back(msg.build(seq_num));
+      sell_orders.push_back(fix::new_order_single(
+          order_id, pos.symbol, fix::SIDE_SELL, static_cast<int>(pos.qty),
+          seq_num, fix::ORD_TYPE_MARKET, 0.0, exit_reason));
       seq_num++;
     } else {
       std::println("   ⏭️  No exit signal - holding position");
