@@ -5,11 +5,13 @@ build/
 .DS_Store
 .env
 
-# Go binaries (each cmd subdir compiles to its own name)
+# Go binaries — match executables built in each cmd subdir
 cmd/account/account
+cmd/account/docs/
 cmd/execute/execute
 cmd/fetch/fetch
 cmd/filter/filter
+cmd/wait-for-bar/wait
 cmd/wait-for-bar/wait-for-bar
 
 # C++ binaries
