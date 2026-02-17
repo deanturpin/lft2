@@ -1,5 +1,4 @@
 #pragma once
-#include <format>
 #include <string>
 #include <string_view>
 
@@ -18,8 +17,11 @@ constexpr auto buy_fix = "docs/buy.fix";
 constexpr auto sell_fix = "docs/sell.fix";
 
 // Per-symbol bar data written by the fetch module
-inline std::string bars(std::string_view symbol) {
-  return std::format("docs/bars/{}.json", symbol);
+constexpr std::string bars(std::string_view symbol) {
+  return "docs/bars/" + std::string{symbol} + ".json";
 }
+
+static_assert(bars("AAPL") == "docs/bars/AAPL.json");
+static_assert(bars("TSLA") == "docs/bars/TSLA.json");
 
 } // namespace paths

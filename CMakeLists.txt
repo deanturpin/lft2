@@ -19,6 +19,9 @@ add_compile_options(
 add_library(barlib STATIC src/bar.cxx)
 target_include_directories(barlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_library(fixlib STATIC src/fix.cxx)
+target_include_directories(fixlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(lft2 src/main.cxx src/test.cxx)
 add_executable(profile src/profile.cxx)
 add_executable(fetch src/fetch.cxx)
@@ -29,8 +32,8 @@ add_executable(entries src/entries.cxx)
 
 target_link_libraries(backtest PRIVATE barlib)
 target_link_libraries(evaluate PRIVATE barlib)
-target_link_libraries(exits    PRIVATE barlib)
-target_link_libraries(entries  PRIVATE barlib)
+target_link_libraries(exits    PRIVATE barlib fixlib)
+target_link_libraries(entries  PRIVATE barlib fixlib)
 
 target_include_directories(lft2 PRIVATE
     ${CMAKE_SOURCE_DIR}
