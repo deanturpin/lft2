@@ -6,10 +6,8 @@
 #include <chrono>
 #include <format>
 #include <fstream>
-#include <iostream>
 #include <print>
 #include <string>
-#include <thread>
 #include <vector>
 
 // Candidate from strategies.json
@@ -244,34 +242,8 @@ std::vector<bar> load_bars(std::string_view symbol) {
 	return bars;
 }
 
-// Sleep until next whole 5-minute mark
-void sleep_until_next_interval() {
-	auto now = std::chrono::system_clock::now();
-	auto tt = std::chrono::system_clock::to_time_t(now);
-	auto tm = *std::gmtime(&tt);
-
-	// Calculate next 5-minute boundary
-	auto current_min = tm.tm_min;
-	auto current_sec = tm.tm_sec;
-	auto next_interval = ((current_min / 5) + 1) * 5;
-	auto wait_min = next_interval - current_min;
-	auto wait_sec = 60 - current_sec;  // Wait until start of next minute
-
-	if (wait_min > 0) {
-		std::println("⏰ Waiting {}:{:02d} until next 5-minute interval...", wait_min - 1, wait_sec);
-		auto wait_time = std::chrono::minutes(wait_min) - std::chrono::seconds(current_sec);
-		std::this_thread::sleep_until(now + wait_time);
-	}
-}
-
-
 int main() {
 	std::println("Low Frequency Trader v2 - Entry Module\n");
-
-	// NOTE: Risk-on check moved to per-candidate evaluation using bar timestamps
-
-	// Wait until next 5-minute interval for fresh data
-	sleep_until_next_interval();
 
 	// Load candidates
 	auto candidates = load_candidates();
