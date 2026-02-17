@@ -39,10 +39,9 @@ constexpr bool is_valid(bar b) {
     return false;
 
   // Basic ISO 8601 format check: YYYY-MM-DD
-  if (b.timestamp.size() >= 10) {
+  if (b.timestamp.size() >= 10)
     if (b.timestamp[4] != '-' || b.timestamp[7] != '-')
       return false;
-  }
 
   return true;
 }
