@@ -48,11 +48,9 @@ constexpr bool test_multiple_bars() {
   })"};
 
   constexpr auto bars = parse_bars<3>(json);
-  return bars[0].close == 100.0 &&
-         bars[1].close == 101.0 &&
+  return bars[0].close == 100.0 && bars[1].close == 101.0 &&
          bars[2].close == 102.0 &&
-         bars[0].timestamp == "2026-01-01T10:00:00Z" &&
-         bars[2].volume == 3000;
+         bars[0].timestamp == "2026-01-01T10:00:00Z" && bars[2].volume == 3000;
 }
 static_assert(test_multiple_bars());
 } // namespace
@@ -117,8 +115,7 @@ constexpr bool test_size_mismatch() {
   constexpr auto bars = parse_bars<5>(json);
 
   // First bar should be valid, rest should be default-initialized
-  return bars[0].close == 100.0 &&
-         bars[1].close == 0.0 &&
+  return bars[0].close == 100.0 && bars[1].close == 0.0 &&
          bars[0].timestamp == "2026-01-01T10:00:00Z" &&
          bars[1].timestamp.empty();
 }

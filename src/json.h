@@ -315,23 +315,25 @@ static_assert(test_parse_bars());
 
 // Extract a string value for a given key from a JSON object fragment.
 // Returns empty string_view if the key is not found.
-constexpr std::string_view json_string(std::string_view obj, std::string_view key) {
-	auto s = obj;
-	while (!s.empty()) {
-		skip_ws(s);
-		auto k = parse_string(s);
-		if (!expect(s, ':')) return {};
-		if (k == key)
-			return parse_string(s);
-		// Skip the value (string or number) and move to next key
-		skip_ws(s);
-		if (s.starts_with('"'))
-			parse_string(s);
-		else
-			parse_number<double>(s);
-		skip_comma(s);
-	}
-	return {};
+constexpr std::string_view json_string(std::string_view obj,
+                                       std::string_view key) {
+  auto s = obj;
+  while (!s.empty()) {
+    skip_ws(s);
+    auto k = parse_string(s);
+    if (!expect(s, ':'))
+      return {};
+    if (k == key)
+      return parse_string(s);
+    // Skip the value (string or number) and move to next key
+    skip_ws(s);
+    if (s.starts_with('"'))
+      parse_string(s);
+    else
+      parse_number<double>(s);
+    skip_comma(s);
+  }
+  return {};
 }
 
 // Extract a numeric value for a given key from a JSON object fragment.
@@ -340,39 +342,41 @@ constexpr std::string_view json_string(std::string_view obj, std::string_view ke
 // Returns 0 if the key is not found.
 template <typename T = double>
 constexpr T json_number(std::string_view obj, std::string_view key) {
-	auto s = obj;
-	while (!s.empty()) {
-		skip_ws(s);
-		auto k = parse_string(s);
-		if (!expect(s, ':')) return {};
-		if (k == key) {
-			skip_ws(s);
-			// Accept both quoted ("3.5") and bare (3.5) numeric values
-			if (s.starts_with('"')) {
-				auto v = parse_string(s);
-				return parse_number<T>(v);
-			}
-			return parse_number<T>(s);
-		}
-		// Skip the value and move to next key
-		skip_ws(s);
-		if (s.starts_with('"'))
-			parse_string(s);
-		else
-			parse_number<double>(s);
-		skip_comma(s);
-	}
-	return {};
+  auto s = obj;
+  while (!s.empty()) {
+    skip_ws(s);
+    auto k = parse_string(s);
+    if (!expect(s, ':'))
+      return {};
+    if (k == key) {
+      skip_ws(s);
+      // Accept both quoted ("3.5") and bare (3.5) numeric values
+      if (s.starts_with('"')) {
+        auto v = parse_string(s);
+        return parse_number<T>(v);
+      }
+      return parse_number<T>(s);
+    }
+    // Skip the value and move to next key
+    skip_ws(s);
+    if (s.starts_with('"'))
+      parse_string(s);
+    else
+      parse_number<double>(s);
+    skip_comma(s);
+  }
+  return {};
 }
 
 namespace {
 // Alpaca returns numeric fields as quoted strings in positions.json
-constexpr auto test_obj = std::string_view{R"("symbol": "AAPL", "qty": "3", "avg_entry_price": "182.5", "side": "long")"};
-static_assert(json_string(test_obj, "symbol")          == "AAPL");
-static_assert(json_string(test_obj, "side")            == "long");
-static_assert(json_number(test_obj, "qty")             == 3.0);
+constexpr auto test_obj = std::string_view{
+    R"("symbol": "AAPL", "qty": "3", "avg_entry_price": "182.5", "side": "long")"};
+static_assert(json_string(test_obj, "symbol") == "AAPL");
+static_assert(json_string(test_obj, "side") == "long");
+static_assert(json_number(test_obj, "qty") == 3.0);
 static_assert(json_number(test_obj, "avg_entry_price") == 182.5);
-static_assert(json_string(test_obj, "missing")         == "");
+static_assert(json_string(test_obj, "missing") == "");
 // Bare numeric values also work
 constexpr auto test_bare = std::string_view{R"("price": 99.5, "vol": 1000)"};
 static_assert(json_number(test_bare, "price") == 99.5);
@@ -382,52 +386,61 @@ static_assert(json_number(test_bare, "price") == 99.5);
 // Calls fn(std::string_view) once per element.
 // E.g. json_string_array(json, "symbols", fn) on {"symbols":["AAPL","TSLA"]}
 template <typename Fn>
-constexpr void json_string_array(std::string_view json, std::string_view key, Fn fn) {
-	auto s = json;
-	if (!expect(s, '{')) return;
-	while (!s.empty() && !s.starts_with('}')) {
-		skip_ws(s);
-		auto k = parse_string(s);
-		if (!expect(s, ':')) return;
-		if (k == key) {
-			if (!expect(s, '[')) return;
-			while (!s.empty() && !s.starts_with(']')) {
-				skip_ws(s);
-				if (s.empty() || s.starts_with(']')) break;
-				fn(parse_string(s));
-				skip_comma(s);
-			}
-			return;
-		}
-		// Skip value (string, number, or nested array) and advance
-		skip_ws(s);
-		if (s.starts_with('[')) {
-			// Skip nested array by tracking depth
-			auto depth = 1;
-			s.remove_prefix(1);
-			while (!s.empty() && depth > 0) {
-				if (s.starts_with('[')) ++depth;
-				else if (s.starts_with(']')) --depth;
-				s.remove_prefix(1);
-			}
-		} else if (s.starts_with('"'))
-			parse_string(s);
-		else
-			parse_number<double>(s);
-		skip_comma(s);
-	}
+constexpr void json_string_array(std::string_view json, std::string_view key,
+                                 Fn fn) {
+  auto s = json;
+  if (!expect(s, '{'))
+    return;
+  while (!s.empty() && !s.starts_with('}')) {
+    skip_ws(s);
+    auto k = parse_string(s);
+    if (!expect(s, ':'))
+      return;
+    if (k == key) {
+      if (!expect(s, '['))
+        return;
+      while (!s.empty() && !s.starts_with(']')) {
+        skip_ws(s);
+        if (s.empty() || s.starts_with(']'))
+          break;
+        fn(parse_string(s));
+        skip_comma(s);
+      }
+      return;
+    }
+    // Skip value (string, number, or nested array) and advance
+    skip_ws(s);
+    if (s.starts_with('[')) {
+      // Skip nested array by tracking depth
+      auto depth = 1;
+      s.remove_prefix(1);
+      while (!s.empty() && depth > 0) {
+        if (s.starts_with('['))
+          ++depth;
+        else if (s.starts_with(']'))
+          --depth;
+        s.remove_prefix(1);
+      }
+    } else if (s.starts_with('"'))
+      parse_string(s);
+    else
+      parse_number<double>(s);
+    skip_comma(s);
+  }
 }
 
 namespace {
 constexpr bool test_json_string_array() {
-	constexpr auto json = std::string_view{R"({"symbols":["AAPL","TSLA","NVDA"]})"};
-	auto count = 0;
-	auto first = std::string_view{};
-	json_string_array(json, "symbols", [&](std::string_view v) {
-		if (count == 0) first = v;
-		++count;
-	});
-	return count == 3 && first == "AAPL";
+  constexpr auto json =
+      std::string_view{R"({"symbols":["AAPL","TSLA","NVDA"]})"};
+  auto count = 0;
+  auto first = std::string_view{};
+  json_string_array(json, "symbols", [&](std::string_view v) {
+    if (count == 0)
+      first = v;
+    ++count;
+  });
+  return count == 3 && first == "AAPL";
 }
 static_assert(test_json_string_array());
 } // namespace

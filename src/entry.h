@@ -5,7 +5,8 @@
 
 // Volume surge with price dip strategy
 // Detects capitulation patterns: high volume selling followed by reversal
-// Based on backtest analysis showing volume surges during weakness precede gains
+// Based on backtest analysis showing volume surges during weakness precede
+// gains
 constexpr bool volume_surge_dip(std::span<const bar> history) {
   constexpr auto lookback = 20uz;
   if (history.size() < lookback)

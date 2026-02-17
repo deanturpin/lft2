@@ -88,24 +88,24 @@ struct backtest_result {
   double suggested_sl_pct{};
   double max_intraday_gain_pct{}; // Best possible gain from entry signal to EOD
   double max_intraday_loss_pct{}; // Worst drawdown from entry signal to EOD
-  best_entry_context top_entry{};  // Context for best entry point
+  best_entry_context top_entry{}; // Context for best entry point
 
   // Additional useful statistics
-  double avg_intraday_range_pct{};      // Average high-low range
-  double pct_bars_over_1pct{};          // % of bars with >1% movement
-  double avg_volume{};                   // Average volume across all bars
-  std::size_t tradeable_days{};         // Days with >2% movement
-  double max_drawdown_during_win{};     // Biggest pullback during best gain
-  std::size_t avg_bars_to_max_gain{};   // Average time to reach peak
-  double up_bar_ratio{};                 // Ratio of up-bars to total bars
-  std::size_t gap_count{};              // Number of overnight gaps
-  double volume_surge_correlation{};    // Correlation of volume with big moves
+  double avg_intraday_range_pct{};    // Average high-low range
+  double pct_bars_over_1pct{};        // % of bars with >1% movement
+  double avg_volume{};                // Average volume across all bars
+  std::size_t tradeable_days{};       // Days with >2% movement
+  double max_drawdown_during_win{};   // Biggest pullback during best gain
+  std::size_t avg_bars_to_max_gain{}; // Average time to reach peak
+  double up_bar_ratio{};              // Ratio of up-bars to total bars
+  std::size_t gap_count{};            // Number of overnight gaps
+  double volume_surge_correlation{};  // Correlation of volume with big moves
 };
 
 // Run backtest simulation using actual entry/exit logic
 template <std::size_t N>
 backtest_result run_backtest(std::string_view symbol,
-                              std::span<const bar, N> bars) {
+                             std::span<const bar, N> bars) {
   auto result = backtest_result{.symbol = symbol, .bar_count = bars.size()};
 
   if (bars.empty())
@@ -222,7 +222,8 @@ backtest_result run_backtest(std::string_view symbol,
   // Store additional statistics
   if (valid_bars > 0) {
     result.avg_intraday_range_pct = total_range / valid_bars;
-    result.pct_bars_over_1pct = static_cast<double>(bars_over_1pct) / valid_bars * 100.0;
+    result.pct_bars_over_1pct =
+        static_cast<double>(bars_over_1pct) / valid_bars * 100.0;
     result.avg_volume = total_volume / valid_bars;
     result.up_bar_ratio = static_cast<double>(up_bars) / valid_bars * 100.0;
   }
@@ -295,7 +296,8 @@ backtest_result run_backtest(std::string_view symbol,
       // Update trailing stop
       auto current_price = bars[i].close;
       if (current_price > current_position.entry_price) {
-        auto new_trailing = current_price * (1.0 - default_params.trailing_stop_pct);
+        auto new_trailing =
+            current_price * (1.0 - default_params.trailing_stop_pct);
         if (new_trailing > current_position.trailing_stop)
           current_position.trailing_stop = new_trailing;
       }
@@ -328,10 +330,14 @@ backtest_result run_backtest(std::string_view symbol,
   result.trade_count = trades.size();
 
   // Find best and worst trades
-  auto best_trade_it = std::ranges::max_element(
-      trades, [](const auto &a, const auto &b) { return a.gain_pct < b.gain_pct; });
-  auto worst_trade_it = std::ranges::min_element(
-      trades, [](const auto &a, const auto &b) { return a.gain_pct < b.gain_pct; });
+  auto best_trade_it =
+      std::ranges::max_element(trades, [](const auto &a, const auto &b) {
+        return a.gain_pct < b.gain_pct;
+      });
+  auto worst_trade_it =
+      std::ranges::min_element(trades, [](const auto &a, const auto &b) {
+        return a.gain_pct < b.gain_pct;
+      });
 
   result.best_gain_pct = best_trade_it->gain_pct;
   result.best_gain_duration = best_trade_it->duration_bars;
@@ -345,8 +351,8 @@ backtest_result run_backtest(std::string_view symbol,
   result.avg_gain_pct = total_gain / trades.size();
 
   // Win rate
-  auto winning_trades =
-      std::ranges::count_if(trades, [](const auto &t) { return t.gain_pct > 0.0; });
+  auto winning_trades = std::ranges::count_if(
+      trades, [](const auto &t) { return t.gain_pct > 0.0; });
   result.win_rate_pct =
       static_cast<double>(winning_trades) / trades.size() * 100.0;
 
@@ -363,8 +369,8 @@ backtest_result run_backtest(std::string_view symbol,
 
   // Suggested parameters based on actual trades
   result.suggested_tp_pct = result.best_gain_pct * 0.5;
-  result.suggested_sl_pct =
-      std::min(std::abs(result.worst_loss_pct) * 0.5, result.best_gain_pct * 0.25);
+  result.suggested_sl_pct = std::min(std::abs(result.worst_loss_pct) * 0.5,
+                                     result.best_gain_pct * 0.25);
 
   // Calculate maximum possible intraday movements from entry signals
   if (!max_intraday_gains.empty()) {
@@ -463,7 +469,8 @@ int main(int argc, char *argv[]) {
     std::println("[");
     for (auto i = 0uz; i < std::min(top_count, results.size()); ++i) {
       const auto &r = results[i];
-      std::println("  \"{}\"{}",  r.symbol, i < std::min(top_count, results.size()) - 1 ? "," : "");
+      std::println("  \"{}\"{}", r.symbol,
+                   i < std::min(top_count, results.size()) - 1 ? "," : "");
     }
     std::println("]");
   } else if (json_output) {
@@ -483,35 +490,39 @@ int main(int argc, char *argv[]) {
       std::println("    \"profit_factor\": {:.2f},", r.profit_factor);
       std::println("    \"suggested_tp_pct\": {:.2f},", r.suggested_tp_pct);
       std::println("    \"suggested_sl_pct\": {:.2f},", r.suggested_sl_pct);
-      std::println("    \"max_intraday_gain_pct\": {:.2f},", r.max_intraday_gain_pct);
-      std::println("    \"max_intraday_loss_pct\": {:.2f}", r.max_intraday_loss_pct);
+      std::println("    \"max_intraday_gain_pct\": {:.2f},",
+                   r.max_intraday_gain_pct);
+      std::println("    \"max_intraday_loss_pct\": {:.2f}",
+                   r.max_intraday_loss_pct);
       std::println("  }}{}", i < results.size() - 1 ? "," : "");
     }
     std::println("}}");
   } else {
     // Print table header
-    std::println("{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
-                 "{:>10} {:>10} {:>12} {:>12}",
-                 "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
-                 "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%", "SugSL%",
-                 "MaxIntGain%", "MaxIntLoss%");
+    std::println(
+        "{:<8} {:>6} {:>7} {:>10} {:>12} {:>10} {:>12} {:>10} {:>10} {:>12} "
+        "{:>10} {:>10} {:>12} {:>12}",
+        "Symbol", "Bars", "Trades", "BestGain%", "BestDur(5m)", "WorstLoss%",
+        "WorstDur(5m)", "AvgGain%", "WinRate%", "ProfitFact", "SugTP%",
+        "SugSL%", "MaxIntGain%", "MaxIntLoss%");
 
     // Print results
     for (const auto &r : results) {
-      std::println("{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
-                   "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f} {:>12.2f} {:>12.2f}",
-                   r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
-                   r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
-                   r.avg_gain_pct, r.win_rate_pct, r.profit_factor,
-                   r.suggested_tp_pct, r.suggested_sl_pct, r.max_intraday_gain_pct,
-                   r.max_intraday_loss_pct);
+      std::println(
+          "{:<8} {:>6} {:>7} {:>10.2f} {:>12} {:>10.2f} {:>12} {:>10.2f} "
+          "{:>10.1f} {:>12.2f} {:>10.2f} {:>10.2f} {:>12.2f} {:>12.2f}",
+          r.symbol, r.bar_count, r.trade_count, r.best_gain_pct,
+          r.best_gain_duration, r.worst_loss_pct, r.worst_loss_duration,
+          r.avg_gain_pct, r.win_rate_pct, r.profit_factor, r.suggested_tp_pct,
+          r.suggested_sl_pct, r.max_intraday_gain_pct, r.max_intraday_loss_pct);
     }
 
     // Show detailed stats for top 5 stocks
     std::println("\n=== Top 5 Stocks - Detailed Trading Statistics ===\n");
     for (auto i = 0uz; i < std::min(5uz, results.size()); ++i) {
       const auto &r = results[i];
-      std::println("{} - Max Intraday Potential: {:.2f}%", r.symbol, r.max_intraday_gain_pct);
+      std::println("{} - Max Intraday Potential: {:.2f}%", r.symbol,
+                   r.max_intraday_gain_pct);
       std::println("  Volatility:");
       std::println("    Avg intraday range: {:.2f}%", r.avg_intraday_range_pct);
       std::println("    Bars with >1% move: {:.1f}%", r.pct_bars_over_1pct);
@@ -519,14 +530,16 @@ int main(int argc, char *argv[]) {
       std::println("  Movement:");
       std::println("    Up-bar ratio: {:.1f}%", r.up_bar_ratio);
       std::println("    Avg bars to max gain: {}", r.avg_bars_to_max_gain);
-      std::println("    Max drawdown during best win: {:.2f}%", r.max_drawdown_during_win);
+      std::println("    Max drawdown during best win: {:.2f}%",
+                   r.max_drawdown_during_win);
       std::println("  Liquidity:");
       std::println("    Avg volume: {:.0f}", r.avg_volume);
       std::println("    Overnight gaps: {}", r.gap_count);
 
       // Show best entry context
       auto lookback = std::min(5uz, r.top_entry.bar_idx);
-      std::println("  Best Entry ({}% gain at {}):", r.top_entry.gain_pct, r.top_entry.timestamp);
+      std::println("  Best Entry ({}% gain at {}):", r.top_entry.gain_pct,
+                   r.top_entry.timestamp);
       if (lookback > 0) {
         std::print("    Previous {} closes: ", lookback);
         for (auto j = 0uz; j < lookback; ++j)
