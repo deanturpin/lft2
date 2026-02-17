@@ -4,6 +4,7 @@
 #include "json.h"
 #include "market.h"
 #include "paths.h"
+#include "params.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -107,13 +108,13 @@ int main() {
     }
     // Check normal exit conditions using our exit logic
     else {
-      // Create position with take profit (+10%), stop loss (-5%), trailing stop
+      // Create position using shared params from params.h
+      auto levels = calculate_levels(pos.avg_entry_price, default_params);
       auto mock_position = position{
           .entry_price = pos.avg_entry_price,
-          .take_profit = pos.avg_entry_price * 1.10,
-          .stop_loss = pos.avg_entry_price * 0.95,
-          .trailing_stop =
-              pos.avg_entry_price * 0.95 // Start at stop loss level
+          .take_profit = levels.take_profit,
+          .stop_loss = levels.stop_loss,
+          .trailing_stop = levels.trailing_stop,
       };
 
       // Check exit strategy
@@ -121,9 +122,9 @@ int main() {
         should_exit = true;
 
         // Determine which condition triggered
-        if (profit_pct >= 10.0)
+        if (profit_pct >= default_params.take_profit_pct * 100.0)
           exit_reason = "take_profit";
-        else if (profit_pct <= -5.0)
+        else if (profit_pct <= -default_params.stop_loss_pct * 100.0)
           exit_reason = "stop_loss";
         else
           exit_reason = "trailing_stop";
@@ -138,17 +139,9 @@ int main() {
           "EXIT_{}_{}_{}", pos.symbol, seq_num,
           std::chrono::system_clock::now().time_since_epoch().count());
 
-      auto msg = fix::message{fix::NEW_ORDER_SINGLE}
-                     .add(fix::CL_ORD_ID, order_id)
-                     .add(fix::HANDL_INST, "1")
-                     .add(fix::SYMBOL, pos.symbol)
-                     .add(fix::SIDE, fix::SIDE_SELL)
-                     .add(fix::ORDER_QTY, static_cast<int>(pos.qty))
-                     .add(fix::ORD_TYPE, fix::ORD_TYPE_MARKET)
-                     .add(fix::TIME_IN_FORCE, fix::TIME_IN_FORCE_DAY)
-                     .add(fix::TEXT, exit_reason);
-
-      sell_orders.push_back(msg.build(seq_num));
+      sell_orders.push_back(fix::new_order_single(
+          order_id, pos.symbol, fix::SIDE_SELL, static_cast<int>(pos.qty),
+          seq_num, fix::ORD_TYPE_MARKET, 0.0, exit_reason));
       seq_num++;
     } else {
       std::println("   ⏭️  No exit signal - holding position");

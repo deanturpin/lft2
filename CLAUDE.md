@@ -88,11 +88,11 @@ Use `nstd::` for functions not yet constexpr in C++20/23:
 ```
 cmd/           - Go binaries (account, fetch, execute, filter, backtest)
 src/           - C++ source (strategies, backtesting, signal generation)
-web/           - Svelte dashboard
+web/           - Svelte dashboard (builds to docs/ for GitHub Pages)
 docs/          - Built static site (GitHub Pages)
 prices/        - Precompiled historical data headers
-bin/           - Build scripts
-.github/workflows/ - CI/CD pipeline
+bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
+.github/workflows/pages.yml - CI/CD pipeline (build + deploy)
 ```
 
 ## Development Workflow
@@ -123,7 +123,7 @@ bin/           - Build scripts
 
 ## Deployment
 
-GitHub Actions workflow (`.github/workflows/build.yml`):
+GitHub Actions workflow (`.github/workflows/pages.yml`):
 1. Build C++ modules with gcc-15
 2. Run profile to generate stats.json and top_stocks.json
 3. Build Svelte dashboard

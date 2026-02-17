@@ -200,17 +200,9 @@ int main() {
         "ENTRY_{}_{}_{}", candidate.symbol, seq_num,
         std::chrono::system_clock::now().time_since_epoch().count());
 
-    auto msg = fix::message{fix::NEW_ORDER_SINGLE}
-                   .add(fix::CL_ORD_ID, order_id)
-                   .add(fix::HANDL_INST, "1")
-                   .add(fix::SYMBOL, candidate.symbol)
-                   .add(fix::SIDE, fix::SIDE_BUY)
-                   .add(fix::ORDER_QTY, shares)
-                   .add(fix::ORD_TYPE, fix::ORD_TYPE_MARKET)
-                   .add(fix::TIME_IN_FORCE, fix::TIME_IN_FORCE_DAY)
-                   .add(fix::TEXT, candidate.strategy);
-
-    buy_orders.push_back(msg.build(seq_num));
+    buy_orders.push_back(fix::new_order_single(
+        order_id, candidate.symbol, fix::SIDE_BUY, shares, seq_num,
+        fix::ORD_TYPE_MARKET, 0.0, candidate.strategy));
     seq_num++;
 
     // Deduct from available cash
