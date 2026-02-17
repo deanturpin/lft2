@@ -114,12 +114,22 @@
       with Go-based API interactions and FIX 5.0 SP2 protocol messages.
     </p>
     <p style="margin-bottom: 1rem; color: #8b949e;">
-      <strong style="color: #c9d1d9;">Architecture:</strong><br>
-      • <strong>Go</strong> - Data fetching (Alpaca API), account management, candidate filtering, order execution<br>
-      • <strong>C++26</strong> - Constexpr strategy logic (entries/exits), backtesting, FIX message generation<br>
-      • <strong>FIX 5.0 SP2</strong> - Exchange-agnostic order protocol (buy.fix, sell.fix)<br>
-      • <strong>GitHub Actions</strong> - Automated CI/CD pipeline<br>
-      • <strong>GitHub Pages</strong> - Static result hosting
+      <strong style="color: #c9d1d9;">Build System:</strong><br>
+      • <strong>cmake</strong> — compiles all C++ strategy modules into <code>build/</code><br>
+      • <strong>GNU make</strong> — sequences modules in the correct order for live trading and backtest pipelines
+    </p>
+    <p style="margin-bottom: 1rem; color: #8b949e;">
+      <strong style="color: #c9d1d9;">Live Trading Loop</strong> (<code>make run</code>):<br>
+      <code>account → exits → wait-for-bar → fetch → entries → execute</code>
+    </p>
+    <p style="margin-bottom: 1rem; color: #8b949e;">
+      <strong style="color: #c9d1d9;">Backtest Pipeline</strong> (<code>make backtest</code>, scheduled CI):<br>
+      <code>fetch → filter → backtest</code>
+    </p>
+    <p style="margin-bottom: 1rem; color: #8b949e;">
+      <strong style="color: #c9d1d9;">Module Languages:</strong><br>
+      • <strong>Go</strong> — account, fetch, filter, wait-for-bar, execute (Alpaca API, shared <code>internal/alpaca</code> client)<br>
+      • <strong>C++26</strong> — exits, entries, backtest (constexpr strategy and market-time logic, FIX 5.0 SP2 messages)
     </p>
     <p style="color: #8b949e;">
       <strong style="color: #c9d1d9;">Tech Stack:</strong>

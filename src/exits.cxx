@@ -97,7 +97,6 @@ std::vector<Position> load_positions() {
 	return positions;
 }
 
-// NOTE: Removed is_market_close - now using market::is_liquidation_time() from market.h
 
 // Load latest bars for a symbol
 std::vector<bar> load_bars(std::string_view symbol) {

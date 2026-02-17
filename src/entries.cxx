@@ -264,7 +264,6 @@ void sleep_until_next_interval() {
 	}
 }
 
-// NOTE: Removed is_market_close - now using market::is_risk_on() from market.h
 
 int main() {
 	std::println("Low Frequency Trader v2 - Entry Module\n");
@@ -322,8 +321,8 @@ int main() {
 		auto latest_price = bars.back().close;
 		std::println("   Current price: ${:.2f}", latest_price);
 
-		// Check if we're in risk-on period (1 hour after open, 30 min before close)
-		if (!market::risk_on(bars.back().timestamp)) {
+		// Skip if market is closed or in risk-off window (first hour / last 30 min)
+		if (market::risk_off(bars.back().timestamp)) {
 			std::println("   ⏭️  Risk-off period (too close to open/close)");
 			continue;
 		}

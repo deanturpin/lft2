@@ -1,0 +1,10 @@
+go 1.21
+
+use (
+	./internal/alpaca
+	./cmd/account
+	./cmd/fetch
+	./cmd/filter
+	./cmd/wait-for-bar
+	./cmd/execute
+)

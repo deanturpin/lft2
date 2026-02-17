@@ -126,8 +126,6 @@ std::vector<bar> load_bars(const std::filesystem::path& file_path) {
 	return bars;
 }
 
-// NOTE: Removed is_market_close - now using market::liquidation_time() from market.h
-
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
 StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) {
@@ -147,10 +145,31 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 	// Walk through bars simulating live trading
 	for (auto i = 0uz; i < bars.size(); ++i) {
 		auto history = std::span{bars.data(), i + 1};
-		auto should_liquidate = market::liquidation_time(bars[i].timestamp);
+		auto& ts = bars[i].timestamp;
 
-		// Check for exit when in position (including forced liquidation)
-		if (position && (is_exit(*position, bars[i]) || should_liquidate)) {
+		if (!market::market_open(ts))
+			continue;
+
+		// Risk-off: liquidate any open position, skip new entries
+		if (position && market::risk_off(ts)) {
+			auto exit_price = bars[i].close;
+			auto profit_pct = (exit_price - position->entry_price) / position->entry_price;
+			auto duration = static_cast<int>(i - entry_bar_index);
+
+			trades.push_back(Trade{
+				.entry_price = position->entry_price,
+				.exit_price = exit_price,
+				.profit_pct = profit_pct,
+				.win = profit_pct > 0.0,
+				.duration_bars = duration
+			});
+
+			position.reset();
+			continue;
+		}
+
+		// Check for normal exit when in position
+		if (position && is_exit(*position, bars[i])) {
 			auto exit_price = bars[i].close;
 			auto profit_pct = (exit_price - position->entry_price) / position->entry_price;
 			auto duration = static_cast<int>(i - entry_bar_index);
@@ -165,8 +184,8 @@ StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func
 
 			position.reset();
 		}
-		// Check for entry signal when not in position (only during risk-on period)
-		else if (!position && i >= 20 && market::risk_on(bars[i].timestamp) && entry_func(history)) {
+		// Check for entry signal when not in position (only during safe window)
+		else if (!position && i >= 20 && !market::risk_off(ts) && entry_func(history)) {
 			auto entry_price = bars[i].close;
 
 			// Set position parameters (10% take profit, 5% stop loss)
