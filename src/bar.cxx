@@ -1,7 +1,7 @@
 #include "bar.h"
 #include "json.h"
+#include "paths.h"
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -9,8 +9,7 @@
 // Load bars from docs/bars/{symbol}.json produced by the fetch module.
 // Uses the json.h parser — same logic as the constexpr path.
 std::vector<bar> load_bars(std::string_view symbol) {
-  auto ifs = std::ifstream{
-      std::filesystem::path{std::format("docs/bars/{}.json", symbol)}};
+  auto ifs = std::ifstream{std::filesystem::path{paths::bars(symbol)}};
   if (!ifs)
     return {};
 

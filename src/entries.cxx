@@ -3,6 +3,7 @@
 #include "fix.h"
 #include "json.h"
 #include "market.h"
+#include "paths.h"
 #include <chrono>
 #include <fstream>
 #include <print>
@@ -23,7 +24,7 @@ struct AccountInfo {
 
 // Load recommended candidates from strategies.json
 std::vector<Candidate> load_candidates() {
-  auto ifs = std::ifstream{"docs/strategies.json"};
+  auto ifs = std::ifstream{paths::strategies};
   if (!ifs)
     return {};
 
@@ -59,7 +60,7 @@ std::vector<Candidate> load_candidates() {
 
 // Load account balance
 AccountInfo load_account_info() {
-  auto ifs = std::ifstream{"docs/account.json"};
+  auto ifs = std::ifstream{paths::account};
   if (!ifs)
     return {};
 
@@ -71,7 +72,7 @@ AccountInfo load_account_info() {
 
 // Load existing positions to avoid duplicates
 std::vector<std::string> load_existing_symbols() {
-  auto ifs = std::ifstream{"docs/positions.json"};
+  auto ifs = std::ifstream{paths::positions};
   if (!ifs)
     return {};
 
@@ -106,7 +107,7 @@ int main() {
   auto candidates = load_candidates();
   if (candidates.empty()) {
     std::println("No candidates to evaluate");
-    auto ofs = std::ofstream{"docs/buy.fix"};
+    auto ofs = std::ofstream{paths::buy_fix};
     return 0;
   }
 
@@ -218,7 +219,7 @@ int main() {
 
   // Write buy.fix file
   if (!buy_orders.empty()) {
-    auto ofs = std::ofstream{"docs/buy.fix"};
+    auto ofs = std::ofstream{paths::buy_fix};
     for (const auto &order : buy_orders)
       ofs << order;
 
@@ -228,7 +229,7 @@ int main() {
     std::println("\n✓ No entry signals");
 
     // Create empty file to indicate module ran
-    auto ofs = std::ofstream{"docs/buy.fix"};
+    auto ofs = std::ofstream{paths::buy_fix};
   }
 
   std::println("Remaining cash: ${:.2f}", account.cash);
