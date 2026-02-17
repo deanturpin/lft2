@@ -24,72 +24,27 @@ std::vector<Position> load_positions() {
 	if (!ifs)
 		return {};
 
-	auto content = std::string{};
-	auto line = std::string{};
-	while (std::getline(ifs, line))
-		content += line;
-
+	auto content   = std::string{std::istreambuf_iterator<char>(ifs), {}};
 	auto positions = std::vector<Position>{};
 
-	// Parse JSON array manually
-	auto start = content.find('[');
-	if (start == std::string::npos)
+	auto pos = content.find('[');
+	if (pos == std::string::npos)
 		return {};
 
-	auto pos = start + 1;
 	while (pos < content.size()) {
 		auto obj_start = content.find('{', pos);
-		if (obj_start == std::string::npos)
-			break;
-
+		if (obj_start == std::string::npos) break;
 		auto obj_end = content.find('}', obj_start);
-		if (obj_end == std::string::npos)
-			break;
+		if (obj_end == std::string::npos) break;
 
-		auto obj = content.substr(obj_start, obj_end - obj_start + 1);
+		auto obj = std::string_view{content}.substr(obj_start + 1, obj_end - obj_start - 1);
+		positions.push_back({
+			.symbol          = std::string{json_string(obj, "symbol")},
+			.qty             = json_number(obj, "qty"),
+			.avg_entry_price = json_number(obj, "avg_entry_price"),
+			.side            = std::string{json_string(obj, "side")},
+		});
 
-		// Extract fields
-		Position p;
-
-		// symbol
-		auto symbol_key = obj.find("\"symbol\"");
-		if (symbol_key != std::string::npos) {
-			auto colon = obj.find(':', symbol_key);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			p.symbol = obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		}
-
-		// qty
-		auto qty_key = obj.find("\"qty\"");
-		if (qty_key != std::string::npos) {
-			auto colon = obj.find(':', qty_key);
-			auto comma = obj.find(',', colon);
-			auto num_str = obj.substr(colon + 1, comma - colon - 1);
-			p.qty = std::stod(num_str);
-		}
-
-		// avg_entry_price
-		auto price_key = obj.find("\"avg_entry_price\"");
-		if (price_key != std::string::npos) {
-			auto colon = obj.find(':', price_key);
-			auto comma = obj.find(',', colon);
-			if (comma == std::string::npos)
-				comma = obj.find('}', colon);
-			auto num_str = obj.substr(colon + 1, comma - colon - 1);
-			p.avg_entry_price = std::stod(num_str);
-		}
-
-		// side
-		auto side_key = obj.find("\"side\"");
-		if (side_key != std::string::npos) {
-			auto colon = obj.find(':', side_key);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			p.side = obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		}
-
-		positions.push_back(p);
 		pos = obj_end + 1;
 	}
 

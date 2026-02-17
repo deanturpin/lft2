@@ -27,53 +27,23 @@ std::vector<Candidate> load_candidates() {
 	if (!ifs)
 		return {};
 
-	auto content = std::string{};
-	auto line = std::string{};
-	while (std::getline(ifs, line))
-		content += line;
-
+	auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
 	auto candidates = std::vector<Candidate>{};
 
-	// Find recommendations array
 	auto rec_start = content.find("\"recommendations\"");
 	if (rec_start == std::string::npos)
 		return {};
 
-	auto array_start = content.find('[', rec_start);
-	if (array_start == std::string::npos)
-		return {};
-
-	auto pos = array_start + 1;
+	auto pos = content.find('[', rec_start) + 1;
 	while (pos < content.size()) {
 		auto obj_start = content.find('{', pos);
-		if (obj_start == std::string::npos)
-			break;
-
+		if (obj_start == std::string::npos) break;
 		auto obj_end = content.find('}', obj_start);
-		if (obj_end == std::string::npos)
-			break;
+		if (obj_end == std::string::npos) break;
 
-		auto obj = content.substr(obj_start, obj_end - obj_start + 1);
-
-		Candidate c;
-
-		// symbol
-		auto symbol_key = obj.find("\"symbol\"");
-		if (symbol_key != std::string::npos) {
-			auto colon = obj.find(':', symbol_key);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			c.symbol = obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		}
-
-		// recommended_strategy
-		auto strat_key = obj.find("\"recommended_strategy\"");
-		if (strat_key != std::string::npos) {
-			auto colon = obj.find(':', strat_key);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			c.strategy = obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		}
+		auto obj = std::string_view{content}.substr(obj_start + 1, obj_end - obj_start - 1);
+		auto c   = Candidate{std::string{json_string(obj, "symbol")},
+		                     std::string{json_string(obj, "recommended_strategy")}};
 
 		if (!c.symbol.empty() && !c.strategy.empty())
 			candidates.push_back(c);
@@ -88,36 +58,12 @@ std::vector<Candidate> load_candidates() {
 AccountInfo load_account_info() {
 	auto ifs = std::ifstream{"docs/account.json"};
 	if (!ifs)
-		return {0.0, 0.0};
+		return {};
 
-	auto content = std::string{};
-	auto line = std::string{};
-	while (std::getline(ifs, line))
-		content += line;
+	auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
+	auto obj     = std::string_view{content};
 
-	AccountInfo info;
-
-	// cash
-	auto cash_key = content.find("\"cash\"");
-	if (cash_key != std::string::npos) {
-		auto colon = content.find(':', cash_key);
-		auto comma = content.find(',', colon);
-		auto num_str = content.substr(colon + 1, comma - colon - 1);
-		info.cash = std::stod(num_str);
-	}
-
-	// portfolio_value
-	auto pv_key = content.find("\"portfolio_value\"");
-	if (pv_key != std::string::npos) {
-		auto colon = content.find(':', pv_key);
-		auto comma = content.find(',', colon);
-		if (comma == std::string::npos)
-			comma = content.find('}', colon);
-		auto num_str = content.substr(colon + 1, comma - colon - 1);
-		info.portfolio_value = std::stod(num_str);
-	}
-
-	return info;
+	return {json_number(obj, "cash"), json_number(obj, "portfolio_value")};
 }
 
 // Load existing positions to avoid duplicates
@@ -126,25 +72,22 @@ std::vector<std::string> load_existing_symbols() {
 	if (!ifs)
 		return {};
 
-	auto content = std::string{};
-	auto line = std::string{};
-	while (std::getline(ifs, line))
-		content += line;
-
+	auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
 	auto symbols = std::vector<std::string>{};
 
 	auto pos = 0uz;
 	while (pos < content.size()) {
-		auto symbol_key = content.find("\"symbol\"", pos);
-		if (symbol_key == std::string::npos)
-			break;
+		auto obj_start = content.find('{', pos);
+		if (obj_start == std::string::npos) break;
+		auto obj_end = content.find('}', obj_start);
+		if (obj_end == std::string::npos) break;
 
-		auto colon = content.find(':', symbol_key);
-		auto quote1 = content.find('"', colon);
-		auto quote2 = content.find('"', quote1 + 1);
-		symbols.push_back(content.substr(quote1 + 1, quote2 - quote1 - 1));
+		auto obj = std::string_view{content}.substr(obj_start + 1, obj_end - obj_start - 1);
+		auto sym = json_string(obj, "symbol");
+		if (!sym.empty())
+			symbols.emplace_back(sym);
 
-		pos = quote2 + 1;
+		pos = obj_end + 1;
 	}
 
 	return symbols;

@@ -317,3 +317,76 @@ constexpr bool test_parse_bars() {
 }
 static_assert(test_parse_bars());
 } // namespace
+
+// ============================================================
+// Key-based field extraction for generic JSON objects.
+// These operate on a string_view of an already-isolated object
+// (i.e. the content between { and }), scanning for a named key.
+// ============================================================
+
+// Extract a string value for a given key from a JSON object fragment.
+// Returns empty string_view if the key is not found.
+constexpr std::string_view json_string(std::string_view obj, std::string_view key) {
+	auto s = obj;
+	while (!s.empty()) {
+		skip_ws(s);
+		auto k = parse_string(s);
+		if (!expect(s, ':')) return {};
+		if (k == key)
+			return parse_string(s);
+		// Skip the value (string or number) and move to next key
+		skip_ws(s);
+		if (!s.empty() && s[0] == '"')
+			parse_string(s);         // consume string value
+		else
+			parse_number<double>(s); // consume numeric value
+		skip_ws(s);
+		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+	}
+	return {};
+}
+
+// Extract a numeric value for a given key from a JSON object fragment.
+// Handles both bare numbers and quoted numbers ("3.5" or 3.5) — Alpaca
+// returns numeric fields like qty and avg_entry_price as quoted strings.
+// Returns 0 if the key is not found.
+template <typename T = double>
+constexpr T json_number(std::string_view obj, std::string_view key) {
+	auto s = obj;
+	while (!s.empty()) {
+		skip_ws(s);
+		auto k = parse_string(s);
+		if (!expect(s, ':')) return {};
+		if (k == key) {
+			skip_ws(s);
+			// Accept both quoted ("3.5") and bare (3.5) numeric values
+			if (!s.empty() && s[0] == '"') {
+				auto v = parse_string(s);  // strip quotes, v is the digits
+				return parse_number<T>(v);
+			}
+			return parse_number<T>(s);
+		}
+		// Skip the value and move to next key
+		skip_ws(s);
+		if (!s.empty() && s[0] == '"')
+			parse_string(s);
+		else
+			parse_number<double>(s);
+		skip_ws(s);
+		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+	}
+	return {};
+}
+
+namespace {
+// Alpaca returns numeric fields as quoted strings in positions.json
+constexpr auto test_obj = std::string_view{R"("symbol": "AAPL", "qty": "3", "avg_entry_price": "182.5", "side": "long")"};
+static_assert(json_string(test_obj, "symbol")          == "AAPL");
+static_assert(json_string(test_obj, "side")            == "long");
+static_assert(json_number(test_obj, "qty")             == 3.0);
+static_assert(json_number(test_obj, "avg_entry_price") == 182.5);
+static_assert(json_string(test_obj, "missing")         == "");
+// Bare numeric values also work
+constexpr auto test_bare = std::string_view{R"("price": 99.5, "vol": 1000)"};
+static_assert(json_number(test_bare, "price") == 99.5);
+} // namespace
