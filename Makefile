@@ -46,9 +46,6 @@ run: build
 	@echo "→ exits"
 	@./$(EXITS)
 	@echo ""
-	@echo "→ wait-for-bar"
-	@cd cmd/wait-for-bar && $(MAKE) --no-print-directory run
-	@echo ""
 	@echo "→ fetch"
 	@cd cmd/fetch && $(MAKE) --no-print-directory run
 	@echo ""
