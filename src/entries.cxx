@@ -103,11 +103,16 @@ std::vector<std::string> load_existing_symbols() {
 int main() {
   std::println("Low Frequency Trader v2 - Entry Module\n");
 
+  // Open buy.fix immediately — heartbeat confirms entries ran, truncates stale
+  // data
+  {
+    std::ofstream{paths::buy_fix} << fix::heartbeat("entries");
+  }
+
   // Load candidates
   auto candidates = load_candidates();
   if (candidates.empty()) {
     std::println("No candidates to evaluate");
-    auto ofs = std::ofstream{paths::buy_fix};
     return 0;
   }
 

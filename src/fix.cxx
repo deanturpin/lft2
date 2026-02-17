@@ -1,4 +1,5 @@
 #include "fix.h"
+#include <chrono>
 #include <format>
 
 namespace fix {
@@ -42,10 +43,13 @@ std::string new_order_single(std::string_view order_id, std::string_view symbol,
   return build(NEW_ORDER_SINGLE, body, seq_num);
 }
 
-// Heartbeat with a free-text status field (tag 58).
+// Heartbeat with UTC timestamp (tag 52) and free-text status (tag 58).
 // Always written as seq_num=0 to distinguish from order messages.
 std::string heartbeat(std::string_view text) {
-  return build(HEARTBEAT, std::format("{}={}|", TEXT, text), 0);
+  auto now = std::chrono::system_clock::now();
+  auto ts = std::format("{:%Y%m%d-%H:%M:%S}", now);
+  return build(HEARTBEAT,
+               std::format("{}={}|{}={}|", SENDING_TIME, ts, TEXT, text), 0);
 }
 
 } // namespace fix

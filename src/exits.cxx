@@ -59,6 +59,12 @@ std::vector<Position> load_positions() {
 int main() {
   std::println("Low Frequency Trader v2 - Exit Module\n");
 
+  // Open sell.fix immediately — heartbeat confirms exits ran, truncates stale
+  // data
+  {
+    std::ofstream{paths::sell_fix} << fix::heartbeat("exits");
+  }
+
   // Load open positions
   auto positions = load_positions();
 
