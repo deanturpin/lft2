@@ -13,21 +13,20 @@ using namespace std::string_view_literals;
 // Output root — all pipeline files live here for GitHub Pages pickup
 constexpr auto root = "docs/"sv;
 
-constexpr auto strategies = "docs/strategies.json";
-constexpr auto candidates = "docs/candidates.json";
-constexpr auto account    = "docs/account.json";
-constexpr auto positions  = "docs/positions.json";
-constexpr auto signals    = "docs/signals.json";
-constexpr auto buy_fix    = "docs/buy.fix";
-constexpr auto sell_fix   = "docs/sell.fix";
+// Helper to build a path from root at compile time
+constexpr std::string path(std::string_view name) {
+  return std::string{root} + std::string{name};
+}
 
-static_assert(std::string_view{strategies}.starts_with(root));
-static_assert(std::string_view{candidates}.starts_with(root));
-static_assert(std::string_view{account  }.starts_with(root));
-static_assert(std::string_view{positions}.starts_with(root));
-static_assert(std::string_view{signals  }.starts_with(root));
-static_assert(std::string_view{buy_fix  }.starts_with(root));
-static_assert(std::string_view{sell_fix }.starts_with(root));
+const auto strategies = path("strategies.json");
+const auto candidates = path("candidates.json");
+const auto account    = path("account.json");
+const auto positions  = path("positions.json");
+const auto signals    = path("signals.json");
+const auto buy_fix    = path("buy.fix");
+const auto sell_fix   = path("sell.fix");
+
+// Correctness guaranteed structurally — all paths are built via path()
 
 // Per-symbol bar data written by the fetch module
 constexpr std::string bars(std::string_view symbol) {
