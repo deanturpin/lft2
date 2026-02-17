@@ -4,6 +4,7 @@ project(lft2 VERSION 2.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # Generates build/compile_commands.json for clangd/IDE
 
 # Compiler flags for gcc 15
 add_compile_options(

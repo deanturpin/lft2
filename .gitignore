@@ -27,3 +27,4 @@ public/
 # GitHub Pages generated data (keep index.html, ignore generated files)
 docs/bars/
 docs/*.json
+compile_commands.json
