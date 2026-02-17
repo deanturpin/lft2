@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 type Signal struct {
@@ -19,112 +20,92 @@ type SignalsFile struct {
 	Signals []Signal `json:"signals"`
 }
 
+// Matches the schema written by the account module to docs/account.json
 type AccountInfo struct {
-	BuyingPower    float64 `json:"buying_power"`
-	Cash           float64 `json:"cash"`
-	PortfolioValue float64 `json:"portfolio_value"`
+	BuyingPower    string `json:"buying_power"`
+	Cash           string `json:"cash"`
+	PortfolioValue string `json:"portfolio_value"`
 }
 
+// Matches the schema written by the account module to docs/positions.json
 type Position struct {
-	Symbol string  `json:"symbol"`
-	Qty    float64 `json:"qty"`
-	Side   string  `json:"side"`
+	Symbol        string `json:"symbol"`
+	Qty           string `json:"qty"`
+	AvgEntryPrice string `json:"avg_entry_price"`
+	Side          string `json:"side"`
 }
 
-func loadSignals() ([]Signal, error) {
-	data, err := os.ReadFile("docs/signals.json")
+func mustParseFloat(s string) float64 {
+	v, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return nil, fmt.Errorf("reading signals.json: %w", err)
+		log.Fatalf("parsing float %q: %v", s, err)
 	}
-
-	var signalsFile SignalsFile
-	if err := json.Unmarshal(data, &signalsFile); err != nil {
-		return nil, fmt.Errorf("parsing signals.json: %w", err)
-	}
-
-	return signalsFile.Signals, nil
+	return v
 }
 
-func fetchAccountInfo(apiKey, apiSecret string) (*AccountInfo, error) {
-	// In production, this would call:
-	// GET https://paper-api.alpaca.markets/v2/account
-	// Headers: APCA-API-KEY-ID, APCA-API-SECRET-KEY
-
-	fmt.Println("Fetching account information from Alpaca...")
-	fmt.Println("(Using paper trading account)")
-
-	// Placeholder values
-	return &AccountInfo{
-		BuyingPower:    100000.0,
-		Cash:           100000.0,
-		PortfolioValue: 100000.0,
-	}, nil
-}
-
-func fetchOpenPositions(apiKey, apiSecret string) ([]Position, error) {
-	// In production, this would call:
-	// GET https://paper-api.alpaca.markets/v2/positions
-	// Headers: APCA-API-KEY-ID, APCA-API-SECRET-KEY
-
-	fmt.Println("Fetching open positions from Alpaca...")
-
-	// Placeholder - return empty positions for now
-	return []Position{}, nil
+func loadJSON(path string, v any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", path, err)
+	}
+	if err := json.Unmarshal(data, v); err != nil {
+		return fmt.Errorf("parsing %s: %w", path, err)
+	}
+	return nil
 }
 
 func main() {
 	fmt.Println("Low Frequency Trader v2 - Trade Executor\n")
 
-	// Load credentials
 	apiKey := os.Getenv("ALPACA_API_KEY")
 	apiSecret := os.Getenv("ALPACA_API_SECRET")
-
 	if apiKey == "" || apiSecret == "" {
-		log.Fatal("Error: ALPACA_API_KEY and ALPACA_API_SECRET must be set")
+		log.Fatal("ALPACA_API_KEY and ALPACA_API_SECRET must be set")
 	}
-
-	fmt.Printf("Credentials loaded successfully\n")
 	fmt.Printf("API Key: %s***\n", apiKey[:8])
 
-	// Fetch account balance
-	account, err := fetchAccountInfo(apiKey, apiSecret)
-	if err != nil {
-		log.Fatal("Error fetching account info:", err)
+	// Read live account data written by the account module
+	var account AccountInfo
+	if err := loadJSON("docs/account.json", &account); err != nil {
+		log.Fatal("Run the account module first: make account\n", err)
 	}
+
+	cash := mustParseFloat(account.Cash)
+	portfolioValue := mustParseFloat(account.PortfolioValue)
 
 	fmt.Printf("\nAccount Balance:\n")
-	fmt.Printf("  Cash:            $%.2f\n", account.Cash)
-	fmt.Printf("  Buying Power:    $%.2f\n", account.BuyingPower)
-	fmt.Printf("  Portfolio Value: $%.2f\n", account.PortfolioValue)
+	fmt.Printf("  Cash:            $%.2f\n", cash)
+	fmt.Printf("  Buying Power:    $%s\n", account.BuyingPower)
+	fmt.Printf("  Portfolio Value: $%.2f\n", portfolioValue)
 
-	// Fetch open positions
-	positions, err := fetchOpenPositions(apiKey, apiSecret)
-	if err != nil {
-		log.Fatal("Error fetching positions:", err)
+	// Read live positions written by the account module
+	var positions []Position
+	if err := loadJSON("docs/positions.json", &positions); err != nil {
+		log.Fatal("Run the account module first: make account\n", err)
 	}
 
-	// Build set of symbols we already have positions in
 	existingPositions := make(map[string]bool)
 	for _, pos := range positions {
 		existingPositions[pos.Symbol] = true
 	}
 
-	fmt.Printf("Currently holding %d position(s)\n", len(positions))
+	fmt.Printf("\nCurrently holding %d position(s)\n", len(positions))
 	for _, pos := range positions {
-		fmt.Printf("  %s: %.0f shares (%s)\n", pos.Symbol, pos.Qty, pos.Side)
+		fmt.Printf("  %s: %s shares (%s)\n", pos.Symbol, pos.Qty, pos.Side)
 	}
 
 	// Calculate position size (2% of portfolio value)
-	positionSize := account.PortfolioValue * 0.02
+	positionSize := portfolioValue * 0.02
 	fmt.Printf("\nPosition Size (2%% of portfolio): $%.2f\n", positionSize)
 
 	// Load signals
-	signals, err := loadSignals()
-	if err != nil {
+	var signalsFile SignalsFile
+	if err := loadJSON("docs/signals.json", &signalsFile); err != nil {
 		fmt.Println("\nNo signals to execute:", err)
 		return
 	}
 
+	signals := signalsFile.Signals
 	if len(signals) == 0 {
 		fmt.Println("\nNo signals to execute")
 		return
@@ -132,7 +113,6 @@ func main() {
 
 	fmt.Printf("\nFound %d signal(s) to execute:\n", len(signals))
 
-	// Execute each signal
 	for _, signal := range signals {
 		fmt.Printf("\n📋 Signal: %s %s @ $%.2f\n", signal.Symbol, signal.Action, signal.Price)
 
@@ -141,15 +121,12 @@ func main() {
 			continue
 		}
 
-		// Skip if we already have a position in this symbol
 		if existingPositions[signal.Symbol] {
 			fmt.Printf("   ⏭️  Already holding position in %s\n", signal.Symbol)
 			continue
 		}
 
-		// Calculate shares to buy
 		shares := int(positionSize / signal.Price)
-
 		if shares < 1 {
 			fmt.Printf("   ❌ Position size too small ($%.2f / $%.2f = %d shares)\n",
 				positionSize, signal.Price, shares)
@@ -157,43 +134,23 @@ func main() {
 		}
 
 		orderValue := float64(shares) * signal.Price
-
-		fmt.Printf("   Strategy: %s\n", signal.Strategy)
-		fmt.Printf("   Shares:   %d ($%.2f total)\n", shares, orderValue)
-
-		if orderValue > account.Cash {
-			fmt.Printf("   ❌ Insufficient cash (need $%.2f, have $%.2f)\n",
-				orderValue, account.Cash)
+		if orderValue > cash {
+			fmt.Printf("   ❌ Insufficient cash (need $%.2f, have $%.2f)\n", orderValue, cash)
 			continue
 		}
 
-		// Set position parameters (matching backtest logic)
-		takeProfit := signal.Price * 1.10 // +10%
-		stopLoss := signal.Price * 0.95   // -5%
+		takeProfit := signal.Price * 1.10
+		stopLoss := signal.Price * 0.95
 
+		fmt.Printf("   Strategy:    %s\n", signal.Strategy)
+		fmt.Printf("   Shares:      %d ($%.2f total)\n", shares, orderValue)
 		fmt.Printf("   Take Profit: $%.2f (+10%%)\n", takeProfit)
 		fmt.Printf("   Stop Loss:   $%.2f (-5%%)\n", stopLoss)
+		fmt.Println("   ✅ Order ready (dry run — no actual orders placed)")
 
-		// In production, this would place the order via Alpaca API:
-		// POST /v2/orders
-		// {
-		//   "symbol": signal.Symbol,
-		//   "qty": shares,
-		//   "side": "buy",
-		//   "type": "limit",
-		//   "time_in_force": "day",
-		//   "limit_price": signal.Price,
-		//   "order_class": "bracket",
-		//   "take_profit": { "limit_price": takeProfit },
-		//   "stop_loss": { "stop_price": stopLoss }
-		// }
-
-		fmt.Println("   ✅ Order ready (not executed - dry run mode)")
-
-		// Deduct from available cash for next signal
-		account.Cash -= orderValue
+		cash -= orderValue
 	}
 
-	fmt.Printf("\n✓ Execution complete (dry run - no actual orders placed)\n")
-	fmt.Printf("Remaining cash: $%.2f\n", account.Cash)
+	fmt.Printf("\n✓ Execution complete\n")
+	fmt.Printf("Remaining cash: $%.2f\n", cash)
 }
