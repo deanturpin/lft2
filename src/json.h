@@ -7,6 +7,10 @@
 // Parses:
 // {"bars":[{"c":val,"h":val,"l":val,"o":val,"t":"str","v":val,"vw":val,"n":val},...]}
 // Designed to work with compile-time embedded JSON data via C++26 #embed
+//
+// Limitations (intentional — Alpaca data never requires these):
+//   - No escape sequence support in strings (e.g. \", \\)
+//   - No scientific notation in numbers (e.g. 1.23e-4)
 
 // Skip whitespace
 constexpr void skip_ws(std::string_view &s) {
@@ -27,7 +31,7 @@ static_assert(test_skip_ws());
 // Expect and consume a specific character
 constexpr bool expect(std::string_view &s, char c) {
   skip_ws(s);
-  if (s.empty() || s[0] != c)
+  if (!s.starts_with(c))
     return false;
   s.remove_prefix(1);
   return true;
@@ -48,37 +52,38 @@ constexpr bool test_expect() {
 static_assert(test_expect());
 } // namespace
 
-// Parse a string value between quotes
+// Skip optional comma (used after every value in arrays and objects)
+constexpr void skip_comma(std::string_view &s) {
+  skip_ws(s);
+  if (s.starts_with(','))
+    s.remove_prefix(1);
+}
+
+// Parse a string value between quotes.
+// No escape sequence support — Alpaca strings contain none.
 constexpr std::string_view parse_string(std::string_view &s) {
   skip_ws(s);
-  if (s.empty() || s[0] != '"')
+  if (!s.starts_with('"'))
     return {};
 
   s.remove_prefix(1);
-  auto start = s.data();
-  auto len = 0uz;
+  auto end = s.find('"');
+  if (end == std::string_view::npos)
+    return {};
 
-  while (!s.empty() && s[0] != '"') {
-    s.remove_prefix(1);
-    ++len;
-  }
-
-  if (!s.empty())
-    s.remove_prefix(1);
-
-  return {start, len};
+  auto result = s.substr(0, end);
+  s.remove_prefix(end + 1);
+  return result;
 }
 
 namespace {
 constexpr bool test_parse_string() {
   auto s1 = std::string_view{R"("hello")"};
-  auto result1 = parse_string(s1);
-  if (result1 != "hello")
+  if (parse_string(s1) != "hello")
     return false;
 
   auto s2 = std::string_view{R"(  "world"  )"};
-  auto result2 = parse_string(s2);
-  if (result2 != "world")
+  if (parse_string(s2) != "world")
     return false;
 
   return true;
@@ -86,30 +91,25 @@ constexpr bool test_parse_string() {
 static_assert(test_parse_string());
 } // namespace
 
-// Parse a numeric value (double or unsigned long)
+// Parse a numeric value (integer or decimal).
+// Scientific notation is not supported — Alpaca never uses it.
 template <typename T> constexpr T parse_number(std::string_view &s) {
   skip_ws(s);
 
   auto start = s.data();
   auto len = 0uz;
 
-  // Find end of number
+  // Scan digits, sign, and decimal point only — no e/E/+
   while (!s.empty() &&
-         ((s[0] >= '0' && s[0] <= '9') || s[0] == '.' || s[0] == '-' ||
-          s[0] == 'e' || s[0] == 'E' || s[0] == '+')) {
+         ((s[0] >= '0' && s[0] <= '9') || s[0] == '.' || s[0] == '-')) {
     s.remove_prefix(1);
     ++len;
   }
 
-  // Simple constexpr parser for integers and floats
-  auto result = T{};
   auto sv = std::string_view{start, len};
-  auto negative = false;
-
-  if (!sv.empty() && sv[0] == '-') {
-    negative = true;
+  auto negative = sv.starts_with('-');
+  if (negative)
     sv.remove_prefix(1);
-  }
 
   // Parse integer part
   auto int_part = 0.0;
@@ -120,7 +120,7 @@ template <typename T> constexpr T parse_number(std::string_view &s) {
 
   // Parse fractional part
   auto frac_part = 0.0;
-  if (!sv.empty() && sv[0] == '.') {
+  if (sv.starts_with('.')) {
     sv.remove_prefix(1);
     auto divisor = 10.0;
     while (!sv.empty() && sv[0] >= '0' && sv[0] <= '9') {
@@ -130,8 +130,7 @@ template <typename T> constexpr T parse_number(std::string_view &s) {
     }
   }
 
-  result = static_cast<T>((int_part + frac_part) * (negative ? -1 : 1));
-  return result;
+  return static_cast<T>((int_part + frac_part) * (negative ? -1 : 1));
 }
 
 namespace {
@@ -166,15 +165,13 @@ constexpr bar parse_bar(std::string_view &s) {
   if (!expect(s, '{'))
     return b;
 
-  while (!s.empty() && s[0] != '}') {
+  while (!s.empty() && !s.starts_with('}')) {
     skip_ws(s);
 
-    // Parse key
     auto key = parse_string(s);
     if (!expect(s, ':'))
       return b;
 
-    // Parse value based on key
     if (key == "c")
       b.close = parse_number<double>(s);
     else if (key == "h")
@@ -192,9 +189,7 @@ constexpr bar parse_bar(std::string_view &s) {
     else if (key == "n")
       b.num_trades = parse_number<unsigned long>(s);
 
-    skip_ws(s);
-    if (s[0] == ',')
-      s.remove_prefix(1);
+    skip_comma(s);
   }
 
   expect(s, '}');
@@ -242,29 +237,23 @@ constexpr std::array<bar, N> parse_bars(std::string_view json) {
   auto bars = std::array<bar, N>{};
   auto s = json;
 
-  // Expect {"bars":[
   if (!expect(s, '{'))
     return bars;
 
   skip_ws(s);
-  auto key = parse_string(s);
-  if (key != "bars")
+  if (parse_string(s) != "bars")
     return bars;
 
   if (!expect(s, ':') || !expect(s, '['))
     return bars;
 
-  // Parse array of bars
   for (auto i = 0uz; i < N; ++i) {
     skip_ws(s);
-    if (s.empty() || s[0] == ']')
+    if (s.empty() || s.starts_with(']'))
       break;
 
     bars[i] = parse_bar(s);
-
-    skip_ws(s);
-    if (s[0] == ',')
-      s.remove_prefix(1);
+    skip_comma(s);
   }
 
   return bars;
@@ -336,12 +325,11 @@ constexpr std::string_view json_string(std::string_view obj, std::string_view ke
 			return parse_string(s);
 		// Skip the value (string or number) and move to next key
 		skip_ws(s);
-		if (!s.empty() && s[0] == '"')
-			parse_string(s);         // consume string value
+		if (s.starts_with('"'))
+			parse_string(s);
 		else
-			parse_number<double>(s); // consume numeric value
-		skip_ws(s);
-		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+			parse_number<double>(s);
+		skip_comma(s);
 	}
 	return {};
 }
@@ -360,20 +348,19 @@ constexpr T json_number(std::string_view obj, std::string_view key) {
 		if (k == key) {
 			skip_ws(s);
 			// Accept both quoted ("3.5") and bare (3.5) numeric values
-			if (!s.empty() && s[0] == '"') {
-				auto v = parse_string(s);  // strip quotes, v is the digits
+			if (s.starts_with('"')) {
+				auto v = parse_string(s);
 				return parse_number<T>(v);
 			}
 			return parse_number<T>(s);
 		}
 		// Skip the value and move to next key
 		skip_ws(s);
-		if (!s.empty() && s[0] == '"')
+		if (s.starts_with('"'))
 			parse_string(s);
 		else
 			parse_number<double>(s);
-		skip_ws(s);
-		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+		skip_comma(s);
 	}
 	return {};
 }
@@ -392,45 +379,42 @@ static_assert(json_number(test_bare, "price") == 99.5);
 } // namespace
 
 // Extract a string array for a given key from a top-level JSON object.
-// Returns each element as a string_view; caller must copy if persistence needed.
-// E.g. json_string_array(json, "symbols") on {"symbols":["AAPL","TSLA"]}
-// The callback is called once per element: fn(std::string_view element)
+// Calls fn(std::string_view) once per element.
+// E.g. json_string_array(json, "symbols", fn) on {"symbols":["AAPL","TSLA"]}
 template <typename Fn>
 constexpr void json_string_array(std::string_view json, std::string_view key, Fn fn) {
 	auto s = json;
 	if (!expect(s, '{')) return;
-	while (!s.empty() && s[0] != '}') {
+	while (!s.empty() && !s.starts_with('}')) {
 		skip_ws(s);
 		auto k = parse_string(s);
 		if (!expect(s, ':')) return;
 		if (k == key) {
 			if (!expect(s, '[')) return;
-			while (!s.empty() && s[0] != ']') {
+			while (!s.empty() && !s.starts_with(']')) {
 				skip_ws(s);
-				if (s.empty() || s[0] == ']') break;
+				if (s.empty() || s.starts_with(']')) break;
 				fn(parse_string(s));
-				skip_ws(s);
-				if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+				skip_comma(s);
 			}
 			return;
 		}
-		// Skip value (string, number, or array) and advance
+		// Skip value (string, number, or nested array) and advance
 		skip_ws(s);
-		if (!s.empty() && s[0] == '[') {
-			// Skip nested array
+		if (s.starts_with('[')) {
+			// Skip nested array by tracking depth
 			auto depth = 1;
 			s.remove_prefix(1);
 			while (!s.empty() && depth > 0) {
-				if (s[0] == '[') ++depth;
-				else if (s[0] == ']') --depth;
+				if (s.starts_with('[')) ++depth;
+				else if (s.starts_with(']')) --depth;
 				s.remove_prefix(1);
 			}
-		} else if (!s.empty() && s[0] == '"')
+		} else if (s.starts_with('"'))
 			parse_string(s);
 		else
 			parse_number<double>(s);
-		skip_ws(s);
-		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+		skip_comma(s);
 	}
 }
 
