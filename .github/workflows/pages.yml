@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y g++ make git curl cmake
+          apt-get install -y g++ make git curl cmake binutils
 
       - name: Setup Go
         uses: actions/setup-go@v5

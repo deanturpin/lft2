@@ -11,10 +11,11 @@
 
 BUILD_DIR := build
 BACKTEST  := $(BUILD_DIR)/backtest
+PROFILE   := $(BUILD_DIR)/profile
 EXITS     := $(BUILD_DIR)/exits
 ENTRIES   := $(BUILD_DIR)/entries
 
-.PHONY: all build run backtest clean \
+.PHONY: all build run backtest profile clean \
         fetch-go filter-go backtest-cpp help
 
 # Default: compile then run live trading loop
@@ -67,7 +68,7 @@ run: build
 #   filter   - score and rank candidates → docs/strategies.json
 #   backtest - run C++ strategies and write results → docs/
 # ============================================================
-backtest: fetch-go filter-go backtest-cpp
+backtest: fetch-go filter-go backtest-cpp profile
 	@echo ""
 	@echo "=== backtest complete ==="
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
@@ -91,6 +92,14 @@ filter-go:
 backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
+
+# Run profile binary and generate gprof report to docs/ for GitHub Pages.
+# gprof requires -pg flag which is Linux-only (enabled in CMakeLists.txt).
+profile: build
+	@echo "→ profile"
+	@./$(PROFILE)
+	@gprof $(PROFILE) gmon.out > docs/gprof.txt 2>/dev/null || true
+	@echo "→ wrote docs/gprof.txt"
 
 # ============================================================
 # Housekeeping

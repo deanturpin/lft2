@@ -18,10 +18,11 @@ cmd/wait-for-bar/wait-for-bar
 src/*/backtest
 src/*/evaluate
 
-# Coverage output
+# Coverage and profiling output
 *.gcda
 *.gcno
 *.gcov
+gmon.out
 
 # Node/Svelte
 node_modules/
