@@ -390,3 +390,60 @@ static_assert(json_string(test_obj, "missing")         == "");
 constexpr auto test_bare = std::string_view{R"("price": 99.5, "vol": 1000)"};
 static_assert(json_number(test_bare, "price") == 99.5);
 } // namespace
+
+// Extract a string array for a given key from a top-level JSON object.
+// Returns each element as a string_view; caller must copy if persistence needed.
+// E.g. json_string_array(json, "symbols") on {"symbols":["AAPL","TSLA"]}
+// The callback is called once per element: fn(std::string_view element)
+template <typename Fn>
+constexpr void json_string_array(std::string_view json, std::string_view key, Fn fn) {
+	auto s = json;
+	if (!expect(s, '{')) return;
+	while (!s.empty() && s[0] != '}') {
+		skip_ws(s);
+		auto k = parse_string(s);
+		if (!expect(s, ':')) return;
+		if (k == key) {
+			if (!expect(s, '[')) return;
+			while (!s.empty() && s[0] != ']') {
+				skip_ws(s);
+				if (s.empty() || s[0] == ']') break;
+				fn(parse_string(s));
+				skip_ws(s);
+				if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+			}
+			return;
+		}
+		// Skip value (string, number, or array) and advance
+		skip_ws(s);
+		if (!s.empty() && s[0] == '[') {
+			// Skip nested array
+			auto depth = 1;
+			s.remove_prefix(1);
+			while (!s.empty() && depth > 0) {
+				if (s[0] == '[') ++depth;
+				else if (s[0] == ']') --depth;
+				s.remove_prefix(1);
+			}
+		} else if (!s.empty() && s[0] == '"')
+			parse_string(s);
+		else
+			parse_number<double>(s);
+		skip_ws(s);
+		if (!s.empty() && s[0] == ',') s.remove_prefix(1);
+	}
+}
+
+namespace {
+constexpr bool test_json_string_array() {
+	constexpr auto json = std::string_view{R"({"symbols":["AAPL","TSLA","NVDA"]})"};
+	auto count = 0;
+	auto first = std::string_view{};
+	json_string_array(json, "symbols", [&](std::string_view v) {
+		if (count == 0) first = v;
+		++count;
+	});
+	return count == 3 && first == "AAPL";
+}
+static_assert(test_json_string_array());
+} // namespace

@@ -165,28 +165,11 @@ int main() {
 	auto ifs = std::ifstream{candidates_file};
 	auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
 
-	// Simple JSON parsing to extract symbols array
+	// Extract symbols array using json.h helper
 	auto candidates = std::vector<std::string>{};
-	auto pos = json_str.find("\"symbols\"");
-	if (pos != std::string::npos) {
-		auto start = json_str.find('[', pos);
-		auto end = json_str.find(']', start);
-		auto symbols_str = json_str.substr(start + 1, end - start - 1);
-
-		// Extract individual symbols
-		auto current = 0uz;
-		while (current < symbols_str.size()) {
-			auto quote1 = symbols_str.find('"', current);
-			if (quote1 == std::string::npos)
-				break;
-			auto quote2 = symbols_str.find('"', quote1 + 1);
-			if (quote2 == std::string::npos)
-				break;
-
-			candidates.push_back(symbols_str.substr(quote1 + 1, quote2 - quote1 - 1));
-			current = quote2 + 1;
-		}
-	}
+	json_string_array(json_str, "symbols", [&](std::string_view sym) {
+		candidates.emplace_back(sym);
+	});
 
 	std::println("Testing {} candidates from filter", candidates.size());
 	std::println("");
