@@ -28,6 +28,7 @@ add_executable(exits src/exits.cxx)
 add_executable(entries src/entries.cxx)
 
 target_link_libraries(backtest PRIVATE barlib)
+target_link_libraries(evaluate PRIVATE barlib)
 target_link_libraries(exits    PRIVATE barlib)
 target_link_libraries(entries  PRIVATE barlib)
 
