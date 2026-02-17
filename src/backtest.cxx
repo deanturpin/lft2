@@ -40,92 +40,6 @@ struct Trade {
 	int duration_bars;
 };
 
-// Simple runtime JSON bar parser (not constexpr like json.h)
-std::vector<bar> load_bars(const std::filesystem::path& file_path) {
-	auto ifs = std::ifstream{file_path};
-	if (!ifs)
-		return {};
-
-	auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
-	auto bars = std::vector<bar>{};
-
-	// Find the "bars" array
-	auto pos = json_str.find("\"bars\"");
-	if (pos == std::string::npos)
-		return {};
-
-	auto array_start = json_str.find('[', pos);
-	if (array_start == std::string::npos)
-		return {};
-
-	// Parse each bar object
-	pos = array_start + 1;
-	while (pos < json_str.size()) {
-		// Find next object start
-		auto obj_start = json_str.find('{', pos);
-		if (obj_start == std::string::npos)
-			break;
-
-		auto obj_end = json_str.find('}', obj_start);
-		if (obj_end == std::string::npos)
-			break;
-
-		// Extract bar fields
-		auto b = bar{};
-		auto obj = json_str.substr(obj_start, obj_end - obj_start + 1);
-
-		// Simple field extraction (assumes specific order isn't required)
-		auto extract_double = [&obj](std::string_view key) -> double {
-			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
-			if (key_pos == std::string::npos)
-				return 0.0;
-			auto colon = obj.find(':', key_pos);
-			auto comma = obj.find_first_of(",}", colon);
-			return std::stod(obj.substr(colon + 1, comma - colon - 1));
-		};
-
-		auto extract_int = [&obj](std::string_view key) -> std::uint32_t {
-			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
-			if (key_pos == std::string::npos)
-				return 0;
-			auto colon = obj.find(':', key_pos);
-			auto comma = obj.find_first_of(",}", colon);
-			return static_cast<std::uint32_t>(std::stoul(obj.substr(colon + 1, comma - colon - 1)));
-		};
-
-		auto extract_string = [&obj](std::string_view key) -> std::string {
-			auto key_pos = obj.find(std::string{"\""}  + std::string{key} + "\"");
-			if (key_pos == std::string::npos)
-				return "";
-			auto colon = obj.find(':', key_pos);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			return obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		};
-
-		b.close = extract_double("c");
-		b.high = extract_double("h");
-		b.low = extract_double("l");
-		b.open = extract_double("o");
-		b.vwap = extract_double("vw");
-		b.volume = extract_int("v");
-		b.num_trades = extract_int("n");
-
-		auto ts = extract_string("t");
-		// Store timestamp in a static buffer (simple approach for backtest)
-		static std::vector<std::string> timestamp_storage;
-		timestamp_storage.push_back(ts);
-		b.timestamp = timestamp_storage.back();
-
-		if (is_valid(b))
-			bars.push_back(b);
-
-		pos = obj_end + 1;
-	}
-
-	return bars;
-}
-
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
 StrategyResult backtest_strategy(std::span<const bar> bars, EntryFunc entry_func, std::string_view strategy_name) {
@@ -281,14 +195,11 @@ int main() {
 
 	// Test each candidate with all three strategies
 	for (const auto& symbol : candidates) {
-		auto bar_file = std::filesystem::path{"docs/bars"} / (symbol + ".json");
-
-		if (!std::filesystem::exists(bar_file)) {
+		auto bars = load_bars(symbol);
+		if (bars.empty()) {
 			std::println("✗ {} - bar data not found", symbol);
 			continue;
 		}
-
-		auto bars = load_bars(bar_file);
 		if (bars.size() < 100) {
 			std::println("✗ {} - insufficient bars ({})", symbol, bars.size());
 			continue;

@@ -4,7 +4,6 @@
 #include "json.h"
 #include "market.h"
 #include <chrono>
-#include <format>
 #include <fstream>
 #include <iostream>
 #include <print>
@@ -95,98 +94,6 @@ std::vector<Position> load_positions() {
 	}
 
 	return positions;
-}
-
-
-// Load latest bars for a symbol
-std::vector<bar> load_bars(std::string_view symbol) {
-	auto path = std::format("docs/bars/{}.json", symbol);
-	auto ifs = std::ifstream{path};
-	if (!ifs)
-		return {};
-
-	auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
-	auto bars = std::vector<bar>{};
-
-	// Find the "bars" array
-	auto pos = json_str.find("\"bars\"");
-	if (pos == std::string::npos)
-		return {};
-
-	// Extract bars array manually
-	auto array_start = json_str.find('[', pos);
-	auto array_end = json_str.find(']', array_start);
-	if (array_start == std::string::npos || array_end == std::string::npos)
-		return {};
-
-	// Static storage for timestamps
-	static std::vector<std::string> timestamp_storage;
-
-	auto obj_pos = array_start + 1;
-	while (obj_pos < array_end) {
-		auto obj_start = json_str.find('{', obj_pos);
-		if (obj_start >= array_end)
-			break;
-
-		auto obj_end = json_str.find('}', obj_start);
-		auto obj = json_str.substr(obj_start, obj_end - obj_start + 1);
-
-		// Parse bar fields
-		auto b = bar{};
-
-		auto extract_double = [&](std::string_view key) {
-			auto key_pos = obj.find(std::format("\"{}\"", key));
-			if (key_pos == std::string::npos)
-				return 0.0;
-			auto colon = obj.find(':', key_pos);
-			auto comma = obj.find(',', colon);
-			if (comma == std::string::npos)
-				comma = obj.find('}', colon);
-			auto num_str = obj.substr(colon + 1, comma - colon - 1);
-			return std::stod(std::string{num_str});
-		};
-
-		auto extract_int = [&](std::string_view key) {
-			auto key_pos = obj.find(std::format("\"{}\"", key));
-			if (key_pos == std::string::npos)
-				return 0;
-			auto colon = obj.find(':', key_pos);
-			auto comma = obj.find(',', colon);
-			if (comma == std::string::npos)
-				comma = obj.find('}', colon);
-			auto num_str = obj.substr(colon + 1, comma - colon - 1);
-			return std::stoi(std::string{num_str});
-		};
-
-		auto extract_string = [&](std::string_view key) {
-			auto key_pos = obj.find(std::format("\"{}\"", key));
-			if (key_pos == std::string::npos)
-				return std::string{};
-			auto colon = obj.find(':', key_pos);
-			auto quote1 = obj.find('"', colon);
-			auto quote2 = obj.find('"', quote1 + 1);
-			return obj.substr(quote1 + 1, quote2 - quote1 - 1);
-		};
-
-		b.close = extract_double("c");
-		b.high = extract_double("h");
-		b.low = extract_double("l");
-		b.open = extract_double("o");
-		b.vwap = extract_double("vw");
-		b.volume = extract_int("v");
-		b.num_trades = extract_int("n");
-
-		auto ts = extract_string("t");
-		timestamp_storage.push_back(ts);
-		b.timestamp = timestamp_storage.back();
-
-		if (is_valid(b))
-			bars.push_back(b);
-
-		obj_pos = obj_end + 1;
-	}
-
-	return bars;
 }
 
 int main() {

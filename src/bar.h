@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string_view>
+#include <vector>
 
 // Core price bar structure representing a single time period of market data.
 // Contains OHLC prices, volume, timestamp, and derived metrics.
@@ -200,3 +201,7 @@ static_assert(
     "Bar incorrectly validated: timestamp='20250101T10:00:00Z' missing dashes "
     "at positions 4 and 7");
 } // namespace
+
+// Implemented in bar.cxx — separated from constexpr logic above.
+// Reads docs/bars/{symbol}.json produced by the fetch module.
+std::vector<bar> load_bars(std::string_view symbol);
