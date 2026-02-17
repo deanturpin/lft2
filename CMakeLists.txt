@@ -42,11 +42,13 @@ target_include_directories(profile PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# Profile target gets debug and profiling flags
+# Profile target gets debug, profiling, and coverage flags
 target_compile_options(profile PRIVATE
     -g3                      # Maximum debug information
     -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
+    --coverage               # gcov instrumentation
 )
+target_link_options(profile PRIVATE --coverage)
 
 # Add gprof profiling flags on Linux (not supported on macOS)
 if(UNIX AND NOT APPLE)
