@@ -118,7 +118,7 @@ profile: build
 	fi
 	@if [ -s gmon.out ]; then \
 	    gprof $(PROFILE) gmon.out \
-	    | gprof2dot -f prof \
+	    | gprof2dot -f prof -n 10 -e 10 \
 	    | dot -Tsvg -o docs/callgraph.svg \
 	    && echo "→ wrote docs/callgraph.svg" \
 	    || echo "→ callgraph failed"; \
