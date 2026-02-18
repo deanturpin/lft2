@@ -6,7 +6,6 @@ build/
 .env
 
 # Go binaries — match executables built in each cmd subdir
-fetch
 cmd/account/account
 cmd/account/docs/
 cmd/execute/execute
