@@ -124,8 +124,14 @@ int main() {
 
   std::println("Evaluating {} candidate(s)...", candidates.size());
 
-  // Load account info
+  // Load account info — abort if balance is zero (likely a parse/API failure)
   auto account = load_account_info();
+  if (account.cash <= 0.0 || account.portfolio_value <= 0.0) {
+    std::println("\n❌ ERROR: account balance is zero — docs/account.json "
+                 "missing or invalid");
+    std::println("   Run the account module first: make account");
+    return 1;
+  }
   std::println("\nAccount Balance:");
   std::println("  Cash: ${:.2f}", account.cash);
   std::println("  Portfolio Value: ${:.2f}", account.portfolio_value);
