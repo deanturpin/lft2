@@ -93,14 +93,12 @@ backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
 
-# Run strategy profiler, then generate:
-#   docs/profile.json   - per-symbol strategy stats (JSON)
+# Run the profile binary (instrumented with -pg/--coverage) to generate:
 #   docs/coverage/       - gcov HTML coverage report (lcov + genhtml)
 #   docs/callgraph.svg   - gprof call graph as SVG (Linux only, via gprof2dot + dot)
 profile: build
 	@echo "→ profile"
-	@./$(PROFILE) --json > docs/profile.json
-	@echo "→ wrote docs/profile.json"
+	@./$(PROFILE) > /dev/null
 	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
 	      --gcov-tool gcov-15 --ignore-errors mismatch 2>/dev/null || true
 	@genhtml docs/coverage.info --output-directory docs/coverage \
