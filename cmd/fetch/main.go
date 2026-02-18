@@ -95,7 +95,9 @@ func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
 	endDate := time.Now().UTC()
 	startDate := endDate.AddDate(0, 0, -daysNeeded)
 
-	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&start=%s&end=%s&limit=%d&feed=iex",
+	// sort=desc so Alpaca returns the most recent N bars rather than the
+	// oldest N from the start date. Bars are reversed to ascending order below.
+	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&start=%s&end=%s&limit=%d&feed=iex&sort=desc",
 		cfg.DataURL,
 		symbol,
 		cfg.TimeframeMin,
@@ -125,7 +127,11 @@ func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
 
 	bars := response.Bars
 	if len(bars) > cfg.BarsPerSymbol {
-		bars = bars[len(bars)-cfg.BarsPerSymbol:]
+		bars = bars[:cfg.BarsPerSymbol]
+	}
+	// Reverse from desc back to chronological (oldest first)
+	for i, j := 0, len(bars)-1; i < j; i, j = i+1, j-1 {
+		bars[i], bars[j] = bars[j], bars[i]
 	}
 
 	return &SymbolData{
