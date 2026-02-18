@@ -36,6 +36,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
+          cache: false  # no root go.sum — workspace uses go.work
 
       - name: Run Pipeline
         env:
