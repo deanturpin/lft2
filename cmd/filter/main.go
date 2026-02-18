@@ -276,7 +276,7 @@ func main() {
 		MinPrice:       10.0,                           // Keep minimum price floor
 		MaxPrice:       marketStats.PriceMax * 1.1,     // Allow all prices up to max + 10%
 		MinVolatility:  marketStats.VolMedian * 0.5,    // Half of median volatility
-		MinBarCount:    50,                             // IEX feed caps at ~65 bars for 5-min timeframe
+		MinBarCount:    100,                            // Minimum history for reliable strategy signals
 		MaxBarRangePct: 0.5,                            // 50 bps — spread proxy from last bar range
 	}
 

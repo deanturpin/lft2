@@ -91,13 +91,17 @@ func loadWatchlist(path string) (*Watchlist, error) {
 }
 
 func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
-	// sort=desc returns the most recent N bars; no start/end needed.
+	// sort=desc + start 6 weeks back gives up to limit bars of recent history.
+	// feed=iex is intentionally omitted — IEX only retains today's bars;
+	// the default SIP feed provides weeks of history needed for backtesting.
 	// Bars are reversed to ascending (oldest first) order before saving.
-	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&limit=%d&feed=iex&sort=desc",
+	start := time.Now().UTC().AddDate(0, 0, -42).Format(time.RFC3339)
+	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&limit=%d&sort=desc&start=%s",
 		cfg.DataURL,
 		symbol,
 		cfg.TimeframeMin,
 		cfg.BarsPerSymbol,
+		start,
 	)
 
 	req, err := NewAlpacaRequest("GET", url, cfg.APIKey, cfg.APISecret)

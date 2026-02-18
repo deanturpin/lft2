@@ -183,7 +183,7 @@ int main() {
       std::println("✗ {} - bar data not found", symbol);
       continue;
     }
-    if (bars.size() < 50) {
+    if (bars.size() < 100) {
       std::println("✗ {} - insufficient bars ({})", symbol, bars.size());
       continue;
     }
