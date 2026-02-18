@@ -7,6 +7,7 @@
 #include <chrono>
 #include <fstream>
 #include <print>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -155,7 +156,22 @@ int main() {
     }
 
     auto latest_price = bars.back().close;
-    std::println("   Current price: ${:.2f}", latest_price);
+    auto first_ts = bars.front().timestamp;
+    auto last_ts = bars.back().timestamp;
+    std::println("   Current price: ${:.2f}  bars: {} → {}", latest_price,
+                 first_ts, last_ts);
+
+    // Warn if latest bar is more than 15 minutes old (stale data)
+    {
+      auto now = std::chrono::system_clock::now();
+      auto bar_time = std::chrono::sys_seconds{};
+      std::istringstream ss{std::string{last_ts}};
+      std::chrono::from_stream(ss, "%Y-%m-%dT%H:%M:%SZ", bar_time);
+      auto age =
+          std::chrono::duration_cast<std::chrono::minutes>(now - bar_time);
+      if (age > std::chrono::minutes{15})
+        std::println("   ⚠️  Data is {} minutes old", age.count());
+    }
 
     // Skip if market is closed or in risk-off window (first hour / last 30 min)
     if (market::risk_off(bars.back().timestamp)) {
