@@ -99,8 +99,8 @@ func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
 		cfg.DataURL,
 		symbol,
 		cfg.TimeframeMin,
-		startDate.Format("2006-01-02"),
-		endDate.Format("2006-01-02"),
+		startDate.Format(time.RFC3339),
+		endDate.Format(time.RFC3339),
 		cfg.BarsPerSymbol,
 	)
 
