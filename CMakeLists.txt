@@ -46,7 +46,7 @@ target_include_directories(profile PRIVATE
 
 # Profile target gets debug, profiling, and coverage flags
 target_compile_options(profile PRIVATE
-    -g3                      # Maximum debug information
+    -g2                      # Maximum debug information
     -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
     --coverage               # gcov instrumentation
 )
