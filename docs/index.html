@@ -90,6 +90,11 @@
       background: linear-gradient(135deg, #6cb6ff 0%, #58a6ff 100%);
       box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
     }
+    #callgraph-card svg {
+      width: 100%;
+      height: auto;
+      filter: invert(1) hue-rotate(180deg);
+    }
   </style>
 </head>
 <body>
@@ -105,6 +110,11 @@
     <ul class="file-list" id="analysis-files">
       <li class="loading">Loading analysis files...</li>
     </ul>
+  </div>
+
+  <h2>Call Graph</h2>
+  <div class="card" id="callgraph-card">
+    <p class="loading" id="callgraph-loading">Loading call graph...</p>
   </div>
 
   <h2>About</h2>
@@ -178,7 +188,6 @@
       const analysisFiles = [
         { name: 'candidates.json',        description: 'Filtered candidate stocks',               type: 'JSON' },
         { name: 'strategies.json',         description: 'Backtested strategy recommendations',     type: 'JSON' },
-        { name: 'callgraph.svg',           description: 'C++ call graph (gprof → gprof2dot)',      type: 'SVG'  },
         { name: 'coverage/index.html',     description: 'Code coverage report (lcov)',             type: 'HTML' },
         { name: 'pipeline-metadata.json',  description: 'Pipeline execution metadata',             type: 'JSON' },
         { name: 'tech-stack.json',         description: 'Build environment and tool versions',     type: 'JSON' },
@@ -211,9 +220,25 @@
       }
     }
 
+    async function loadCallgraph() {
+      try {
+        const response = await fetch('callgraph.svg');
+        if (response.ok) {
+          const svg = await response.text();
+          const card = document.getElementById('callgraph-card');
+          card.innerHTML = svg;
+        } else {
+          document.getElementById('callgraph-loading').textContent = 'Call graph not yet generated';
+        }
+      } catch (err) {
+        document.getElementById('callgraph-loading').textContent = 'Call graph not yet generated';
+      }
+    }
+
     loadMetadata();
     loadTechStack();
     loadFiles();
+    loadCallgraph();
   </script>
 </body>
 </html>
