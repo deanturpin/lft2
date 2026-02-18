@@ -7,9 +7,8 @@ build:
 run: run-live
 
 run-live: build
-	curl -sf https://deanturpin.github.io/lft2/strategies.json \
-	    | jq -r '[.recommendations[].symbol]' \
-	    | jq '{symbols: .}' > /tmp/live-watchlist.json
+	curl -sfL https://deanturpin.github.io/lft2/strategies.json \
+	    | jq '{symbols: [.recommendations[].symbol]}' > /tmp/live-watchlist.json
 	./fetch -watchlist /tmp/live-watchlist.json -bars 25 -output ../../docs/bars
 
 # Backtest mode: fetch 1000 bars for full watchlist
