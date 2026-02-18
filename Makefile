@@ -25,8 +25,11 @@ all: run
 # cmake: compile all C++ modules into build/
 # ============================================================
 build:
-	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=g++-15
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=$(CXX)
 	cmake --build $(BUILD_DIR) -j
+
+# g++-15 is required for C++26; override with CXX=g++ if unavailable
+CXX ?= g++-15
 
 # ============================================================
 # GNU make: live trading loop (module sequencing)
@@ -90,11 +93,12 @@ backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
 
-# Run profile binary and generate gprof report to docs/ for GitHub Pages.
+# Run profile binary: writes docs/profile.json and gprof report.
 # gprof requires -pg flag which is Linux-only (enabled in CMakeLists.txt).
 profile: build
 	@echo "→ profile"
-	@./$(PROFILE)
+	@./$(PROFILE) --json > docs/profile.json
+	@echo "→ wrote docs/profile.json"
 	@gprof $(PROFILE) gmon.out > docs/gprof.txt 2>/dev/null || true
 	@echo "→ wrote docs/gprof.txt"
 
