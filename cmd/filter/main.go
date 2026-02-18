@@ -12,11 +12,12 @@ import (
 )
 
 type FilterCriteria struct {
-	MinAvgVolume  float64 `json:"min_avg_volume"`
-	MinPrice      float64 `json:"min_price"`
-	MaxPrice      float64 `json:"max_price"`
-	MinVolatility float64 `json:"min_volatility"`
-	MinBarCount   int     `json:"min_bar_count"`
+	MinAvgVolume    float64 `json:"min_avg_volume"`
+	MinPrice        float64 `json:"min_price"`
+	MaxPrice        float64 `json:"max_price"`
+	MinVolatility   float64 `json:"min_volatility"`
+	MinBarCount     int     `json:"min_bar_count"`
+	MaxBarRangePct  float64 `json:"max_bar_range_pct"` // Max (high-low)/close on last bar — spread proxy
 }
 
 type BarData struct {
@@ -40,7 +41,10 @@ type SymbolStats struct {
 	AvgVolume     float64 `json:"avg_volume"`
 	AvgPrice      float64 `json:"avg_price"`
 	AvgVolatility float64 `json:"avg_volatility"`
+	LastRangePct  float64 `json:"last_bar_range_pct"`
 	BarCount      int     `json:"bar_count"`
+	Tradeable     bool    `json:"tradeable"`
+	SkipReason    string  `json:"skip_reason,omitempty"`
 }
 
 type MarketStats struct {
@@ -89,26 +93,39 @@ func calculateStats(bars []Bar) (avgVolume float64, avgPrice float64, avgVolatil
 	return avgVolume, avgPrice, avgVolatility
 }
 
-func passesFilter(data *BarData, criteria FilterCriteria) bool {
+// filterReason returns "" if the symbol passes all criteria, or a short
+// explanation of the first failing check.
+func filterReason(data *BarData, criteria FilterCriteria) string {
 	if data.Count < criteria.MinBarCount {
-		return false
+		return fmt.Sprintf("insufficient bars (%d < %d)", data.Count, criteria.MinBarCount)
 	}
 
 	avgVolume, avgPrice, avgVolatility := calculateStats(data.Bars)
 
 	if avgVolume < criteria.MinAvgVolume {
-		return false
+		return fmt.Sprintf("low volume (%.0f < %.0f)", avgVolume, criteria.MinAvgVolume)
 	}
-
-	if avgPrice < criteria.MinPrice || avgPrice > criteria.MaxPrice {
-		return false
+	if avgPrice < criteria.MinPrice {
+		return fmt.Sprintf("price too low ($%.2f < $%.2f)", avgPrice, criteria.MinPrice)
 	}
-
+	if avgPrice > criteria.MaxPrice {
+		return fmt.Sprintf("price too high ($%.2f > $%.2f)", avgPrice, criteria.MaxPrice)
+	}
 	if avgVolatility < criteria.MinVolatility {
-		return false
+		return fmt.Sprintf("low volatility (%.4f < %.4f)", avgVolatility, criteria.MinVolatility)
 	}
 
-	return true
+	// Spread proxy: reject if the last bar's range is implausibly wide.
+	// For liquid stocks (high-low)/close is typically <0.4%; wide spreads
+	// or illiquid stocks produce much larger values.
+	if last := data.Bars[len(data.Bars)-1]; last.Close > 0 {
+		lastRangePct := (last.High - last.Low) / last.Close * 100.0
+		if lastRangePct > criteria.MaxBarRangePct {
+			return fmt.Sprintf("spread too wide (%.3f%% > %.2f%%)", lastRangePct, criteria.MaxBarRangePct)
+		}
+	}
+
+	return ""
 }
 
 func median(values []float64) float64 {
@@ -198,6 +215,7 @@ func main() {
 	}
 
 	var allStats []SymbolStats
+	allBarData := map[string]*BarData{}
 	totalFiles := 0
 
 	log.Println("Calculating market statistics...")
@@ -226,6 +244,7 @@ func main() {
 			continue
 		}
 
+		allBarData[barData.Symbol] = &barData
 		avgVolume, avgPrice, avgVolatility := calculateStats(barData.Bars)
 		allStats = append(allStats, SymbolStats{
 			Symbol:        barData.Symbol,
@@ -253,37 +272,54 @@ func main() {
 	// Use 25th percentile for volume (accept stocks with reasonable liquidity)
 	// Use median volatility (accept stocks with decent movement)
 	criteria := FilterCriteria{
-		MinAvgVolume:  marketStats.VolumeMedian * 0.5, // Half of median volume
-		MinPrice:      10.0,                           // Keep minimum price floor
-		MaxPrice:      marketStats.PriceMax * 1.1,     // Allow all prices up to max + 10%
-		MinVolatility: marketStats.VolMedian * 0.5,    // Half of median volatility
-		MinBarCount:   100,                            // Keep minimum bar count
+		MinAvgVolume:   marketStats.VolumeMedian * 0.5, // Half of median volume
+		MinPrice:       10.0,                           // Keep minimum price floor
+		MaxPrice:       marketStats.PriceMax * 1.1,     // Allow all prices up to max + 10%
+		MinVolatility:  marketStats.VolMedian * 0.5,    // Half of median volatility
+		MinBarCount:    100,                            // Keep minimum bar count
+		MaxBarRangePct: 0.5,                            // 50 bps — spread proxy from last bar range
 	}
 
 	log.Println("Filter Criteria (data-driven):")
-	log.Printf("  Min avg volume:  %.0f (50%% of median)", criteria.MinAvgVolume)
-	log.Printf("  Price range:     $%.2f - $%.2f", criteria.MinPrice, criteria.MaxPrice)
-	log.Printf("  Min volatility:  %.3f%% (50%% of median)", criteria.MinVolatility*100)
-	log.Printf("  Min bar count:   %d", criteria.MinBarCount)
+	log.Printf("  Min avg volume:   %.0f (50%% of median)", criteria.MinAvgVolume)
+	log.Printf("  Price range:      $%.2f - $%.2f", criteria.MinPrice, criteria.MaxPrice)
+	log.Printf("  Min volatility:   %.3f%% (50%% of median)", criteria.MinVolatility*100)
+	log.Printf("  Min bar count:    %d", criteria.MinBarCount)
+	log.Printf("  Max bar range:    %.2f%% (spread proxy)", criteria.MaxBarRangePct)
 	log.Println("")
 
-	// Second pass: apply filter criteria
+	// Second pass: apply filter criteria, annotate all symbols with tradeable flag
 	var candidates []string
 
-	for _, stats := range allStats {
-		passes := stats.BarCount >= criteria.MinBarCount &&
-			stats.AvgVolume >= criteria.MinAvgVolume &&
-			stats.AvgPrice >= criteria.MinPrice &&
-			stats.AvgPrice <= criteria.MaxPrice &&
-			stats.AvgVolatility >= criteria.MinVolatility
+	for i, stats := range allStats {
+		bd := allBarData[stats.Symbol]
 
-		if passes {
-			candidates = append(candidates, stats.Symbol)
-			log.Printf("✓ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%)",
-				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100)
+		var lastRangePct float64
+		if bd != nil && len(bd.Bars) > 0 {
+			last := bd.Bars[len(bd.Bars)-1]
+			if last.Close > 0 {
+				lastRangePct = (last.High - last.Low) / last.Close * 100.0
+			}
+		}
+		allStats[i].LastRangePct = lastRangePct
+
+		reason := ""
+		if bd == nil {
+			reason = "no data"
 		} else {
-			log.Printf("✗ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%)",
-				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100)
+			reason = filterReason(bd, criteria)
+		}
+
+		allStats[i].Tradeable = reason == ""
+		allStats[i].SkipReason = reason
+
+		if reason == "" {
+			candidates = append(candidates, stats.Symbol)
+			log.Printf("✓ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%, range: %.3f%%)",
+				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100, lastRangePct)
+		} else {
+			log.Printf("✗ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%, range: %.3f%%) — %s",
+				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100, lastRangePct, reason)
 		}
 	}
 
