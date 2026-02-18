@@ -7,7 +7,7 @@ build:
 run: run-live
 
 run-live: build
-	./fetch -live -strategies ../../docs/strategies.json -output ../../docs/bars
+	./fetch -live -output ../../docs/bars
 
 # Backtest mode: fetch 1000 bars for watchlist symbols
 run-backtest: build

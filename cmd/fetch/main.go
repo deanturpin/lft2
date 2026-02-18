@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -68,7 +70,7 @@ type FetchResult struct {
 func loadConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.WatchlistFile, "watchlist", "watchlist.json", "Path to watchlist JSON file")
-	flag.StringVar(&cfg.StrategyFile, "strategies", "docs/strategies.json", "Path to strategies JSON file")
+	flag.StringVar(&cfg.StrategyFile, "strategies", "https://deanturpin.github.io/lft2/strategies.json", "URL of strategies JSON")
 	flag.StringVar(&cfg.OutputDir, "output", "docs/bars", "Output directory for bar data")
 	flag.IntVar(&cfg.BarsPerSymbol, "bars", 1000, "Number of bars to fetch per symbol")
 	flag.IntVar(&cfg.TimeframeMin, "timeframe", 5, "Timeframe in minutes")
@@ -109,10 +111,46 @@ func loadWatchlist(path string) (*Watchlist, error) {
 	return &watchlist, nil
 }
 
-func loadStrategies(path string) ([]string, error) {
-	data, err := os.ReadFile(path)
+const pagesBase = "https://deanturpin.github.io/lft2"
+
+// downloadFile fetches a URL and writes it to a local path.
+func downloadFile(url, dest string) error {
+	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("reading strategies: %w", err)
+		return fmt.Errorf("fetching %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("fetching %s: HTTP %d", url, resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading %s: %w", url, err)
+	}
+
+	if err := os.WriteFile(dest, data, 0644); err != nil {
+		return fmt.Errorf("writing %s: %w", dest, err)
+	}
+
+	return nil
+}
+
+func loadStrategies(url string) ([]string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("fetching strategies: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetching strategies: HTTP %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading strategies response: %w", err)
 	}
 
 	var stratFile StrategyFile
@@ -120,7 +158,6 @@ func loadStrategies(path string) ([]string, error) {
 		return nil, fmt.Errorf("parsing strategies: %w", err)
 	}
 
-	// Extract unique symbols
 	symbols := make([]string, 0, len(stratFile.Recommendations))
 	for _, rec := range stratFile.Recommendations {
 		symbols = append(symbols, rec.Symbol)
@@ -222,7 +259,18 @@ func main() {
 	var err error
 
 	if cfg.LiveMode {
-		log.Printf("Live mode: Loading candidates from %s", cfg.StrategyFile)
+		// Download latest pipeline outputs from GitHub Pages
+		for _, f := range []struct{ url, dest string }{
+			{pagesBase + "/strategies.json", "../../docs/strategies.json"},
+			{pagesBase + "/candidates.json", "../../docs/candidates.json"},
+		} {
+			log.Printf("Downloading %s → %s", f.url, f.dest)
+			if err := downloadFile(f.url, f.dest); err != nil {
+				log.Fatalf("Failed to download %s: %v", f.url, err)
+			}
+		}
+
+		log.Printf("Live mode: Fetching candidates from %s", cfg.StrategyFile)
 		symbols, err = loadStrategies(cfg.StrategyFile)
 		if err != nil {
 			log.Fatalf("Failed to load strategies: %v", err)
