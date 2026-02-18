@@ -44,13 +44,13 @@ run: build
 	@echo "=== LFT2 Live Trading Loop ==="
 	@echo ""
 	@echo "→ account"
-	@cd cmd/account && $(MAKE) --no-print-directory run
+	@cd cmd/account && go build -o ../../bin/account . && cd ../.. && ./bin/account
 	@echo ""
 	@echo "→ exits"
 	@./$(EXITS)
 	@echo ""
 	@echo "→ fetch"
-	@cd cmd/fetch && $(MAKE) --no-print-directory run
+	@cd cmd/fetch && go build -o ../../bin/fetch . && cd ../.. && ./bin/fetch
 	@echo ""
 	@echo "→ downloading strategies.json from GitHub Pages"
 	@curl -sfL https://deanturpin.github.io/lft2/strategies.json > docs/strategies.json \
@@ -61,7 +61,7 @@ run: build
 	@./$(ENTRIES)
 	@echo ""
 	@echo "→ execute"
-	@cd cmd/execute && $(MAKE) --no-print-directory run
+	@cd cmd/execute && go build -o ../../bin/execute . && cd ../.. && ./bin/execute
 	@echo ""
 	@echo "=== loop complete ==="
 
