@@ -22,9 +22,13 @@ target_include_directories(barlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_library(fixlib STATIC src/fix.cxx)
 target_include_directories(fixlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-add_executable(lft2 src/main.cxx src/test.cxx)
+add_executable(test src/test.cxx)
+
+target_include_directories(test PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
 add_executable(profile src/profile.cxx)
-add_executable(fetch src/fetch.cxx)
 add_executable(evaluate src/evaluate.cxx)
 add_executable(backtest src/backtest.cxx)
 add_executable(exits src/exits.cxx)
@@ -34,11 +38,6 @@ target_link_libraries(backtest PRIVATE barlib)
 target_link_libraries(evaluate PRIVATE barlib)
 target_link_libraries(exits    PRIVATE barlib fixlib)
 target_link_libraries(entries  PRIVATE barlib fixlib)
-
-target_include_directories(lft2 PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-)
 
 target_include_directories(profile PRIVATE
     ${CMAKE_SOURCE_DIR}
@@ -58,11 +57,6 @@ if(UNIX AND NOT APPLE)
     target_compile_options(profile PRIVATE -pg)
     target_link_options(profile PRIVATE -pg)
 endif()
-
-target_include_directories(fetch PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-)
 
 target_include_directories(evaluate PRIVATE
     ${CMAKE_SOURCE_DIR}
