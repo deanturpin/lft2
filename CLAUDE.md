@@ -22,11 +22,13 @@ Both are required. See `.env.example` for full structure.
 ### Technology Stack
 
 **C++26 modules** (`src/*.cxx`):
+
 - `test` - Compile-time unit tests (static_assert)
 - `profile` - Backtest with historical data
 - `evaluate` - Signal generation (platform-agnostic)
 
 **Go modules** (`cmd/*/main.go`):
+
 - `account` - Fetch account data from Alpaca
 - `fetch` - Retrieve market snapshots
 - `execute` - Place orders
@@ -34,12 +36,13 @@ Both are required. See `.env.example` for full structure.
 - `backtest` - Daily strategy evaluation
 
 **Svelte** (`web/`):
+
 - Dashboard with real-time updates
 - Builds to `docs/` for GitHub Pages
 
 ### Data Pipeline
 
-```
+```text
 Daily:    filter → backtest → strategies.json
 5min:     fetch → evaluate → execute → positions.json
 Hourly:   account → dashboard.json → website
@@ -71,6 +74,7 @@ constexpr bool is_entry(std::span<const bar> history) {
 ```
 
 Use `nstd::` for functions not yet constexpr in C++20/23:
+
 - `nstd::sqrt()` - Newton-Raphson square root (replace with `std::sqrt` in C++26)
 
 ### Common Issues
@@ -85,12 +89,12 @@ Use `nstd::` for functions not yet constexpr in C++20/23:
 
 ## File Structure
 
-```
+```text
 cmd/           - Go binaries (account, fetch, execute, filter, backtest)
 src/           - C++ source (strategies, backtesting, signal generation)
 web/           - Svelte dashboard (builds to docs/ for GitHub Pages)
 docs/          - Built static site (GitHub Pages)
-prices/        - Precompiled historical data headers
+snapshots/     - Pre-compiled historical bar data headers (backtesting)
 bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 .github/workflows/pages.yml - CI/CD pipeline (build + deploy)
 ```
@@ -112,11 +116,13 @@ bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 ## Testing
 
 **Compile-time** (`src/test.cxx`):
+
 - Strategy logic validated via `static_assert`
 - Bar parsing and validation
 - Entry/exit conditions
 
 **Runtime** (`make profile`):
+
 - Backtest all strategies on 45 stocks
 - Generate performance statistics
 - Publish results to GitHub Pages
@@ -124,12 +130,13 @@ bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 ## Deployment
 
 GitHub Actions workflow (`.github/workflows/pages.yml`):
+
 1. Build C++ modules with gcc-15
 2. Run profile to generate stats.json and top_stocks.json
 3. Build Svelte dashboard
 4. Deploy to GitHub Pages
 
-Live site: https://deanturpin.github.io/lft2/
+Live site: <https://deanturpin.github.io/lft2/>
 
 ## Notes
 

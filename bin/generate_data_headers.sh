@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Generate C++ headers from JSON price files in prices/ directory
-# Creates headers in prices/ with matching names (e.g., aapl.json -> aapl.h)
+# Generate C++ headers from JSON price files in snapshots/ directory
+# Creates headers in snapshots/ with matching names (e.g., aapl.json -> aapl.h)
 # Uses C++26 #embed for efficient compile-time embedding
 
-for json_file in prices/*.json; do
+for json_file in snapshots/*.json; do
     # Extract symbol from filename (e.g., aapl.json -> aapl)
     symbol=$(basename "$json_file" .json)
 
-    header_file="prices/${symbol}.h"
+    header_file="snapshots/${symbol}.h"
 
     cat > "$header_file" << EOF
 #pragma once
