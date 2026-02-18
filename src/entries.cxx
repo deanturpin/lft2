@@ -69,6 +69,10 @@ AccountInfo load_account_info() {
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
   auto obj = std::string_view{content};
 
+  // json_number scans object content (inside braces); skip the opening '{'
+  if (auto brace = obj.find('{'); brace != std::string_view::npos)
+    obj.remove_prefix(brace + 1);
+
   return {json_number(obj, "cash"), json_number(obj, "portfolio_value")};
 }
 
