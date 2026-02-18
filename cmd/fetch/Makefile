@@ -3,15 +3,18 @@
 build:
 	go build -o fetch .
 
-# Live trading mode: fetch latest 25 bars for strategy candidates
+# Live trading mode: download latest strategies from GitHub Pages, then fetch 25 bars
 run: run-live
 
 run-live: build
-	./fetch -live -output ../../docs/bars
+	curl -sf https://deanturpin.github.io/lft2/strategies.json \
+	    | jq -r '[.recommendations[].symbol]' \
+	    | jq '{symbols: .}' > /tmp/live-watchlist.json
+	./fetch -watchlist /tmp/live-watchlist.json -bars 25 -output ../../docs/bars
 
-# Backtest mode: fetch 1000 bars for watchlist symbols
+# Backtest mode: fetch 1000 bars for full watchlist
 run-backtest: build
-	./fetch -watchlist ../../watchlist.json -output ../../docs/bars
+	./fetch -watchlist ../../watchlist.json -bars 1000 -output ../../docs/bars
 
 test:
 	go test -v ./...
