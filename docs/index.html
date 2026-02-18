@@ -90,6 +90,11 @@
       background: linear-gradient(135deg, #6cb6ff 0%, #58a6ff 100%);
       box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
     }
+    #callgraph-card svg {
+      width: 100%;
+      height: auto;
+      filter: invert(1) hue-rotate(180deg);
+    }
   </style>
 </head>
 <body>
@@ -105,6 +110,11 @@
     <ul class="file-list" id="analysis-files">
       <li class="loading">Loading analysis files...</li>
     </ul>
+  </div>
+
+  <h2>Call Graph</h2>
+  <div class="card" id="callgraph-card">
+    <p class="loading" id="callgraph-loading">Loading call graph...</p>
   </div>
 
   <h2>About</h2>
@@ -176,10 +186,11 @@
 
     async function loadFiles() {
       const analysisFiles = [
-        { name: 'candidates.json', description: 'Filtered candidate stocks' },
-        { name: 'strategies.json', description: 'Backtested strategy recommendations' },
-        { name: 'pipeline-metadata.json', description: 'Pipeline execution metadata' },
-        { name: 'tech-stack.json', description: 'Build environment and tool versions' }
+        { name: 'candidates.json',        description: 'Filtered candidate stocks',               type: 'JSON' },
+        { name: 'strategies.json',         description: 'Backtested strategy recommendations',     type: 'JSON' },
+        { name: 'coverage/index.html',     description: 'Code coverage report (lcov)',             type: 'HTML' },
+        { name: 'pipeline-metadata.json',  description: 'Pipeline execution metadata',             type: 'JSON' },
+        { name: 'tech-stack.json',         description: 'Build environment and tool versions',     type: 'JSON' },
       ];
 
       // Load analysis files
@@ -194,7 +205,7 @@
             li.innerHTML = `
               <a href="${file.name}" class="file-link">
                 <span>${file.description}</span>
-                <span class="file-type">JSON</span>
+                <span class="file-type">${file.type}</span>
               </a>
             `;
             analysisContainer.appendChild(li);
@@ -209,9 +220,25 @@
       }
     }
 
+    async function loadSvg(filename, cardId, loadingId, label) {
+      try {
+        const response = await fetch(filename);
+        if (response.ok) {
+          const svg = await response.text();
+          document.getElementById(cardId).innerHTML =
+            `<a href="${filename}" target="_blank" title="Open full size in new tab" style="display:block;cursor:zoom-in">${svg}</a>`;
+        } else {
+          document.getElementById(loadingId).textContent = `${label} not yet generated`;
+        }
+      } catch (err) {
+        document.getElementById(loadingId).textContent = `${label} not yet generated`;
+      }
+    }
+
     loadMetadata();
     loadTechStack();
     loadFiles();
+    loadSvg('callgraph.svg',  'callgraph-card',  'callgraph-loading',  'Call graph');
   </script>
 </body>
 </html>

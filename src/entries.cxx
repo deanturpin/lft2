@@ -3,10 +3,12 @@
 #include "fix.h"
 #include "json.h"
 #include "market.h"
+#include "params.h"
 #include "paths.h"
 #include <chrono>
 #include <fstream>
 #include <print>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -47,7 +49,7 @@ std::vector<Candidate> load_candidates() {
     auto obj = std::string_view{content}.substr(obj_start + 1,
                                                 obj_end - obj_start - 1);
     auto c = Candidate{std::string{json_string(obj, "symbol")},
-                       std::string{json_string(obj, "recommended_strategy")}};
+                       std::string{json_string(obj, "strategy")}};
 
     if (!c.symbol.empty() && !c.strategy.empty())
       candidates.push_back(c);
@@ -155,7 +157,26 @@ int main() {
     }
 
     auto latest_price = bars.back().close;
-    std::println("   Current price: ${:.2f}", latest_price);
+    auto first_ts = bars.front().timestamp;
+    auto last_ts = bars.back().timestamp;
+    std::println("   Current price: ${:.2f}  bars: {} → {}", latest_price,
+                 first_ts, last_ts);
+
+    // Skip if latest bar is more than one bar period (5 min) old — stale data
+    // produces nonsense signals and should never trigger a live order.
+    {
+      auto now = std::chrono::system_clock::now();
+      auto bar_time = std::chrono::sys_seconds{};
+      std::istringstream ss{std::string{last_ts}};
+      std::chrono::from_stream(ss, "%Y-%m-%dT%H:%M:%SZ", bar_time);
+      auto age =
+          std::chrono::duration_cast<std::chrono::minutes>(now - bar_time);
+      if (age > std::chrono::minutes{10}) {
+        std::println("   ⏭️  Stale data ({} minutes old), skipping",
+                     age.count());
+        continue;
+      }
+    }
 
     // Skip if market is closed or in risk-off window (first hour / last 30 min)
     if (market::risk_off(bars.back().timestamp)) {
@@ -164,19 +185,7 @@ int main() {
     }
 
     // Check entry signal using recommended strategy
-    auto should_enter = false;
-
-    if (candidate.strategy == "volume_surge_dip")
-      should_enter = volume_surge_dip(bars);
-    else if (candidate.strategy == "mean_reversion")
-      should_enter = mean_reversion(bars);
-    else if (candidate.strategy == "sma_crossover")
-      should_enter = sma_crossover(bars);
-    else {
-      std::println("   ⚠️  Unknown strategy: {}", candidate.strategy);
-      continue;
-    }
-
+    auto should_enter = dispatch_entry(candidate.strategy, bars);
     if (!should_enter) {
       std::println("   ⏭️  No entry signal");
       continue;
@@ -200,10 +209,18 @@ int main() {
     std::println("   ✅ Entry signal! Buying {} shares (${:.2f})", shares,
                  order_value);
 
-    // Generate FIX buy order
+    // Generate FIX buy order — encode symbol, strategy and risk params in the
+    // client_order_id (tag 11) so every field is visible in Alpaca's order
+    // history without needing a separate lookup.
+    // Format: AAPL_mean_reversion_tp3_sl2_tsl1_20260218T143000
+    auto now_ts = std::format("{:%Y%m%dT%H%M%S}",
+                              std::chrono::floor<std::chrono::seconds>(
+                                  std::chrono::system_clock::now()));
     auto order_id = std::format(
-        "ENTRY_{}_{}_{}", candidate.symbol, seq_num,
-        std::chrono::system_clock::now().time_since_epoch().count());
+        "{}_{}_tp{}_sl{}_tsl{}_{}", candidate.symbol, candidate.strategy,
+        static_cast<int>(default_params.take_profit_pct * 100),
+        static_cast<int>(default_params.stop_loss_pct * 100),
+        static_cast<int>(default_params.trailing_stop_pct * 100), now_ts);
 
     buy_orders.push_back(fix::new_order_single(
         order_id, candidate.symbol, fix::SIDE_BUY, shares, seq_num,

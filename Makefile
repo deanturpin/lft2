@@ -25,8 +25,11 @@ all: run
 # cmake: compile all C++ modules into build/
 # ============================================================
 build:
-	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=g++-15
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=$(GCXX)
 	cmake --build $(BUILD_DIR) -j
+
+# g++-15 required for C++26; override: GCXX=g++ make build
+GCXX ?= g++-15
 
 # ============================================================
 # GNU make: live trading loop (module sequencing)
@@ -48,6 +51,11 @@ run: build
 	@echo ""
 	@echo "→ fetch"
 	@cd cmd/fetch && $(MAKE) --no-print-directory run
+	@echo ""
+	@echo "→ downloading strategies.json from GitHub Pages"
+	@curl -sfL https://deanturpin.github.io/lft2/strategies.json > docs/strategies.json \
+	    && echo "→ wrote docs/strategies.json" \
+	    || echo "→ warning: failed to download strategies.json"
 	@echo ""
 	@echo "→ entries"
 	@./$(ENTRIES)
@@ -90,13 +98,33 @@ backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
 
-# Run profile binary and generate gprof report to docs/ for GitHub Pages.
-# gprof requires -pg flag which is Linux-only (enabled in CMakeLists.txt).
+# Run the profile binary (instrumented with -pg/--coverage) to generate:
+#   docs/coverage/       - gcov HTML coverage report (lcov + genhtml)
+#   docs/callgraph.svg   - gprof call graph as SVG (Linux only, via gprof2dot + dot)
 profile: build
 	@echo "→ profile"
-	@./$(PROFILE)
-	@gprof $(PROFILE) gmon.out > docs/gprof.txt 2>/dev/null || true
-	@echo "→ wrote docs/gprof.txt"
+	@./$(PROFILE) > /dev/null
+	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
+	      --gcov-tool gcov-15 --ignore-errors mismatch \
+	    && echo "→ captured coverage data" \
+	    || echo "→ warning: lcov capture failed"
+	@if [ -s docs/coverage.info ]; then \
+	    genhtml docs/coverage.info --output-directory docs/coverage \
+	            --title "LFT2 Coverage" --quiet \
+	    && echo "→ wrote docs/coverage/" \
+	    || echo "→ warning: genhtml failed"; \
+	else \
+	    echo "→ skipping coverage (no coverage data)"; \
+	fi
+	@if [ -s gmon.out ]; then \
+	    gprof $(PROFILE) gmon.out \
+	    | gprof2dot -f prof -n 10 -e 10 \
+	    | dot -Tsvg -o docs/callgraph.svg \
+	    && echo "→ wrote docs/callgraph.svg" \
+	    || echo "→ callgraph failed"; \
+	else \
+	    echo "→ skipping callgraph (no gmon.out)"; \
+	fi
 
 # ============================================================
 # Housekeeping

@@ -20,11 +20,11 @@ constexpr std::string path(std::string_view name) {
 
 const auto strategies = path("strategies.json");
 const auto candidates = path("candidates.json");
-const auto account    = path("account.json");
-const auto positions  = path("positions.json");
-const auto signals    = path("signals.json");
-const auto buy_fix    = path("buy.fix");
-const auto sell_fix   = path("sell.fix");
+const auto account = path("account.json");
+const auto positions = path("positions.json");
+const auto signals = path("signals.json");
+const auto buy_fix = path("buy.fix");
+const auto sell_fix = path("sell.fix");
 
 // All paths share the same root prefix by construction
 

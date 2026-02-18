@@ -77,4 +77,35 @@ static_assert([] {
                .timestamp = "2025-01-01T10:00:00Z"};
   return !is_exit(pos, b);
 }());
+
+// Test: trailing stop ratchets up with price — caller updates trailing_stop
+// each bar to track the peak. Here price rose to 108, trailing_stop raised to
+// 107 (1% below peak), then drops to 106.5 → below trailing_stop → exit.
+static_assert([] {
+  // After price rose to 108, caller set trailing_stop = 108 * 0.99 = 106.92
+  auto pos = position{100.0, 115.0, 90.0, 106.92};
+  auto b = bar{.close = 106.5, // below ratcheted trailing stop
+               .high = 107.0,
+               .low = 106.0,
+               .open = 107.0,
+               .vwap = 106.7,
+               .volume = 900,
+               .num_trades = 45,
+               .timestamp = "2025-01-01T14:00:00Z"};
+  return is_exit(pos, b);
+}());
+
+// Test: trailing stop does not trigger while price stays above it
+static_assert([] {
+  auto pos = position{100.0, 115.0, 90.0, 106.92};
+  auto b = bar{.close = 108.0, // above trailing stop — no exit
+               .high = 108.5,
+               .low = 107.5,
+               .open = 107.8,
+               .vwap = 108.0,
+               .volume = 900,
+               .num_trades = 45,
+               .timestamp = "2025-01-01T14:05:00Z"};
+  return !is_exit(pos, b);
+}());
 } // namespace

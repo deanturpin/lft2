@@ -16,25 +16,13 @@ type Config struct {
 	APISecret     string
 	DataURL       string
 	WatchlistFile string
-	StrategyFile  string
 	OutputDir     string
 	BarsPerSymbol int
 	TimeframeMin  int
-	LiveMode      bool
 }
 
 type Watchlist struct {
 	Symbols []string `json:"symbols"`
-}
-
-type StrategyRecommendation struct {
-	Symbol   string  `json:"symbol"`
-	Strategy string  `json:"strategy"`
-	WinRate  float64 `json:"win_rate"`
-}
-
-type StrategyFile struct {
-	Recommendations []StrategyRecommendation `json:"recommendations"`
 }
 
 type AlpacaBar struct {
@@ -47,16 +35,16 @@ type AlpacaBar struct {
 }
 
 type AlpacaBarsResponse struct {
-	Bars      []AlpacaBar `json:"bars"`
-	Symbol    string      `json:"symbol"`
-	NextPageToken string  `json:"next_page_token,omitempty"`
+	Bars          []AlpacaBar `json:"bars"`
+	Symbol        string      `json:"symbol"`
+	NextPageToken string      `json:"next_page_token,omitempty"`
 }
 
 type SymbolData struct {
-	Symbol string       `json:"symbol"`
-	Bars   []AlpacaBar  `json:"bars"`
-	Count  int          `json:"count"`
-	FetchedAt string    `json:"fetched_at"`
+	Symbol    string      `json:"symbol"`
+	Bars      []AlpacaBar `json:"bars"`
+	Count     int         `json:"count"`
+	FetchedAt string      `json:"fetched_at"`
 }
 
 type FetchResult struct {
@@ -68,11 +56,9 @@ type FetchResult struct {
 func loadConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.WatchlistFile, "watchlist", "watchlist.json", "Path to watchlist JSON file")
-	flag.StringVar(&cfg.StrategyFile, "strategies", "docs/strategies.json", "Path to strategies JSON file")
 	flag.StringVar(&cfg.OutputDir, "output", "docs/bars", "Output directory for bar data")
-	flag.IntVar(&cfg.BarsPerSymbol, "bars", 1000, "Number of bars to fetch per symbol")
+	flag.IntVar(&cfg.BarsPerSymbol, "bars", 25, "Number of bars to fetch per symbol")
 	flag.IntVar(&cfg.TimeframeMin, "timeframe", 5, "Timeframe in minutes")
-	flag.BoolVar(&cfg.LiveMode, "live", false, "Live trading mode (fetch latest bars for strategy candidates)")
 	flag.Parse()
 
 	cfg.APIKey = os.Getenv("ALPACA_API_KEY")
@@ -85,11 +71,6 @@ func loadConfig() Config {
 
 	if cfg.APIKey == "" || cfg.APISecret == "" {
 		log.Fatal("ALPACA_API_KEY and ALPACA_API_SECRET environment variables required")
-	}
-
-	// In live mode, fetch fewer bars and use strategies file
-	if cfg.LiveMode {
-		cfg.BarsPerSymbol = 25  // Latest 25 bars for live trading
 	}
 
 	return cfg
@@ -109,41 +90,19 @@ func loadWatchlist(path string) (*Watchlist, error) {
 	return &watchlist, nil
 }
 
-func loadStrategies(path string) ([]string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("reading strategies: %w", err)
-	}
-
-	var stratFile StrategyFile
-	if err := json.Unmarshal(data, &stratFile); err != nil {
-		return nil, fmt.Errorf("parsing strategies: %w", err)
-	}
-
-	// Extract unique symbols
-	symbols := make([]string, 0, len(stratFile.Recommendations))
-	for _, rec := range stratFile.Recommendations {
-		symbols = append(symbols, rec.Symbol)
-	}
-
-	return symbols, nil
-}
-
 func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
-	// Calculate date range to fetch approximately the requested number of bars
-	// 5-minute bars: ~78 per day (market hours only)
-	// Request extra days to account for weekends and holidays
-	daysNeeded := (cfg.BarsPerSymbol / 78) + 10
-	endDate := time.Now().UTC()
-	startDate := endDate.AddDate(0, 0, -daysNeeded)
-
-	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&start=%s&end=%s&limit=%d&feed=iex",
+	// start=6 weeks ago + sort=desc + limit gives the most recent N bars.
+	// Without a start bound the API only returns today's bars (~120 max).
+	// feed=iex is intentionally omitted — IEX only retains today's bars;
+	// the default SIP feed provides weeks of history needed for backtesting.
+	// Bars are reversed to ascending (oldest first) order before saving.
+	start := time.Now().UTC().AddDate(0, 0, -42).Format(time.RFC3339)
+	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&limit=%d&sort=desc&start=%s",
 		cfg.DataURL,
 		symbol,
 		cfg.TimeframeMin,
-		startDate.Format("2006-01-02"),
-		endDate.Format("2006-01-02"),
 		cfg.BarsPerSymbol,
+		start,
 	)
 
 	req, err := NewAlpacaRequest("GET", url, cfg.APIKey, cfg.APISecret)
@@ -165,10 +124,13 @@ func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
 		return nil, fmt.Errorf("no bars returned")
 	}
 
-	// Keep only the most recent N bars
 	bars := response.Bars
 	if len(bars) > cfg.BarsPerSymbol {
-		bars = bars[len(bars)-cfg.BarsPerSymbol:]
+		bars = bars[:cfg.BarsPerSymbol]
+	}
+	// Reverse from desc back to chronological (oldest first)
+	for i, j := 0, len(bars)-1; i < j; i, j = i+1, j-1 {
+		bars[i], bars[j] = bars[j], bars[i]
 	}
 
 	return &SymbolData{
@@ -206,7 +168,6 @@ func processSymbol(cfg Config, symbol string, resultChan chan<- FetchResult, wg 
 		return
 	}
 
-	// Save JSON
 	if err := saveJSON(data, cfg.OutputDir); err != nil {
 		resultChan <- FetchResult{Symbol: symbol, Error: fmt.Errorf("saving JSON: %w", err)}
 		return
@@ -218,26 +179,14 @@ func processSymbol(cfg Config, symbol string, resultChan chan<- FetchResult, wg 
 func main() {
 	cfg := loadConfig()
 
-	var symbols []string
-	var err error
-
-	if cfg.LiveMode {
-		log.Printf("Live mode: Loading candidates from %s", cfg.StrategyFile)
-		symbols, err = loadStrategies(cfg.StrategyFile)
-		if err != nil {
-			log.Fatalf("Failed to load strategies: %v", err)
-		}
-	} else {
-		log.Printf("Backtest mode: Loading watchlist from %s", cfg.WatchlistFile)
-		watchlist, err := loadWatchlist(cfg.WatchlistFile)
-		if err != nil {
-			log.Fatalf("Failed to load watchlist: %v", err)
-		}
-		symbols = watchlist.Symbols
+	log.Printf("Loading watchlist from %s", cfg.WatchlistFile)
+	watchlist, err := loadWatchlist(cfg.WatchlistFile)
+	if err != nil {
+		log.Fatalf("Failed to load watchlist: %v", err)
 	}
 
-	if len(symbols) == 0 {
-		log.Fatal("No symbols to fetch")
+	if len(watchlist.Symbols) == 0 {
+		log.Fatal("No symbols in watchlist")
 	}
 
 	log.Printf("Creating output directory: %s", cfg.OutputDir)
@@ -245,30 +194,23 @@ func main() {
 		log.Fatalf("Failed to create output directory: %v", err)
 	}
 
-	mode := "backtest"
-	if cfg.LiveMode {
-		mode = "live"
-	}
-	log.Printf("Mode: %s | Fetching %d bars for %d symbols (timeframe: %dMin)",
-		mode, cfg.BarsPerSymbol, len(symbols), cfg.TimeframeMin)
+	log.Printf("Fetching %d bars for %d symbols (timeframe: %dMin)",
+		cfg.BarsPerSymbol, len(watchlist.Symbols), cfg.TimeframeMin)
 	log.Println()
 
 	var wg sync.WaitGroup
-	resultChan := make(chan FetchResult, len(symbols))
+	resultChan := make(chan FetchResult, len(watchlist.Symbols))
 
-	// Process symbols concurrently
-	for _, symbol := range symbols {
+	for _, symbol := range watchlist.Symbols {
 		wg.Add(1)
 		go processSymbol(cfg, symbol, resultChan, &wg)
 	}
 
-	// Wait for all goroutines to complete
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
 
-	// Collect results
 	successCount := 0
 	failCount := 0
 

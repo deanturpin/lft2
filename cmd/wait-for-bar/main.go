@@ -54,8 +54,6 @@ func main() {
 
 	if !clock.IsOpen {
 		fmt.Printf("Next open:     %s\n", clock.NextOpen)
-		fmt.Println("\nMarket is closed - nothing to do")
-		return
 	}
 
 	// Parse exchange timestamp from Alpaca (RFC3339)

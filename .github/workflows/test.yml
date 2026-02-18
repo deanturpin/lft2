@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    paths:
+      - 'cmd/filter/**'
+      - 'cmd/fetch/**'
+      - 'cmd/execute/**'
+  pull_request:
+    paths:
+      - 'cmd/filter/**'
+      - 'cmd/fetch/**'
+      - 'cmd/execute/**'
+
+jobs:
+  go-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: false
+
+      - name: Run filter tests
+        run: go test -v ./...
+        working-directory: cmd/filter
+
+      - name: Run fetch tests
+        run: go test -v ./...
+        working-directory: cmd/fetch
+
+      - name: Run execute tests
+        run: go test -v ./...
+        working-directory: cmd/execute

@@ -86,13 +86,7 @@ int main() {
       continue;
     }
 
-    auto should_enter = false;
-    if (candidate.strategy == "volume_surge_dip")
-      should_enter = volume_surge_dip(bars);
-    else if (candidate.strategy == "mean_reversion")
-      should_enter = mean_reversion(bars);
-    else if (candidate.strategy == "sma_crossover")
-      should_enter = sma_crossover(bars);
+    auto should_enter = dispatch_entry(candidate.strategy, bars);
 
     if (should_enter) {
       signals.push_back({
@@ -115,17 +109,22 @@ int main() {
     return 1;
   }
 
-  ofs << "{\n  \"signals\": [\n";
+  ofs << "{\"signals\": [\n";
   for (auto i = 0uz; i < signals.size(); ++i) {
     const auto &sig = signals[i];
-    ofs << std::format("    "
-                       "{{\"symbol\":\"{}\",\"strategy\":\"{}\",\"action\":\"{}"
-                       "\",\"price\":{:.2f},\"timestamp\":\"{}\"}}",
-                       sig.symbol, sig.strategy, sig.action, sig.price,
-                       sig.timestamp);
-    ofs << (i < signals.size() - 1 ? ",\n" : "\n");
+    auto sep = i + 1 < signals.size() ? "," : "";
+    ofs << std::format(
+        R"(  {{
+    "symbol": "{}",
+    "strategy": "{}",
+    "action": "{}",
+    "price": {:.2f},
+    "timestamp": "{}"
+  }}{}
+)",
+        sig.symbol, sig.strategy, sig.action, sig.price, sig.timestamp, sep);
   }
-  ofs << "  ]\n}\n";
+  ofs << "]}\n";
 
   std::println("Wrote signals to docs/signals.json");
   return 0;

@@ -6,6 +6,7 @@
 #include "exit.h"
 #include "json.h"
 #include "market.h"
+#include "params.h"
 #include "paths.h"
 #include <algorithm>
 #include <chrono>
@@ -16,6 +17,7 @@
 #include <iomanip>
 #include <limits>
 #include <print>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -49,66 +51,72 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
   auto result = StrategyResult{};
   result.strategy_name = std::string{strategy_name};
 
-  // Capture data range
-  if (!bars.empty()) {
-    result.first_timestamp = std::string{bars.front().timestamp};
-    result.last_timestamp = std::string{bars.back().timestamp};
+  if (bars.empty()) {
+    std::println("  ✗ {} - no bars", strategy_name);
+    return result;
   }
+
+  result.first_timestamp = std::string{bars.front().timestamp};
+  result.last_timestamp = std::string{bars.back().timestamp};
 
   auto trades = std::vector<Trade>{};
   auto position = std::optional<::position>{};
   auto entry_bar_index = 0uz;
 
-  // Walk through bars simulating live trading
-  for (auto i = 0uz; i < bars.size(); ++i) {
+  // Walk through bars: now is the signal bar (close), next is the fill
+  // bar (open). Stop one bar early so lookahead is always valid.
+  for (auto i = 20uz; i + 1 < bars.size(); ++i) {
+    const auto &now = bars[i];
+    const auto &next = bars[i + 1];
     auto history = std::span{bars.data(), i + 1};
-    auto &ts = bars[i].timestamp;
 
-    if (!market::market_open(ts))
+    if (!market::market_open(now.timestamp))
       continue;
 
-    // Risk-off: liquidate any open position, skip new entries
-    if (position && market::risk_off(ts)) {
-      auto exit_price = bars[i].close;
+    // Risk-off: liquidate any open position; fill at next bar's open like any
+    // exit
+    if (position && market::risk_off(now.timestamp)) {
       auto profit_pct =
-          (exit_price - position->entry_price) / position->entry_price;
-      auto duration = static_cast<int>(i - entry_bar_index);
-
-      trades.push_back(Trade{.entry_price = position->entry_price,
-                             .exit_price = exit_price,
-                             .profit_pct = profit_pct,
-                             .win = profit_pct > 0.0,
-                             .duration_bars = duration});
-
+          (next.open - position->entry_price) / position->entry_price;
+      trades.push_back(
+          Trade{.entry_price = position->entry_price,
+                .exit_price = next.open,
+                .profit_pct = profit_pct,
+                .win = profit_pct > 0.0,
+                .duration_bars = static_cast<int>(i - entry_bar_index)});
       position.reset();
       continue;
     }
 
-    // Check for normal exit when in position
-    if (position && is_exit(*position, bars[i])) {
-      auto exit_price = bars[i].close;
+    // Update trailing stop to track peak price while in position
+    if (position) {
+      auto peak =
+          position->trailing_stop / (1.0 - default_params.trailing_stop_pct);
+      if (now.close > peak)
+        position->trailing_stop =
+            now.close * (1.0 - default_params.trailing_stop_pct);
+    }
+
+    // Exit signal fires on now's close; fill at next bar's open
+    if (position && is_exit(*position, now)) {
       auto profit_pct =
-          (exit_price - position->entry_price) / position->entry_price;
-      auto duration = static_cast<int>(i - entry_bar_index);
-
-      trades.push_back(Trade{.entry_price = position->entry_price,
-                             .exit_price = exit_price,
-                             .profit_pct = profit_pct,
-                             .win = profit_pct > 0.0,
-                             .duration_bars = duration});
-
+          (next.open - position->entry_price) / position->entry_price;
+      trades.push_back(
+          Trade{.entry_price = position->entry_price,
+                .exit_price = next.open,
+                .profit_pct = profit_pct,
+                .win = profit_pct > 0.0,
+                .duration_bars = static_cast<int>(i - entry_bar_index)});
       position.reset();
     }
-    // Check for entry signal when not in position (only during safe window)
-    else if (!position && i >= 20 && !market::risk_off(ts) &&
+    // Entry signal fires on now's close; fill at next bar's open
+    else if (!position && !market::risk_off(now.timestamp) &&
              entry_func(history)) {
-      auto entry_price = bars[i].close;
-
-      // Set position parameters (10% take profit, 5% stop loss)
-      position = ::position{.entry_price = entry_price,
-                            .take_profit = entry_price * 1.10,
-                            .stop_loss = entry_price * 0.95,
-                            .trailing_stop = entry_price * 0.95};
+      auto levels = calculate_levels(next.open, default_params);
+      position = ::position{.entry_price = next.open,
+                            .take_profit = levels.take_profit,
+                            .stop_loss = levels.stop_loss,
+                            .trailing_stop = levels.trailing_stop};
       entry_bar_index = i;
     }
   }
@@ -188,7 +196,7 @@ int main() {
       continue;
     }
 
-    // Test all three strategies
+    // Test all five strategies
     auto results = std::vector<StrategyResult>{};
 
     results.push_back(
@@ -203,14 +211,19 @@ int main() {
         backtest_strategy(bars, sma_crossover<10, 20>, "sma_crossover"));
     results[2].symbol = symbol;
 
+    results.push_back(backtest_strategy(bars, price_dip, "price_dip"));
+    results[3].symbol = symbol;
+
+    results.push_back(
+        backtest_strategy(bars, volatility_breakout, "volatility_breakout"));
+    results[4].symbol = symbol;
+
     // Debug output showing trade counts and win rates
-    for (const auto &r : results) {
-      if (r.trade_count > 0) {
+    for (const auto &r : results)
+      if (r.trade_count > 0)
         std::println("    {} - {}: {} trades, {:.1f}% win, {:.2f}% avg profit",
                      symbol, r.strategy_name, r.trade_count, r.win_rate * 100.0,
                      r.avg_profit * 100.0);
-      }
-    }
 
     // Find best strategy for this symbol
     auto best = std::max_element(
@@ -268,34 +281,31 @@ int main() {
     return 1;
   }
 
-  ofs << "{\n";
-  ofs << std::format("  \"timestamp\": \"{}\",\n", get_iso_timestamp());
-  ofs << "  \"recommendations\": [\n";
+  ofs << "{\"timestamp\": \"" << get_iso_timestamp()
+      << "\", \"recommendations\": [\n";
 
   for (auto i = 0uz; i < all_results.size(); ++i) {
     const auto &rec = all_results[i];
-    ofs << "    {\n";
-    ofs << std::format("      \"symbol\": \"{}\",\n", rec.symbol);
-    ofs << std::format("      \"strategy\": \"{}\",\n", rec.strategy_name);
-    ofs << std::format("      \"win_rate\": {:.3f},\n", rec.win_rate);
-    ofs << std::format("      \"avg_profit\": {:.4f},\n", rec.avg_profit);
-    ofs << std::format("      \"trade_count\": {},\n", rec.trade_count);
-    ofs << std::format("      \"min_duration_bars\": {},\n",
-                       rec.min_duration_bars);
-    ofs << std::format("      \"max_duration_bars\": {},\n",
-                       rec.max_duration_bars);
-    ofs << std::format("      \"first_timestamp\": \"{}\",\n",
-                       rec.first_timestamp);
-    ofs << std::format("      \"last_timestamp\": \"{}\"\n",
-                       rec.last_timestamp);
-    ofs << "    }";
-    if (i < all_results.size() - 1)
-      ofs << ",";
-    ofs << "\n";
+    auto sep = i + 1 < all_results.size() ? "," : "";
+    ofs << std::format(
+        R"(    {{
+      "symbol": "{}",
+      "strategy": "{}",
+      "win_rate": {:.3f},
+      "avg_profit": {:.4f},
+      "trade_count": {},
+      "min_duration_bars": {},
+      "max_duration_bars": {},
+      "first_timestamp": "{}",
+      "last_timestamp": "{}"
+    }}{}
+)",
+        rec.symbol, rec.strategy_name, rec.win_rate, rec.avg_profit,
+        rec.trade_count, rec.min_duration_bars, rec.max_duration_bars,
+        rec.first_timestamp, rec.last_timestamp, sep);
   }
 
-  ofs << "  ]\n";
-  ofs << "}\n";
+  ofs << "]}\n";
 
   std::println("Wrote {}", output_file.string());
 

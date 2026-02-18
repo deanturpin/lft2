@@ -1,4 +1,5 @@
 #include "json.h"
+#include <print>
 
 // Test parsing empty bars array
 namespace {
@@ -121,3 +122,5 @@ constexpr bool test_size_mismatch() {
 }
 static_assert(test_size_mismatch());
 } // namespace
+
+int main() { std::println("All compile-time tests passed."); }
