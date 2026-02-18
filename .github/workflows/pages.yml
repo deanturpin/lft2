@@ -17,17 +17,18 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # ubuntu:26.04 ships gcc-15 as the default g++ — required for C++26
+    container:
+      image: ubuntu:26.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-15 make git curl cmake binutils \
+          apt-get update
+          apt-get install -y g++ make git curl cmake binutils \
             lcov graphviz python3-pip
           pip3 install gprof2dot --break-system-packages
 
@@ -40,6 +41,8 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          # g++ in ubuntu:26.04 IS gcc-15; use it directly
+          GCXX: g++
         run: make backtest
 
       - name: Setup Pages
