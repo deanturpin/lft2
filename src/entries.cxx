@@ -148,33 +148,30 @@ int main() {
   auto buy_orders = std::vector<std::string>{};
   auto seq_num = 1;
 
-  for (const auto &candidate : candidates) {
-    std::println("\n📊 Evaluating {}", candidate.symbol);
-    std::println("   Strategy: {}", candidate.strategy);
+  std::println("\n{:<6} {:<24} {:>8}  {}", "Symbol", "Strategy", "Price",
+               "Status");
+  std::println("{}", std::string(60, '-'));
 
-    // Skip if already holding
+  for (const auto &candidate : candidates) {
+    auto prefix =
+        std::format("{:<6} {:<24}", candidate.symbol, candidate.strategy);
+
     if (std::ranges::find(existing_symbols, candidate.symbol) !=
         existing_symbols.end()) {
-      std::println("   ⏭️  Already holding position");
+      std::println("{}           ⏭️  holding", prefix);
       continue;
     }
 
-    // Load bars
     auto bars = load_bars(candidate.symbol);
     if (bars.size() < 25) {
-      std::println("   ⚠️  Insufficient data ({} bars)", bars.size());
+      std::println("{}           ⚠️  {} bars", prefix, bars.size());
       continue;
     }
 
     auto latest_price = bars.back().close;
-    auto first_ts = bars.front().timestamp;
     auto last_ts = bars.back().timestamp;
-    std::println("   Current price: ${:.2f}  bars: {} → {}", latest_price,
-                 first_ts, last_ts);
 
-    // During market hours, skip if latest bar is more than 10 minutes old —
-    // stale data produces nonsense signals. Outside hours the last bar will
-    // always be old, so the check is meaningless and skipped.
+    // During market hours, skip if latest bar is more than 10 minutes old
     if (market::market_open(last_ts)) {
       auto now = std::chrono::system_clock::now();
       auto bar_time = std::chrono::sys_seconds{};
@@ -183,40 +180,37 @@ int main() {
       auto age =
           std::chrono::duration_cast<std::chrono::minutes>(now - bar_time);
       if (age > std::chrono::minutes{10}) {
-        std::println("   ⏭️  Stale data ({} minutes old), skipping",
+        std::println("{} {:>8.2f}  ⏭️  stale ({}m)", prefix, latest_price,
                      age.count());
         continue;
       }
     }
 
-    if (!market::market_open(bars.back().timestamp)) {
-      std::println("   ⏭️  Market closed");
+    if (!market::market_open(last_ts)) {
+      std::println("{} {:>8.2f}  ⏭️  market closed", prefix, latest_price);
       continue;
     }
-    if (market::risk_off(bars.back().timestamp)) {
-      std::println("   ⏭️  Risk-off");
+    if (market::risk_off(last_ts)) {
+      std::println("{} {:>8.2f}  ⏭️  risk-off", prefix, latest_price);
       continue;
     }
 
-    // Check entry signal using recommended strategy
     auto should_enter = dispatch_entry(candidate.strategy, bars);
     if (!should_enter) {
-      std::println("   ⏭️  No entry signal");
+      std::println("{} {:>8.2f}  ⏭️  no signal", prefix, latest_price);
       continue;
     }
 
-    // Calculate shares
     auto shares = static_cast<int>(position_size / latest_price);
     if (shares < 1) {
-      std::println("   ❌ Position too small (${:.2f} / ${:.2f} = {} shares)",
-                   position_size, latest_price, shares);
+      std::println("{} {:>8.2f}  ❌ too small ({} shares)", prefix,
+                   latest_price, shares);
       continue;
     }
 
     auto order_value = shares * latest_price;
     if (order_value > account.cash) {
-      std::println("   ❌ Insufficient cash (need ${:.2f}, have ${:.2f})",
-                   order_value, account.cash);
+      std::println("{} {:>8.2f}  ❌ insufficient cash", prefix, latest_price);
       continue;
     }
 
@@ -240,6 +234,9 @@ int main() {
         order_id, candidate.symbol, fix::SIDE_BUY, shares, seq_num,
         fix::ORD_TYPE_MARKET, 0.0, candidate.strategy));
     seq_num++;
+
+    std::println("{} {:>8.2f}  ✅ buy {} shares (${:.2f})", prefix,
+                 latest_price, shares, order_value);
 
     // Deduct from available cash
     account.cash -= order_value;
