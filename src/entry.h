@@ -130,6 +130,73 @@ constexpr bool price_dip(std::span<const bar> history) {
   return price_change_pct < -1.0;
 }
 
+// price_dip: exact threshold — 1% drop triggers, 0.99% does not
+static_assert([] {
+  auto bars = std::array<bar, 2>{};
+  bars[0] = bar{.close = 100.0,
+                .high = 101.0,
+                .low = 99.0,
+                .open = 100.0,
+                .vwap = 100.0,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:00:00Z"};
+  // 0.99% drop — should NOT trigger
+  bars[1] = bar{.close = 99.01,
+                .high = 100.0,
+                .low = 98.5,
+                .open = 100.0,
+                .vwap = 99.5,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:05:00Z"};
+  return !price_dip(bars);
+}());
+
+// price_dip: exactly 1.01% drop triggers
+static_assert([] {
+  auto bars = std::array<bar, 2>{};
+  bars[0] = bar{.close = 100.0,
+                .high = 101.0,
+                .low = 99.0,
+                .open = 100.0,
+                .vwap = 100.0,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:00:00Z"};
+  bars[1] = bar{.close = 98.98,
+                .high = 100.0,
+                .low = 98.5,
+                .open = 100.0,
+                .vwap = 99.0,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:05:00Z"};
+  return price_dip(bars);
+}());
+
+// price_dip: up bar does not trigger
+static_assert([] {
+  auto bars = std::array<bar, 2>{};
+  bars[0] = bar{.close = 100.0,
+                .high = 101.0,
+                .low = 99.0,
+                .open = 100.0,
+                .vwap = 100.0,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:00:00Z"};
+  bars[1] = bar{.close = 101.5,
+                .high = 102.0,
+                .low = 100.0,
+                .open = 100.0,
+                .vwap = 101.0,
+                .volume = 1000,
+                .num_trades = 10,
+                .timestamp = "2026-01-01T10:05:00Z"};
+  return !price_dip(bars);
+}());
+
 // Volatility breakout strategy
 // Buys when recent volatility expands to >1.5x historical average and the bar
 // closes up — signals a breakout from compression rather than a breakdown.
@@ -171,6 +238,62 @@ constexpr bool volatility_breakout(std::span<const bar> history) {
   auto price_change_pct = (current.close - current.open) / current.open * 100.0;
   return recent_vol > hist_vol * 1.5 && price_change_pct > 0.0;
 }
+
+// volatility_breakout: insufficient history returns false
+static_assert([] {
+  auto bars = std::array<bar, 10>{};
+  for (auto &b : bars)
+    b = bar{.close = 100.0,
+            .high = 101.0,
+            .low = 99.0,
+            .open = 100.0,
+            .vwap = 100.0,
+            .volume = 1000,
+            .num_trades = 10,
+            .timestamp = "2026-01-01T10:00:00Z"};
+  return !volatility_breakout(bars);
+}());
+
+// volatility_breakout: flat historical bars with no expansion does not trigger
+static_assert([] {
+  auto bars = std::array<bar, 30>{};
+  for (auto &b : bars)
+    b = bar{.close = 100.0,
+            .high = 100.1,
+            .low = 99.9,
+            .open = 100.0,
+            .vwap = 100.0,
+            .volume = 1000,
+            .num_trades = 10,
+            .timestamp = "2026-01-01T10:00:00Z"};
+  return !volatility_breakout(bars);
+}());
+
+// volatility_breakout: expansion but bar closes down does not trigger
+static_assert([] {
+  auto bars = std::array<bar, 30>{};
+  // Quiet historical bars
+  for (auto i = 0uz; i < 25uz; ++i)
+    bars[i] = bar{.close = 100.0,
+                  .high = 100.2,
+                  .low = 99.8,
+                  .open = 100.0,
+                  .vwap = 100.0,
+                  .volume = 1000,
+                  .num_trades = 10,
+                  .timestamp = "2026-01-01T10:00:00Z"};
+  // Wide recent bars but closing DOWN — should not trigger
+  for (auto i = 25uz; i < 30uz; ++i)
+    bars[i] = bar{.close = 98.0,
+                  .high = 104.0,
+                  .low = 96.0,
+                  .open = 100.0,
+                  .vwap = 100.0,
+                  .volume = 1000,
+                  .num_trades = 10,
+                  .timestamp = "2026-01-01T11:00:00Z"};
+  return !volatility_breakout(bars);
+}());
 
 // Master entry function combining multiple strategies
 // Returns true if any strategy signals an entry
