@@ -117,6 +117,11 @@
     <p class="loading" id="callgraph-loading">Loading call graph...</p>
   </div>
 
+  <h2>Flame Graph</h2>
+  <div class="card" id="flamegraph-card">
+    <p class="loading" id="flamegraph-loading">Loading flame graph...</p>
+  </div>
+
   <h2>About</h2>
   <div class="card">
     <p style="margin-bottom: 1rem;">
@@ -220,25 +225,26 @@
       }
     }
 
-    async function loadCallgraph() {
+    async function loadSvg(filename, cardId, loadingId, label) {
       try {
-        const response = await fetch('callgraph.svg');
+        const response = await fetch(filename);
         if (response.ok) {
           const svg = await response.text();
-          const card = document.getElementById('callgraph-card');
-          card.innerHTML = `<a href="callgraph.svg" target="_blank" title="Open full size in new tab" style="display:block;cursor:zoom-in">${svg}</a>`;
+          document.getElementById(cardId).innerHTML =
+            `<a href="${filename}" target="_blank" title="Open full size in new tab" style="display:block;cursor:zoom-in">${svg}</a>`;
         } else {
-          document.getElementById('callgraph-loading').textContent = 'Call graph not yet generated';
+          document.getElementById(loadingId).textContent = `${label} not yet generated`;
         }
       } catch (err) {
-        document.getElementById('callgraph-loading').textContent = 'Call graph not yet generated';
+        document.getElementById(loadingId).textContent = `${label} not yet generated`;
       }
     }
 
     loadMetadata();
     loadTechStack();
     loadFiles();
-    loadCallgraph();
+    loadSvg('callgraph.svg',  'callgraph-card',  'callgraph-loading',  'Call graph');
+    loadSvg('flamegraph.svg', 'flamegraph-card', 'flamegraph-loading', 'Flame graph');
   </script>
 </body>
 </html>

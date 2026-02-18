@@ -39,5 +39,6 @@ docs/*.json
 docs/coverage/
 docs/coverage.info
 docs/callgraph.svg
+docs/flamegraph.svg
 docs/gprof.txt
 compile_commands.json

@@ -125,6 +125,16 @@ profile: build
 	else \
 	    echo "→ skipping callgraph (no gmon.out)"; \
 	fi
+	@if command -v valgrind >/dev/null 2>&1; then \
+	    valgrind --tool=callgrind --callgrind-out-file=callgrind.out \
+	             --quiet $(PROFILE) > /dev/null 2>&1 \
+	    && gprof2dot -f callgrind -n 5 -e 5 callgrind.out \
+	       | dot -Tsvg -o docs/flamegraph.svg \
+	    && echo "→ wrote docs/flamegraph.svg" \
+	    || echo "→ flamegraph failed"; \
+	else \
+	    echo "→ skipping flamegraph (valgrind not available)"; \
+	fi
 
 # ============================================================
 # Housekeeping
