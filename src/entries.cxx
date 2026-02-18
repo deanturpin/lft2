@@ -161,7 +161,8 @@ int main() {
     std::println("   Current price: ${:.2f}  bars: {} → {}", latest_price,
                  first_ts, last_ts);
 
-    // Warn if latest bar is more than 15 minutes old (stale data)
+    // Skip if latest bar is more than one bar period (5 min) old — stale data
+    // produces nonsense signals and should never trigger a live order.
     {
       auto now = std::chrono::system_clock::now();
       auto bar_time = std::chrono::sys_seconds{};
@@ -169,8 +170,11 @@ int main() {
       std::chrono::from_stream(ss, "%Y-%m-%dT%H:%M:%SZ", bar_time);
       auto age =
           std::chrono::duration_cast<std::chrono::minutes>(now - bar_time);
-      if (age > std::chrono::minutes{15})
-        std::println("   ⚠️  Data is {} minutes old", age.count());
+      if (age > std::chrono::minutes{10}) {
+        std::println("   ⏭️  Stale data ({} minutes old), skipping",
+                     age.count());
+        continue;
+      }
     }
 
     // Skip if market is closed or in risk-off window (first hour / last 30 min)
