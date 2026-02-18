@@ -104,10 +104,15 @@ profile: build
 	@genhtml docs/coverage.info --output-directory docs/coverage \
 	         --title "LFT2 Coverage" --quiet 2>/dev/null || true
 	@echo "→ wrote docs/coverage/"
-	@gprof $(PROFILE) gmon.out 2>/dev/null \
-	    | gprof2dot -f gprof 2>/dev/null \
-	    | dot -Tsvg -o docs/callgraph.svg 2>/dev/null || true
-	@echo "→ wrote docs/callgraph.svg"
+	@if [ -s gmon.out ]; then \
+	    gprof $(PROFILE) gmon.out \
+	    | gprof2dot -f gprof \
+	    | dot -Tsvg -o docs/callgraph.svg \
+	    && echo "→ wrote docs/callgraph.svg" \
+	    || echo "→ callgraph failed"; \
+	else \
+	    echo "→ skipping callgraph (no gmon.out)"; \
+	fi
 
 # ============================================================
 # Housekeeping
