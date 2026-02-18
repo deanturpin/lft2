@@ -189,9 +189,10 @@ int main() {
       }
     }
 
-    // Skip if market is closed or in risk-off window (first hour / last 30 min)
-    if (market::risk_off(bars.back().timestamp)) {
-      std::println("   ⏭️  Risk-off period (too close to open/close)");
+    // Skip if market closed or in risk-off window (first hour / last 30 min)
+    if (!market::market_open(bars.back().timestamp) ||
+        market::risk_off(bars.back().timestamp)) {
+      std::println("   ⏭️  Risk-off");
       continue;
     }
 
