@@ -16,15 +16,34 @@ std::vector<bar> load_bars(std::string_view symbol) {
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
   auto s = std::string_view{content};
 
-  // Advance past {"bars":[
+  // Scan the top-level object for the "bars" key.
+  // The fetch module writes {"symbol":..., "bars":[...],...} so we cannot
+  // assume "bars" is the first key — skip any preceding keys.
   if (!expect(s, '{'))
     return {};
-  skip_ws(s);
-  if (parse_string(s) != "bars")
-    return {};
-  if (!expect(s, ':'))
-    return {};
-  if (!expect(s, '['))
+
+  bool found = false;
+  while (!s.empty() && !s.starts_with('}')) {
+    skip_ws(s);
+    auto key = parse_string(s);
+    if (!expect(s, ':'))
+      return {};
+    if (key == "bars") {
+      if (!expect(s, '['))
+        return {};
+      found = true;
+      break;
+    }
+    // Skip non-array scalar value (string or number) and continue
+    skip_ws(s);
+    if (s.starts_with('"'))
+      parse_string(s);
+    else
+      parse_number<double>(s);
+    skip_comma(s);
+  }
+
+  if (!found)
     return {};
 
   // Persistent storage for timestamp string_views held by each bar.
