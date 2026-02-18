@@ -28,7 +28,7 @@ target_include_directories(test PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )
-add_executable(profile src/profile.cxx)
+add_executable(analyse src/analyse.cxx)
 add_executable(evaluate src/evaluate.cxx)
 add_executable(backtest src/backtest.cxx)
 add_executable(exits src/exits.cxx)
@@ -39,23 +39,23 @@ target_link_libraries(evaluate PRIVATE barlib)
 target_link_libraries(exits    PRIVATE barlib fixlib)
 target_link_libraries(entries  PRIVATE barlib fixlib)
 
-target_include_directories(profile PRIVATE
+target_include_directories(analyse PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
 )
 
 # Profile target gets debug, profiling, and coverage flags
-target_compile_options(profile PRIVATE
+target_compile_options(analyse PRIVATE
     -g3                      # Maximum debug information
     -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
     --coverage               # gcov instrumentation
 )
-target_link_options(profile PRIVATE --coverage)
+target_link_options(analyse PRIVATE --coverage)
 
 # Add gprof profiling flags on Linux (not supported on macOS)
 if(UNIX AND NOT APPLE)
-    target_compile_options(profile PRIVATE -pg)
-    target_link_options(profile PRIVATE -pg)
+    target_compile_options(analyse PRIVATE -pg)
+    target_link_options(analyse PRIVATE -pg)
 endif()
 
 target_include_directories(evaluate PRIVATE

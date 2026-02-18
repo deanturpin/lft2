@@ -24,7 +24,7 @@ Both are required. See `.env.example` for full structure.
 **C++26 modules** (`src/*.cxx`):
 
 - `test` - Compile-time unit tests (static_assert)
-- `profile` - Backtest with historical data
+- `analyse` - Strategy analysis across snapshot data
 - `evaluate` - Signal generation (platform-agnostic)
 
 **Go modules** (`cmd/*/main.go`):
@@ -54,7 +54,7 @@ All modules communicate via JSON files.
 
 ```bash
 make build      # C++ modules (CMake + gcc-15)
-make profile    # Run backtest on historical data
+make analyse   # Analyse strategies against snapshot data
 make account    # Start Go account service
 make web-dev    # Svelte dev server
 make web-build  # Build static site to docs/
@@ -103,7 +103,7 @@ bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 
 1. **Add strategy**: Implement as `constexpr` in `src/entry.h` or `src/exit.h`
 2. **Unit test**: Add `static_assert` tests inline
-3. **Profile**: Run `make profile` to backtest on historical data
+3. **Analyse**: Run `make analyse` to analyse strategies against snapshot data
 4. **Deploy**: Push to main, GitHub Actions builds and publishes to Pages
 
 ## Security
@@ -121,7 +121,7 @@ bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 - Bar parsing and validation
 - Entry/exit conditions
 
-**Runtime** (`make profile`):
+**Runtime** (`make analyse`):
 
 - Backtest all strategies on 45 stocks
 - Generate performance statistics
@@ -132,7 +132,7 @@ bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
 GitHub Actions workflow (`.github/workflows/pages.yml`):
 
 1. Build C++ modules with gcc-15
-2. Run profile to generate stats.json and top_stocks.json
+2. Run analyse to generate analyse.json (per-symbol strategy stats)
 3. Build Svelte dashboard
 4. Deploy to GitHub Pages
 

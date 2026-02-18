@@ -11,11 +11,11 @@
 
 BUILD_DIR := build
 BACKTEST  := $(BUILD_DIR)/backtest
-PROFILE   := $(BUILD_DIR)/profile
+ANALYSE   := $(BUILD_DIR)/analyse
 EXITS     := $(BUILD_DIR)/exits
 ENTRIES   := $(BUILD_DIR)/entries
 
-.PHONY: all build run backtest profile clean \
+.PHONY: all build run backtest analyse clean \
         fetch-go filter-go backtest-cpp help
 
 # Default: compile then run live trading loop
@@ -68,7 +68,7 @@ run: build
 #   filter   - score and rank candidates → docs/strategies.json
 #   backtest - run C++ strategies and write results → docs/
 # ============================================================
-backtest: fetch-go filter-go backtest-cpp profile
+backtest: fetch-go filter-go backtest-cpp analyse
 	@echo ""
 	@echo "=== backtest complete ==="
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
@@ -93,20 +93,20 @@ backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
 
-# Run profile binary, then generate:
-#   docs/profile.json    - per-symbol backtest stats (JSON)
+# Run analyse binary, then generate:
+#   docs/analyse.json   - per-symbol strategy stats (JSON)
 #   docs/coverage/       - gcov HTML coverage report (lcov + genhtml)
 #   docs/callgraph.svg   - gprof call graph as SVG (Linux only, via gprof2dot + dot)
-profile: build
-	@echo "→ profile"
-	@./$(PROFILE) --json > docs/profile.json
-	@echo "→ wrote docs/profile.json"
+analyse: build
+	@echo "→ analyse"
+	@./$(ANALYSE) --json > docs/analyse.json
+	@echo "→ wrote docs/analyse.json"
 	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
 	      --gcov-tool gcov-15 --ignore-errors mismatch 2>/dev/null || true
 	@genhtml docs/coverage.info --output-directory docs/coverage \
 	         --title "LFT2 Coverage" --quiet 2>/dev/null || true
 	@echo "→ wrote docs/coverage/"
-	@gprof $(PROFILE) gmon.out 2>/dev/null \
+	@gprof $(ANALYSE) gmon.out 2>/dev/null \
 	    | gprof2dot -f gprof 2>/dev/null \
 	    | dot -Tsvg -o docs/callgraph.svg 2>/dev/null || true
 	@echo "→ wrote docs/callgraph.svg"
