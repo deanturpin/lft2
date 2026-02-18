@@ -111,7 +111,7 @@ profile: build
 	@echo "→ wrote docs/coverage/"
 	@if [ -s gmon.out ]; then \
 	    gprof $(PROFILE) gmon.out \
-	    | gprof2dot -f gprof \
+	    | gprof2dot -f prof \
 	    | dot -Tsvg -o docs/callgraph.svg \
 	    && echo "→ wrote docs/callgraph.svg" \
 	    || echo "→ callgraph failed"; \
