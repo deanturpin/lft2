@@ -162,14 +162,18 @@ func calculateMarketStats(allStats []SymbolStats) MarketStats {
 	return MarketStats{
 		VolumeMin:    math.Floor(minFloat64(volumes)),
 		VolumeMax:    math.Ceil(maxFloat64(volumes)),
-		VolumeMedian: median(volumes),
-		PriceMin:     minFloat64(prices),
-		PriceMax:     maxFloat64(prices),
-		PriceMedian:  median(prices),
-		VolMin:       minFloat64(volatilities),
-		VolMax:       maxFloat64(volatilities),
-		VolMedian:    median(volatilities),
+		VolumeMedian: round3(median(volumes)),
+		PriceMin:     round3(minFloat64(prices)),
+		PriceMax:     round3(maxFloat64(prices)),
+		PriceMedian:  round3(median(prices)),
+		VolMin:       round3(minFloat64(volatilities)),
+		VolMax:       round3(maxFloat64(volatilities)),
+		VolMedian:    round3(median(volatilities)),
 	}
+}
+
+func round3(v float64) float64 {
+	return math.Round(v*1000) / 1000
 }
 
 func minFloat64(values []float64) float64 {
@@ -248,9 +252,9 @@ func main() {
 		avgVolume, avgPrice, avgVolatility := calculateStats(barData.Bars)
 		allStats = append(allStats, SymbolStats{
 			Symbol:        barData.Symbol,
-			AvgVolume:     avgVolume,
-			AvgPrice:      avgPrice,
-			AvgVolatility: avgVolatility,
+			AvgVolume:     round3(avgVolume),
+			AvgPrice:      round3(avgPrice),
+			AvgVolatility: round3(avgVolatility),
 			BarCount:      barData.Count,
 		})
 	}
@@ -301,7 +305,7 @@ func main() {
 				lastRangePct = (last.High - last.Low) / last.Close * 100.0
 			}
 		}
-		allStats[i].LastRangePct = lastRangePct
+		allStats[i].LastRangePct = round3(lastRangePct)
 
 		reason := ""
 		if bd == nil {

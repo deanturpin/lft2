@@ -481,18 +481,18 @@ int main(int argc, char *argv[]) {
       std::println("  \"{}\": {{", r.symbol);
       std::println("    \"bar_count\": {},", r.bar_count);
       std::println("    \"trade_count\": {},", r.trade_count);
-      std::println("    \"best_gain_pct\": {:.2f},", r.best_gain_pct);
+      std::println("    \"best_gain_pct\": {:.3f},", r.best_gain_pct);
       std::println("    \"best_gain_duration\": {},", r.best_gain_duration);
-      std::println("    \"worst_loss_pct\": {:.2f},", r.worst_loss_pct);
+      std::println("    \"worst_loss_pct\": {:.3f},", r.worst_loss_pct);
       std::println("    \"worst_loss_duration\": {},", r.worst_loss_duration);
-      std::println("    \"avg_gain_pct\": {:.2f},", r.avg_gain_pct);
-      std::println("    \"win_rate_pct\": {:.2f},", r.win_rate_pct);
-      std::println("    \"profit_factor\": {:.2f},", r.profit_factor);
-      std::println("    \"suggested_tp_pct\": {:.2f},", r.suggested_tp_pct);
-      std::println("    \"suggested_sl_pct\": {:.2f},", r.suggested_sl_pct);
-      std::println("    \"max_intraday_gain_pct\": {:.2f},",
+      std::println("    \"avg_gain_pct\": {:.3f},", r.avg_gain_pct);
+      std::println("    \"win_rate_pct\": {:.3f},", r.win_rate_pct);
+      std::println("    \"profit_factor\": {:.3f},", r.profit_factor);
+      std::println("    \"suggested_tp_pct\": {:.3f},", r.suggested_tp_pct);
+      std::println("    \"suggested_sl_pct\": {:.3f},", r.suggested_sl_pct);
+      std::println("    \"max_intraday_gain_pct\": {:.3f},",
                    r.max_intraday_gain_pct);
-      std::println("    \"max_intraday_loss_pct\": {:.2f}",
+      std::println("    \"max_intraday_loss_pct\": {:.3f}",
                    r.max_intraday_loss_pct);
       std::println("  }}{}", i < results.size() - 1 ? "," : "");
     }

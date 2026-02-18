@@ -285,7 +285,7 @@ int main() {
     ofs << std::format("      \"symbol\": \"{}\",\n", rec.symbol);
     ofs << std::format("      \"strategy\": \"{}\",\n", rec.strategy_name);
     ofs << std::format("      \"win_rate\": {:.3f},\n", rec.win_rate);
-    ofs << std::format("      \"avg_profit\": {:.4f},\n", rec.avg_profit);
+    ofs << std::format("      \"avg_profit\": {:.3f},\n", rec.avg_profit);
     ofs << std::format("      \"trade_count\": {},\n", rec.trade_count);
     ofs << std::format("      \"min_duration_bars\": {},\n",
                        rec.min_duration_bars);
