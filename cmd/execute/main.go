@@ -251,10 +251,13 @@ func main() {
 			continue
 		}
 
-		// Check we actually hold this — don't sell what we don't own
+		// Check we actually hold this — don't sell what we don't own.
+		// This should never happen: exits.cxx reads positions.json which is
+		// written by the account module from the same live API. If it does,
+		// there is a pipeline ordering bug or a stale positions.json.
 		held, ok := positions[symbol]
 		if !ok {
-			fmt.Printf("  [skip] %s not in positions (nothing to sell)\n", symbol)
+			fmt.Printf("  [WARNING] %s in sell.fix but NOT in live positions — pipeline bug? skipping\n", symbol)
 			continue
 		}
 
