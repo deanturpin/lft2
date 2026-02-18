@@ -27,7 +27,9 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y g++-15 make git curl cmake binutils
+          apt-get install -y g++-15 make git curl cmake binutils \
+            lcov graphviz python3-pip
+          pip3 install gprof2dot --break-system-packages
 
       - name: Setup Go
         uses: actions/setup-go@v5

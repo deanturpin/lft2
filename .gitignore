@@ -36,4 +36,8 @@ public/
 # GitHub Pages generated data (keep index.html, ignore generated files)
 docs/bars/
 docs/*.json
+docs/coverage/
+docs/coverage.info
+docs/callgraph.svg
+docs/gprof.txt
 compile_commands.json

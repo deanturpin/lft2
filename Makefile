@@ -25,11 +25,11 @@ all: run
 # cmake: compile all C++ modules into build/
 # ============================================================
 build:
-	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=$(CXX)
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_CXX_COMPILER=$(GCXX)
 	cmake --build $(BUILD_DIR) -j
 
-# g++-15 is required for C++26; override with CXX=g++ if unavailable
-CXX ?= g++-15
+# g++-15 required for C++26; override: GCXX=g++ make build
+GCXX ?= g++-15
 
 # ============================================================
 # GNU make: live trading loop (module sequencing)
@@ -93,14 +93,23 @@ backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
 
-# Run profile binary: writes docs/profile.json and gprof report.
-# gprof requires -pg flag which is Linux-only (enabled in CMakeLists.txt).
+# Run profile binary, then generate:
+#   docs/profile.json    - per-symbol backtest stats (JSON)
+#   docs/coverage/       - gcov HTML coverage report (lcov + genhtml)
+#   docs/callgraph.svg   - gprof call graph as SVG (Linux only, via gprof2dot + dot)
 profile: build
 	@echo "→ profile"
 	@./$(PROFILE) --json > docs/profile.json
 	@echo "→ wrote docs/profile.json"
-	@gprof $(PROFILE) gmon.out > docs/gprof.txt 2>/dev/null || true
-	@echo "→ wrote docs/gprof.txt"
+	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
+	      --gcov-tool gcov-15 --ignore-errors mismatch 2>/dev/null || true
+	@genhtml docs/coverage.info --output-directory docs/coverage \
+	         --title "LFT2 Coverage" --quiet 2>/dev/null || true
+	@echo "→ wrote docs/coverage/"
+	@gprof $(PROFILE) gmon.out 2>/dev/null \
+	    | gprof2dot -f gprof 2>/dev/null \
+	    | dot -Tsvg -o docs/callgraph.svg 2>/dev/null || true
+	@echo "→ wrote docs/callgraph.svg"
 
 # ============================================================
 # Housekeeping
