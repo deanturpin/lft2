@@ -188,7 +188,7 @@ int main() {
       continue;
     }
 
-    // Test all three strategies
+    // Test all five strategies
     auto results = std::vector<StrategyResult>{};
 
     results.push_back(
@@ -202,6 +202,13 @@ int main() {
     results.push_back(
         backtest_strategy(bars, sma_crossover<10, 20>, "sma_crossover"));
     results[2].symbol = symbol;
+
+    results.push_back(backtest_strategy(bars, price_dip, "price_dip"));
+    results[3].symbol = symbol;
+
+    results.push_back(
+        backtest_strategy(bars, volatility_breakout, "volatility_breakout"));
+    results[4].symbol = symbol;
 
     // Debug output showing trade counts and win rates
     for (const auto &r : results) {

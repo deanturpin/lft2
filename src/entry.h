@@ -115,6 +115,63 @@ constexpr bool sma_crossover(std::span<const bar> history) {
   return prev_short_sma <= prev_long_sma && short_sma > long_sma;
 }
 
+// Price dip strategy
+// Buys when the bar closes >1% below its open — a single-bar momentum reversal
+// signal. Simple but catches intraday capitulation moves.
+constexpr bool price_dip(std::span<const bar> history) {
+  if (history.size() < 2)
+    return false;
+
+  auto current = history.back();
+  if (!is_valid(current))
+    return false;
+
+  auto price_change_pct = (current.close - current.open) / current.open * 100.0;
+  return price_change_pct < -1.0;
+}
+
+// Volatility breakout strategy
+// Buys when recent volatility expands to >1.5x historical average and the bar
+// closes up — signals a breakout from compression rather than a breakdown.
+constexpr bool volatility_breakout(std::span<const bar> history) {
+  constexpr auto lookback = 20uz;
+  constexpr auto recent_window = 5uz;
+
+  if (history.size() < lookback + recent_window)
+    return false;
+
+  // Validate recent bars
+  for (auto i = 0uz; i < recent_window; ++i)
+    if (!is_valid(history[history.size() - 1 - i]))
+      return false;
+
+  // Recent volatility: average bar range over last 5 bars
+  auto recent_vol = 0.0;
+  for (auto i = 0uz; i < recent_window; ++i) {
+    const auto &b = history[history.size() - 1 - i];
+    recent_vol += (b.high - b.low) / b.close;
+  }
+  recent_vol /= recent_window;
+
+  // Historical volatility: average bar range over the preceding lookback bars
+  auto hist_vol = 0.0;
+  for (auto i = recent_window; i < recent_window + lookback; ++i) {
+    const auto &b = history[history.size() - 1 - i];
+    if (!is_valid(b))
+      return false;
+    hist_vol += (b.high - b.low) / b.close;
+  }
+  hist_vol /= lookback;
+
+  if (hist_vol < 0.0001)
+    return false;
+
+  // Breakout: volatility expands AND current bar closes up
+  auto current = history.back();
+  auto price_change_pct = (current.close - current.open) / current.open * 100.0;
+  return recent_vol > hist_vol * 1.5 && price_change_pct > 0.0;
+}
+
 // Master entry function combining multiple strategies
 // Returns true if any strategy signals an entry
 // Strategies are evaluated in order of backtest effectiveness
@@ -129,6 +186,14 @@ constexpr bool is_entry(std::span<const bar> history) {
 
   // Priority 3: SMA crossover (momentum confirmation)
   if (sma_crossover(history))
+    return true;
+
+  // Priority 4: Simple price dip (intraday momentum reversal)
+  if (price_dip(history))
+    return true;
+
+  // Priority 5: Volatility breakout (expansion from compression)
+  if (volatility_breakout(history))
     return true;
 
   return false;
@@ -238,5 +303,70 @@ static_assert([] {
                  .num_trades = 150,
                  .timestamp = "2025-01-01T11:00:00Z"};
   return volume_surge_dip(bars);
+}());
+
+// Test: price_dip triggers on >1% intrabar drop
+static_assert([] {
+  auto bars = std::array<bar, 5>{};
+  for (auto i = 0uz; i < 4uz; ++i)
+    bars[i] = bar{.close = 100.0,
+                  .high = 101.0,
+                  .low = 99.0,
+                  .open = 100.0,
+                  .vwap = 100.0,
+                  .volume = 1000,
+                  .num_trades = 50,
+                  .timestamp = "2025-01-01T10:00:00Z"};
+  // Bar closes >1% below open
+  bars[4] = bar{.close = 98.0,
+                .high = 100.5,
+                .low = 97.5,
+                .open = 100.0,
+                .vwap = 99.0,
+                .volume = 1000,
+                .num_trades = 50,
+                .timestamp = "2025-01-01T11:00:00Z"};
+  return price_dip(bars);
+}());
+
+// Test: price_dip does not trigger on flat or up bar
+static_assert([] {
+  auto bars = std::array<bar, 5>{};
+  for (auto i = 0uz; i < bars.size(); ++i)
+    bars[i] = bar{.close = 100.5,
+                  .high = 101.0,
+                  .low = 99.5,
+                  .open = 100.0,
+                  .vwap = 100.0,
+                  .volume = 1000,
+                  .num_trades = 50,
+                  .timestamp = "2025-01-01T10:00:00Z"};
+  return !price_dip(bars);
+}());
+
+// Test: volatility_breakout triggers on expanding range with up close
+static_assert([] {
+  auto bars = std::array<bar, 30>{};
+  // Historical bars: narrow range (low volatility)
+  for (auto i = 0uz; i < 25uz; ++i)
+    bars[i] = bar{.close = 100.0,
+                  .high = 100.2,
+                  .low = 99.8,
+                  .open = 100.0,
+                  .vwap = 100.0,
+                  .volume = 1000,
+                  .num_trades = 50,
+                  .timestamp = "2025-01-01T10:00:00Z"};
+  // Recent bars: wide range (volatility expansion) closing up
+  for (auto i = 25uz; i < 30uz; ++i)
+    bars[i] = bar{.close = 102.0,
+                  .high = 104.0,
+                  .low = 98.0,
+                  .open = 100.0,
+                  .vwap = 101.0,
+                  .volume = 1000,
+                  .num_trades = 50,
+                  .timestamp = "2025-01-01T11:00:00Z"};
+  return volatility_breakout(bars);
 }());
 } // namespace
