@@ -18,7 +18,6 @@ type Config struct {
 	APISecret     string
 	DataURL       string
 	WatchlistFile string
-	StrategyFile  string
 	OutputDir     string
 	BarsPerSymbol int
 	TimeframeMin  int
@@ -70,7 +69,6 @@ type FetchResult struct {
 func loadConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.WatchlistFile, "watchlist", "watchlist.json", "Path to watchlist JSON file")
-	flag.StringVar(&cfg.StrategyFile, "strategies", "https://deanturpin.github.io/lft2/strategies.json", "URL of strategies JSON")
 	flag.StringVar(&cfg.OutputDir, "output", "docs/bars", "Output directory for bar data")
 	flag.IntVar(&cfg.BarsPerSymbol, "bars", 1000, "Number of bars to fetch per symbol")
 	flag.IntVar(&cfg.TimeframeMin, "timeframe", 5, "Timeframe in minutes")
@@ -137,20 +135,10 @@ func downloadFile(url, dest string) error {
 	return nil
 }
 
-func loadStrategies(url string) ([]string, error) {
-	resp, err := http.Get(url)
+func loadStrategies(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("fetching strategies: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching strategies: HTTP %d", resp.StatusCode)
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading strategies response: %w", err)
+		return nil, fmt.Errorf("reading strategies: %w", err)
 	}
 
 	var stratFile StrategyFile
@@ -259,22 +247,24 @@ func main() {
 	var err error
 
 	if cfg.LiveMode {
-		// Download latest pipeline outputs from GitHub Pages
-		for _, f := range []struct{ url, dest string }{
-			{pagesBase + "/strategies.json", "../../docs/strategies.json"},
-			{pagesBase + "/candidates.json", "../../docs/candidates.json"},
-		} {
-			log.Printf("Downloading %s → %s", f.url, f.dest)
-			if err := downloadFile(f.url, f.dest); err != nil {
-				log.Fatalf("Failed to download %s: %v", f.url, err)
-			}
+		// Download strategies.json from GitHub Pages (backtest publishes it there)
+		tmp, tmpErr := os.CreateTemp("", "strategies-*.json")
+		if tmpErr != nil {
+			log.Fatalf("Failed to create temp file: %v", tmpErr)
+		}
+		tmp.Close()
+		defer os.Remove(tmp.Name())
+
+		log.Printf("Live mode: Downloading strategies from %s", pagesBase+"/strategies.json")
+		if err := downloadFile(pagesBase+"/strategies.json", tmp.Name()); err != nil {
+			log.Fatalf("Failed to download strategies: %v", err)
 		}
 
-		log.Printf("Live mode: Fetching candidates from %s", cfg.StrategyFile)
-		symbols, err = loadStrategies(cfg.StrategyFile)
+		symbols, err = loadStrategies(tmp.Name())
 		if err != nil {
 			log.Fatalf("Failed to load strategies: %v", err)
 		}
+		log.Printf("Loaded %d strategy candidates", len(symbols))
 	} else {
 		log.Printf("Backtest mode: Loading watchlist from %s", cfg.WatchlistFile)
 		watchlist, err := loadWatchlist(cfg.WatchlistFile)
