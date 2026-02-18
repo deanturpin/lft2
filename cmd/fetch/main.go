@@ -91,7 +91,8 @@ func loadWatchlist(path string) (*Watchlist, error) {
 }
 
 func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
-	// sort=desc + start 6 weeks back gives up to limit bars of recent history.
+	// start=6 weeks ago + sort=desc + limit gives the most recent N bars.
+	// Without a start bound the API only returns today's bars (~120 max).
 	// feed=iex is intentionally omitted — IEX only retains today's bars;
 	// the default SIP feed provides weeks of history needed for backtesting.
 	// Bars are reversed to ascending (oldest first) order before saving.
