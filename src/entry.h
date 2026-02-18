@@ -603,7 +603,7 @@ constexpr bool is_entry(std::span<const bar> history) {
 
 // Dispatch entry check by strategy name — single source of truth for the
 // name→function mapping used by entries.cxx and evaluate.cxx.
-// Defined in dispatch.cxx.
+// Defined in entry.cxx.
 bool dispatch_entry(std::string_view, std::span<const bar>);
 
 // is_entry: insufficient history returns false for all strategies
