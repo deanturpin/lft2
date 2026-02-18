@@ -2,6 +2,7 @@
 #include "json.h"
 #include "nstd.h"
 #include <span>
+#include <string_view>
 
 // Volume surge with price dip strategy
 // Detects capitulation patterns: high volume selling followed by reversal
@@ -597,6 +598,23 @@ constexpr bool is_entry(std::span<const bar> history) {
   if (volatility_breakout(history))
     return true;
 
+  return false;
+}
+
+// Dispatch entry check by strategy name — single source of truth for the
+// name→function mapping used by entries.cxx and evaluate.cxx
+inline bool dispatch_entry(std::string_view strategy,
+                           std::span<const bar> history) {
+  if (strategy == "volume_surge")
+    return volume_surge_dip(history);
+  if (strategy == "mean_reversion")
+    return mean_reversion(history);
+  if (strategy == "sma_crossover")
+    return sma_crossover(history);
+  if (strategy == "price_dip")
+    return price_dip(history);
+  if (strategy == "volatility_breakout")
+    return volatility_breakout(history);
   return false;
 }
 

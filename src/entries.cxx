@@ -164,23 +164,7 @@ int main() {
     }
 
     // Check entry signal using recommended strategy
-    auto should_enter = false;
-
-    if (candidate.strategy == "volume_surge")
-      should_enter = volume_surge_dip(bars);
-    else if (candidate.strategy == "mean_reversion")
-      should_enter = mean_reversion(bars);
-    else if (candidate.strategy == "sma_crossover")
-      should_enter = sma_crossover(bars);
-    else if (candidate.strategy == "price_dip")
-      should_enter = price_dip(bars);
-    else if (candidate.strategy == "volatility_breakout")
-      should_enter = volatility_breakout(bars);
-    else {
-      std::println("   ⚠️  Unknown strategy: {}", candidate.strategy);
-      continue;
-    }
-
+    auto should_enter = dispatch_entry(candidate.strategy, bars);
     if (!should_enter) {
       std::println("   ⏭️  No entry signal");
       continue;
