@@ -39,6 +39,6 @@ docs/*.json
 docs/coverage/
 docs/coverage.info
 docs/callgraph.svg
-docs/flamegraph.svg
 docs/gprof.txt
+callgrind.out
 compile_commands.json
