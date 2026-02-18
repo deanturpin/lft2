@@ -39,15 +39,6 @@ type OrderRequest struct {
 
 var client alpaca.Client
 
-func init() {
-	apiKey := os.Getenv("ALPACA_API_KEY")
-	apiSecret := os.Getenv("ALPACA_API_SECRET")
-	if apiKey == "" || apiSecret == "" {
-		log.Fatal("ALPACA_API_KEY and ALPACA_API_SECRET must be set")
-	}
-	client = alpaca.New(apiKey, apiSecret, os.Getenv("ALPACA_BASE_URL"), "")
-}
-
 func fetchAccount() (*Account, error) {
 	body, err := client.Get(client.BaseURL + "/v2/account")
 	if err != nil {
@@ -151,6 +142,13 @@ func submitOrder(req OrderRequest) error {
 }
 
 func main() {
+	apiKey := os.Getenv("ALPACA_API_KEY")
+	apiSecret := os.Getenv("ALPACA_API_SECRET")
+	if apiKey == "" || apiSecret == "" {
+		log.Fatal("ALPACA_API_KEY and ALPACA_API_SECRET must be set")
+	}
+	client = alpaca.New(apiKey, apiSecret, os.Getenv("ALPACA_BASE_URL"), "")
+
 	fmt.Println("Low Frequency Trader v2 - Trade Executor")
 	fmt.Println(strings.Repeat("─", 50))
 

@@ -4,9 +4,13 @@ on:
   push:
     paths:
       - 'cmd/filter/**'
+      - 'cmd/fetch/**'
+      - 'cmd/execute/**'
   pull_request:
     paths:
       - 'cmd/filter/**'
+      - 'cmd/fetch/**'
+      - 'cmd/execute/**'
 
 jobs:
   go-test:
@@ -22,3 +26,11 @@ jobs:
       - name: Run filter tests
         run: go test -v ./...
         working-directory: cmd/filter
+
+      - name: Run fetch tests
+        run: go test -v ./...
+        working-directory: cmd/fetch
+
+      - name: Run execute tests
+        run: go test -v ./...
+        working-directory: cmd/execute
