@@ -162,9 +162,10 @@ int main() {
     std::println("   Current price: ${:.2f}  bars: {} → {}", latest_price,
                  first_ts, last_ts);
 
-    // Skip if latest bar is more than one bar period (5 min) old — stale data
-    // produces nonsense signals and should never trigger a live order.
-    {
+    // During market hours, skip if latest bar is more than 10 minutes old —
+    // stale data produces nonsense signals. Outside hours the last bar will
+    // always be old, so the check is meaningless and skipped.
+    if (market::market_open(last_ts)) {
       auto now = std::chrono::system_clock::now();
       auto bar_time = std::chrono::sys_seconds{};
       std::istringstream ss{std::string{last_ts}};
