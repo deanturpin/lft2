@@ -52,6 +52,11 @@ run: build
 	@echo "→ fetch"
 	@cd cmd/fetch && $(MAKE) --no-print-directory run
 	@echo ""
+	@echo "→ downloading strategies.json from GitHub Pages"
+	@curl -sfL https://deanturpin.github.io/lft2/strategies.json > docs/strategies.json \
+	    && echo "→ wrote docs/strategies.json" \
+	    || echo "→ warning: failed to download strategies.json"
+	@echo ""
 	@echo "→ entries"
 	@./$(ENTRIES)
 	@echo ""
