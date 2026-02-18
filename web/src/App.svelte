@@ -2,11 +2,9 @@
   import Router from 'svelte-spa-router';
   import Dashboard from './routes/Dashboard.svelte';
   import About from './routes/About.svelte';
-  import Analysis from './routes/Analysis.svelte';
 
   const routes = {
     '/': Dashboard,
-    '/analysis': Analysis,
     '/about': About,
   };
 </script>
@@ -16,7 +14,6 @@
 
   <nav class="nav">
     <a href="#/" class="nav-link">Dashboard</a>
-    <a href="#/analysis" class="nav-link">Analysis</a>
     <a href="#/about" class="nav-link">About</a>
   </nav>
 
