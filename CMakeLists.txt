@@ -44,8 +44,11 @@ target_include_directories(profile PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# Profile target gets debug, profiling, and coverage flags
+# Profile target gets debug, profiling, and coverage flags.
+# -O0 overrides the global -O1 to prevent inlining — without it the constexpr
+# strategy functions are inlined away and gprof/callgraph only sees main().
 target_compile_options(profile PRIVATE
+    -O0                      # No optimisation: keep all function calls visible to gprof
     -g2                      # Maximum debug information
     -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
     --coverage               # gcov instrumentation

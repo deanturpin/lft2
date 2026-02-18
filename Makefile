@@ -105,10 +105,17 @@ profile: build
 	@echo "→ profile"
 	@./$(PROFILE) > /dev/null
 	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
-	      --gcov-tool gcov-15 --ignore-errors mismatch 2>/dev/null || true
-	@genhtml docs/coverage.info --output-directory docs/coverage \
-	         --title "LFT2 Coverage" --quiet 2>/dev/null || true
-	@echo "→ wrote docs/coverage/"
+	      --gcov-tool gcov-15 --ignore-errors mismatch \
+	    && echo "→ captured coverage data" \
+	    || echo "→ warning: lcov capture failed"
+	@if [ -s docs/coverage.info ]; then \
+	    genhtml docs/coverage.info --output-directory docs/coverage \
+	            --title "LFT2 Coverage" --quiet \
+	    && echo "→ wrote docs/coverage/" \
+	    || echo "→ warning: genhtml failed"; \
+	else \
+	    echo "→ skipping coverage (no coverage data)"; \
+	fi
 	@if [ -s gmon.out ]; then \
 	    gprof $(PROFILE) gmon.out \
 	    | gprof2dot -f prof \

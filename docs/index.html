@@ -226,7 +226,7 @@
         if (response.ok) {
           const svg = await response.text();
           const card = document.getElementById('callgraph-card');
-          card.innerHTML = svg;
+          card.innerHTML = `<a href="callgraph.svg" target="_blank" title="Open full size in new tab" style="display:block;cursor:zoom-in">${svg}</a>`;
         } else {
           document.getElementById('callgraph-loading').textContent = 'Call graph not yet generated';
         }
