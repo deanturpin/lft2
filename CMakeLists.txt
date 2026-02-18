@@ -16,7 +16,7 @@ add_compile_options(
     -march=native
 )
 
-add_library(barlib STATIC src/bar.cxx src/entry.cxx)
+add_library(barlib STATIC src/bar.cxx)
 target_include_directories(barlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 add_library(fixlib STATIC src/fix.cxx)

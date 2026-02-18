@@ -603,8 +603,20 @@ constexpr bool is_entry(std::span<const bar> history) {
 
 // Dispatch entry check by strategy name — single source of truth for the
 // name→function mapping used by entries.cxx and evaluate.cxx.
-// Defined in entry.cxx.
-bool dispatch_entry(std::string_view, std::span<const bar>);
+constexpr bool dispatch_entry(std::string_view strategy,
+                              std::span<const bar> history) {
+  if (strategy == "volume_surge")
+    return volume_surge_dip(history);
+  if (strategy == "mean_reversion")
+    return mean_reversion(history);
+  if (strategy == "sma_crossover")
+    return sma_crossover(history);
+  if (strategy == "price_dip")
+    return price_dip(history);
+  if (strategy == "volatility_breakout")
+    return volatility_breakout(history);
+  return false;
+}
 
 // is_entry: insufficient history returns false for all strategies
 static_assert([] {
