@@ -91,18 +91,12 @@ func loadWatchlist(path string) (*Watchlist, error) {
 }
 
 func fetchBars(cfg Config, symbol string) (*SymbolData, error) {
-	daysNeeded := (cfg.BarsPerSymbol / 78) + 10
-	endDate := time.Now().UTC()
-	startDate := endDate.AddDate(0, 0, -daysNeeded)
-
-	// sort=desc so Alpaca returns the most recent N bars rather than the
-	// oldest N from the start date. Bars are reversed to ascending order below.
-	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&start=%s&end=%s&limit=%d&feed=iex&sort=desc",
+	// sort=desc returns the most recent N bars; no start/end needed.
+	// Bars are reversed to ascending (oldest first) order before saving.
+	url := fmt.Sprintf("%s/v2/stocks/%s/bars?timeframe=%dMin&limit=%d&feed=iex&sort=desc",
 		cfg.DataURL,
 		symbol,
 		cfg.TimeframeMin,
-		startDate.Format(time.RFC3339),
-		endDate.Format(time.RFC3339),
 		cfg.BarsPerSymbol,
 	)
 
