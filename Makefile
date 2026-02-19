@@ -83,6 +83,7 @@ run: build
 	    if [ -s docs/coverage.info ]; then \
 	        genhtml docs/coverage.info --output-directory docs/coverage \
 	                --title "LFT2 Coverage" --quiet \
+	                --ignore-errors inconsistent,corrupt \
 	        && echo "→ wrote docs/coverage/" \
 	        || echo "→ warning: genhtml failed"; \
 	    else \
@@ -139,6 +140,7 @@ profile: build
 	    if [ -s docs/coverage.info ]; then \
 	        genhtml docs/coverage.info --output-directory docs/coverage \
 	                --title "LFT2 Coverage" --quiet \
+	                --ignore-errors inconsistent,corrupt \
 	        && echo "→ wrote docs/coverage/" \
 	        || echo "→ warning: genhtml failed"; \
 	    else \
