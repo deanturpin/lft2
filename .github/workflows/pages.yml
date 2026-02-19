@@ -2,7 +2,7 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '*/20 * * * *'  # Every 20 minutes
+    - cron: '*/10 * * * *'  # Every 10 minutes
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
@@ -38,7 +38,25 @@ jobs:
           go-version: '1.21'
           cache: false  # no root go.sum — workspace uses go.work
 
+      - name: Check Market Hours
+        id: market_check
+        run: |
+          # US market: 09:30-16:00 ET (14:30-21:00 UTC), Mon-Fri
+          hour=$(date -u +%H)
+          dow=$(date -u +%u)  # 1=Mon, 7=Sun
+          if [ "$dow" -ge 6 ]; then
+            echo "Weekend - market closed"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          elif [ "$hour" -lt 14 ] || [ "$hour" -ge 21 ]; then
+            echo "Outside market hours (09:30-16:00 ET)"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Market open - proceeding"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Pipeline
+        if: steps.market_check.outputs.skip != 'true'
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
