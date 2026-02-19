@@ -15,7 +15,7 @@ PROFILE   := $(BUILD_DIR)/profile
 EXITS     := $(BUILD_DIR)/exits
 ENTRIES   := $(BUILD_DIR)/entries
 
-.PHONY: all build run backtest profile clean \
+.PHONY: all build run profile clean \
         fetch-go filter-go backtest-cpp help
 
 # Default: compile then run live trading loop
@@ -32,38 +32,74 @@ build:
 GCXX ?= g++-15
 
 # ============================================================
-# GNU make: live trading loop (module sequencing)
-#   account  - fetch positions and cash balance from Alpaca → account.json, positions.json
+# GNU make: full pipeline — runs every 5-minute bar
+#   fetch    - get latest bars for watchlist → docs/bars/
+#   filter   - score and rank candidates → docs/candidates.json
+#   backtest - run C++ strategies → docs/strategies.json
+#   account  - fetch cash balance and positions from Alpaca
+#   entries  - evaluate entry signals → buy.fix (skips symbols already held)
 #   exits    - check open positions for exit signals → sell.fix
-#   wait-for-bar - sleep until next 5-min bar (+ 35s Alpaca publish delay)
-#   fetch    - get latest 25 bars for strategy candidates → docs/bars/
-#   entries  - evaluate entry signals → buy.fix
 #   execute  - submit buy.fix and sell.fix orders to Alpaca
 # ============================================================
 run: build
-	@echo "=== LFT2 Live Trading Loop ==="
-	@echo ""
-	@echo "→ account"
-	@cd cmd/account && go build -o ../../bin/account . && cd ../.. && ./bin/account
-	@echo ""
-	@echo "→ exits"
-	@./$(EXITS)
+	@echo "=== LFT2 pipeline ==="
 	@echo ""
 	@echo "→ fetch"
 	@cd cmd/fetch && go build -o ../../bin/fetch . && cd ../.. && ./bin/fetch
 	@echo ""
-	@echo "→ downloading strategies.json from GitHub Pages"
-	@curl -sfL https://deanturpin.github.io/lft2/strategies.json > docs/strategies.json \
-	    && echo "→ wrote docs/strategies.json" \
-	    || echo "→ warning: failed to download strategies.json"
+	@echo "→ filter"
+	@cd cmd/filter && go build -o ../../bin/filter . && cd ../.. && ./bin/filter
+	@echo ""
+	@echo "→ backtest"
+	@./$(BACKTEST)
+	@echo ""
+	@echo "→ account"
+	@cd cmd/account && go build -o ../../bin/account . && cd ../.. && ./bin/account
 	@echo ""
 	@echo "→ entries"
 	@./$(ENTRIES)
 	@echo ""
+	@echo "→ exits"
+	@./$(EXITS)
+	@echo ""
 	@echo "→ execute"
 	@cd cmd/execute && go build -o ../../bin/execute . && cd ../.. && ./bin/execute
 	@echo ""
-	@echo "=== loop complete ==="
+	@echo "=== done ==="
+	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
+	@echo '{'                                                                        > docs/tech-stack.json
+	@echo "  \"go\":     \"$$(go version | cut -d' ' -f3)\","                      >> docs/tech-stack.json
+	@echo "  \"gcc\":    \"$$(g++ --version | head -1 | awk '{print $$NF}')\"," >> docs/tech-stack.json
+	@echo "  \"cmake\":  \"$$(cmake --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
+	@echo "  \"make\":   \"$$(make --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
+	@echo "  \"os\":     \"$$(lsb_release -d 2>/dev/null | cut -f2 || uname -s)\"," >> docs/tech-stack.json
+	@echo "  \"kernel\": \"$$(uname -r)\"" >> docs/tech-stack.json
+	@echo '}'                                                                       >> docs/tech-stack.json
+	@if [ "$$(uname -s)" = "Linux" ]; then \
+	    lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
+	         --gcov-tool gcov-15 --ignore-errors mismatch \
+	    && echo "→ captured coverage data" \
+	    || echo "→ warning: lcov capture failed"; \
+	    if [ -s docs/coverage.info ]; then \
+	        genhtml docs/coverage.info --output-directory docs/coverage \
+	                --title "LFT2 Coverage" --quiet \
+	        && echo "→ wrote docs/coverage/" \
+	        || echo "→ warning: genhtml failed"; \
+	    else \
+	        echo "→ skipping coverage (no coverage data)"; \
+	    fi; \
+	    if [ -s gmon.out ]; then \
+	        gprof $(PROFILE) gmon.out \
+	        | gprof2dot -f prof -n 10 -e 10 \
+	        | dot -Tsvg -o docs/callgraph.svg \
+	        && echo "→ wrote docs/callgraph.svg" \
+	        || echo "→ callgraph failed"; \
+	    else \
+	        echo "→ skipping callgraph (no gmon.out)"; \
+	    fi; \
+	else \
+	    echo "→ skipping coverage and callgraph (Linux only)"; \
+	fi
 
 # ============================================================
 # GNU make: backtest pipeline (module sequencing)
@@ -73,26 +109,17 @@ run: build
 #   filter   - score and rank candidates → docs/strategies.json
 #   backtest - run C++ strategies and write results → docs/
 # ============================================================
-backtest: fetch-go filter-go backtest-cpp profile
+backtest: fetch-go filter-go backtest-cpp
 	@echo ""
 	@echo "=== backtest complete ==="
-	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
-	@echo '{'                                                                        > docs/tech-stack.json
-	@echo "  \"go\":     \"$$(go version | cut -d' ' -f3)\","                      >> docs/tech-stack.json
-	@echo "  \"gcc\":    \"$$(g++ --version | head -1 | awk '{print $$NF}')\"," >> docs/tech-stack.json
-	@echo "  \"cmake\":  \"$$(cmake --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
-	@echo "  \"make\":   \"$$(make --version | head -1 | awk '{print $$3}')\"," >> docs/tech-stack.json
-	@echo "  \"os\":     \"$$(uname -s)\"," >> docs/tech-stack.json
-	@echo "  \"kernel\": \"$$(uname -r)\"" >> docs/tech-stack.json
-	@echo '}'                                                                       >> docs/tech-stack.json
 
 fetch-go:
-	@echo "→ fetch (backtest: 1000 bars)"
-	@cd cmd/fetch && $(MAKE) --no-print-directory run-backtest
+	@echo "→ fetch"
+	@cd cmd/fetch && go build -o ../../bin/fetch . && cd ../.. && ./bin/fetch
 
 filter-go:
 	@echo "→ filter"
-	@cd cmd/filter && $(MAKE) --no-print-directory run
+	@cd cmd/filter && go build -o ../../bin/filter . && cd ../.. && ./bin/filter
 
 backtest-cpp: build
 	@echo "→ backtest"
@@ -104,40 +131,43 @@ backtest-cpp: build
 profile: build
 	@echo "→ profile"
 	@./$(PROFILE) > /dev/null
-	@lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
-	      --gcov-tool gcov-15 --ignore-errors mismatch \
+	@if [ "$$(uname -s)" = "Linux" ]; then \
+	    lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
+	         --gcov-tool gcov-15 --ignore-errors mismatch \
 	    && echo "→ captured coverage data" \
-	    || echo "→ warning: lcov capture failed"
-	@if [ -s docs/coverage.info ]; then \
-	    genhtml docs/coverage.info --output-directory docs/coverage \
-	            --title "LFT2 Coverage" --quiet \
-	    && echo "→ wrote docs/coverage/" \
-	    || echo "→ warning: genhtml failed"; \
+	    || echo "→ warning: lcov capture failed"; \
+	    if [ -s docs/coverage.info ]; then \
+	        genhtml docs/coverage.info --output-directory docs/coverage \
+	                --title "LFT2 Coverage" --quiet \
+	        && echo "→ wrote docs/coverage/" \
+	        || echo "→ warning: genhtml failed"; \
+	    else \
+	        echo "→ skipping coverage (no coverage data)"; \
+	    fi; \
+	    if [ -s gmon.out ]; then \
+	        gprof $(PROFILE) gmon.out \
+	        | gprof2dot -f prof -n 10 -e 10 \
+	        | dot -Tsvg -o docs/callgraph.svg \
+	        && echo "→ wrote docs/callgraph.svg" \
+	        || echo "→ callgraph failed"; \
+	    else \
+	        echo "→ skipping callgraph (no gmon.out)"; \
+	    fi; \
 	else \
-	    echo "→ skipping coverage (no coverage data)"; \
-	fi
-	@if [ -s gmon.out ]; then \
-	    gprof $(PROFILE) gmon.out \
-	    | gprof2dot -f prof -n 10 -e 10 \
-	    | dot -Tsvg -o docs/callgraph.svg \
-	    && echo "→ wrote docs/callgraph.svg" \
-	    || echo "→ callgraph failed"; \
-	else \
-	    echo "→ skipping callgraph (no gmon.out)"; \
+	    echo "→ skipping coverage and callgraph (Linux only)"; \
 	fi
 
 # ============================================================
 # Housekeeping
 # ============================================================
 clean:
-	rm -rf $(BUILD_DIR)
-	cd cmd/fetch && $(MAKE) clean
-	cd cmd/filter && $(MAKE) clean
+	rm -rf $(BUILD_DIR) bin/
+	rm -rf docs/bars/
+	rm -f docs/candidates.json docs/strategies.json
 
 help:
 	@echo "LFT2 Build System"
 	@echo ""
-	@echo "  make          - compile and run live trading loop"
-	@echo "  make backtest - compile and run full backtest pipeline"
-	@echo "  make build    - cmake: compile C++ modules only"
-	@echo "  make clean    - remove all build artefacts and fetched data"
+	@echo "  make        - compile and run full pipeline (fetch → filter → backtest → entries → execute)"
+	@echo "  make build  - cmake: compile C++ modules only"
+	@echo "  make clean  - remove all build artefacts and fetched data"

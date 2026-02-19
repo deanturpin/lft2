@@ -8,7 +8,12 @@ build/
 # Go binaries — built to bin/ and run from project root
 bin/
 cmd/account/docs/
-cmd/filter/filter
+cmd/account/account
+cmd/execute/execute
+cmd/wait-for-bar/wait
+cmd/wait-for-bar/wait-for-bar
+/fetch
+/filter
 
 # C++ binaries
 src/*/backtest

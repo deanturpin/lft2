@@ -12,9 +12,19 @@ add_compile_options(
     -Wextra
     -Wpedantic
     -Werror
-    -O1
+    -O0                      # No optimisation: keep all function calls visible to profiler
+    -g2                      # Maximum debug information
+    -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
+    --coverage               # gcov instrumentation
     -march=native
 )
+add_link_options(--coverage)
+
+# Add gprof profiling flags on Linux (not supported on macOS)
+if(UNIX AND NOT APPLE)
+    add_compile_options(-pg)
+    add_link_options(-pg)
+endif()
 
 add_library(barlib STATIC src/bar.cxx)
 target_include_directories(barlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -44,22 +54,6 @@ target_include_directories(profile PRIVATE
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# Profile target gets debug, profiling, and coverage flags.
-# -O0 overrides the global -O1 to prevent inlining — without it the constexpr
-# strategy functions are inlined away and gprof/callgraph only sees main().
-target_compile_options(profile PRIVATE
-    -O0                      # No optimisation: keep all function calls visible to gprof
-    -g2                      # Maximum debug information
-    -fno-omit-frame-pointer  # Keep frame pointers for better stack traces
-    --coverage               # gcov instrumentation
-)
-target_link_options(profile PRIVATE --coverage)
-
-# Add gprof profiling flags on Linux (not supported on macOS)
-if(UNIX AND NOT APPLE)
-    target_compile_options(profile PRIVATE -pg)
-    target_link_options(profile PRIVATE -pg)
-endif()
 
 target_include_directories(evaluate PRIVATE
     ${CMAKE_SOURCE_DIR}

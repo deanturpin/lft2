@@ -57,7 +57,7 @@ func loadConfig() Config {
 	cfg := Config{}
 	flag.StringVar(&cfg.WatchlistFile, "watchlist", "watchlist.json", "Path to watchlist JSON file")
 	flag.StringVar(&cfg.OutputDir, "output", "docs/bars", "Output directory for bar data")
-	flag.IntVar(&cfg.BarsPerSymbol, "bars", 25, "Number of bars to fetch per symbol")
+	flag.IntVar(&cfg.BarsPerSymbol, "bars", 1000, "Number of bars to fetch per symbol")
 	flag.IntVar(&cfg.TimeframeMin, "timeframe", 5, "Timeframe in minutes")
 	flag.Parse()
 

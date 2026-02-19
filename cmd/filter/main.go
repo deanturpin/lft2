@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -15,7 +16,6 @@ type FilterCriteria struct {
 	MinAvgVolume   float64 `json:"min_avg_volume"`
 	MinPrice       float64 `json:"min_price"`
 	MaxPrice       float64 `json:"max_price"`
-	MinVolatility  float64 `json:"min_volatility"`  // Min avg (high-low)/close — must be able to reach TP
 	MinBarCount    int     `json:"min_bar_count"`
 	MaxBarRangePct float64 `json:"max_bar_range_pct"` // Max (high-low)/close on last bar — spread proxy
 }
@@ -100,7 +100,7 @@ func filterReason(data *BarData, criteria FilterCriteria) string {
 		return fmt.Sprintf("insufficient bars (%d < %d)", data.Count, criteria.MinBarCount)
 	}
 
-	avgVolume, avgPrice, avgVolatility := calculateStats(data.Bars)
+	avgVolume, avgPrice, _ := calculateStats(data.Bars)
 
 	if avgVolume < criteria.MinAvgVolume {
 		return fmt.Sprintf("low volume (%.0f < %.0f)", avgVolume, criteria.MinAvgVolume)
@@ -111,10 +111,6 @@ func filterReason(data *BarData, criteria FilterCriteria) string {
 	if avgPrice > criteria.MaxPrice {
 		return fmt.Sprintf("price too high ($%.2f > $%.2f)", avgPrice, criteria.MaxPrice)
 	}
-	if avgVolatility < criteria.MinVolatility {
-		return fmt.Sprintf("low volatility (%.4f < %.4f)", avgVolatility, criteria.MinVolatility)
-	}
-
 	// Spread proxy: reject if the last bar's range is implausibly wide.
 	// For liquid stocks (high-low)/close is typically <0.4%; wide spreads
 	// or illiquid stocks produce much larger values.
@@ -202,7 +198,7 @@ func main() {
 	log.Println("Filter Module - Identifying candidate stocks")
 	log.Println("")
 
-	barsDir := "../../docs/bars"
+	barsDir := "docs/bars"
 
 	if _, err := os.Stat(barsDir); os.IsNotExist(err) {
 		log.Fatalf("Error: bars directory not found: %s", barsDir)
@@ -268,31 +264,27 @@ func main() {
 		marketStats.VolMin*100, marketStats.VolMax*100, marketStats.VolMedian*100)
 	log.Println("")
 
-	// Take profit target from trading params — filter rejects stocks whose average
-	// bar range is too small to plausibly reach it. We require avg range ≥ 10% of
-	// the TP per bar (e.g. TP=3% → min range=0.3%), so ~10 bars to reach target.
-	const takeProfitPct = 0.03 // must match default_params.take_profit_pct in params.h
-
-	// Set criteria based on market statistics and trading params
+	// Set criteria based on market statistics
 	criteria := FilterCriteria{
-		MinAvgVolume:   marketStats.VolumeMedian * 0.5,  // Half of median volume
-		MinPrice:       10.0,                             // Keep minimum price floor
-		MaxPrice:       marketStats.PriceMax * 1.1,       // Allow all prices up to max + 10%
-		MinVolatility:  takeProfitPct * 0.1,              // 10% of TP per bar → stocks that can reach TP
-		MinBarCount:    100,                              // Minimum history for reliable strategy signals
-		MaxBarRangePct: 0.5,                              // 50 bps — spread proxy from last bar range
+		MinAvgVolume:   marketStats.VolumeMedian * 0.5, // Half of median volume
+		MinPrice:       10.0,                            // Keep minimum price floor
+		MaxPrice:       marketStats.PriceMax * 1.1,      // Allow all prices up to max + 10%
+		MinBarCount:    100,                             // Minimum history for reliable strategy signals
+		MaxBarRangePct: 0.5,                             // 50 bps — spread proxy from last bar range
 	}
 
 	log.Println("Filter Criteria:")
 	log.Printf("  Min avg volume:   %.0f (50%% of median)", criteria.MinAvgVolume)
 	log.Printf("  Price range:      $%.2f - $%.2f", criteria.MinPrice, criteria.MaxPrice)
-	log.Printf("  Min volatility:   %.3f%% (10%% of %.0f%% take profit)", criteria.MinVolatility*100, takeProfitPct*100)
 	log.Printf("  Min bar count:    %d", criteria.MinBarCount)
 	log.Printf("  Max bar range:    %.2f%% (spread proxy)", criteria.MaxBarRangePct)
 	log.Println("")
 
 	// Second pass: apply filter criteria, annotate all symbols with tradeable flag
 	var candidates []string
+
+	fmt.Printf("\n%-6s  %8s  %8s  %6s  %6s  %s\n", "Symbol", "Volume", "Price", "Vol%", "Rng%", "Status")
+	fmt.Println(strings.Repeat("-", 60))
 
 	for i, stats := range allStats {
 		bd := allBarData[stats.Symbol]
@@ -316,14 +308,15 @@ func main() {
 		allStats[i].Tradeable = reason == ""
 		allStats[i].SkipReason = reason
 
-		if reason == "" {
-			candidates = append(candidates, stats.Symbol)
-			log.Printf("✓ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%, range: %.3f%%)",
-				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100, lastRangePct)
+		status := "✓"
+		if reason != "" {
+			status = reason
 		} else {
-			log.Printf("✗ %s (vol: %.0f, price: $%.2f, volatility: %.3f%%, range: %.3f%%) — %s",
-				stats.Symbol, stats.AvgVolume, stats.AvgPrice, stats.AvgVolatility*100, lastRangePct, reason)
+			candidates = append(candidates, stats.Symbol)
 		}
+		fmt.Printf("%-6s  %8.0f  %8.2f  %6.3f  %6.3f  %s\n",
+			stats.Symbol, stats.AvgVolume, stats.AvgPrice,
+			stats.AvgVolatility*100, lastRangePct, status)
 	}
 
 	log.Println("")
@@ -344,7 +337,7 @@ func main() {
 		TotalCandidates: len(candidates),
 	}
 
-	outputFile := "../../docs/candidates.json"
+	outputFile := "docs/candidates.json"
 	file, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatalf("Error creating output file: %v", err)
@@ -353,6 +346,7 @@ func main() {
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(output); err != nil {
 		log.Fatalf("Error encoding JSON: %v", err)
 	}

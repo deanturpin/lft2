@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/deanturpin/lft2/internal/alpaca"
@@ -158,17 +156,9 @@ func main() {
 	if err != nil {
 		log.Fatal("fetching account: ", err)
 	}
-	cash, err := strconv.ParseFloat(account.Cash, 64)
-	if err != nil {
-		log.Fatalf("parsing cash %q: %v", account.Cash, err)
-	}
-	fmt.Printf("  Cash:            $%.2f\n", cash)
+	fmt.Printf("  Cash:            $%s\n", account.Cash)
 	fmt.Printf("  Buying Power:    $%s\n", account.BuyingPower)
 	fmt.Printf("  Portfolio Value: $%s\n", account.PortfolioValue)
-
-	// 2% of cash per position
-	positionSize := cash * 0.02
-	fmt.Printf("  Position size:   $%.2f (2%% of cash)\n", positionSize)
 
 	// ── Positions ─────────────────────────────────────────
 	fmt.Println("\n[positions]")
@@ -208,18 +198,17 @@ func main() {
 			continue
 		}
 
-		// Size: 2% of cash; need at least 1 share, so calculate fractional qty
-		// Alpaca supports fractional shares for many symbols — use 2 decimal places
-		qty := math.Floor(positionSize*100) / 100
-		if qty < 0.01 {
-			fmt.Printf("  [skip] %s position size too small ($%.4f)\n", symbol, positionSize)
+		// Quantity is set by entries.cxx (FIX tag 38) — trust it, don't recalculate
+		qty := fields["38"]
+		if qty == "" || qty == "0" {
+			fmt.Printf("  [skip] %s missing qty in FIX message\n", symbol)
 			continue
 		}
 
-		fmt.Printf("  [buy]  %s strategy=%s size=$%.2f qty=%.2f id=%s\n", symbol, strategy, positionSize, qty, clientOrdID)
+		fmt.Printf("  [buy]  %s strategy=%s qty=%s id=%s\n", symbol, strategy, qty, clientOrdID)
 		if err := submitOrder(OrderRequest{
 			Symbol:      symbol,
-			Qty:         fmt.Sprintf("%.2f", qty),
+			Qty:         qty,
 			Side:        "buy",
 			Type:        "market",
 			TimeInForce: "day",

@@ -22,6 +22,7 @@ struct Candidate {
 struct AccountInfo {
   double cash;
   double portfolio_value;
+  double buying_power;
 };
 
 // Load recommended candidates from strategies.json
@@ -73,7 +74,8 @@ AccountInfo load_account_info() {
   if (auto brace = obj.find('{'); brace != std::string_view::npos)
     obj.remove_prefix(brace + 1);
 
-  return {json_number(obj, "cash"), json_number(obj, "portfolio_value")};
+  return {json_number(obj, "cash"), json_number(obj, "portfolio_value"),
+          json_number(obj, "buying_power")};
 }
 
 // Load existing positions to avoid duplicates
@@ -124,10 +126,11 @@ int main() {
 
   std::println("Evaluating {} candidate(s)...", candidates.size());
 
-  // Load account info — abort if balance is zero (likely a parse/API failure)
+  // Load account info — abort if buying_power is zero (likely a parse/API
+  // failure)
   auto account = load_account_info();
-  if (account.cash <= 0.0 || account.portfolio_value <= 0.0) {
-    std::println("\n❌ ERROR: account balance is zero — docs/account.json "
+  if (account.buying_power <= 0.0) {
+    std::println("\n❌ ERROR: buying power is zero — docs/account.json "
                  "missing or invalid");
     std::println("   Run the account module first: make account");
     return 1;
@@ -135,10 +138,9 @@ int main() {
   std::println("\nAccount Balance:");
   std::println("  Cash: ${:.2f}", account.cash);
   std::println("  Portfolio Value: ${:.2f}", account.portfolio_value);
+  std::println("  Buying Power: ${:.2f}", account.buying_power);
 
-  // Calculate position size (2% of portfolio)
-  auto position_size = account.portfolio_value * 0.02;
-  std::println("  Position Size (2%): ${:.2f}", position_size);
+  constexpr auto max_order_value = 2000.0;
 
   // Load existing positions to avoid duplicates
   auto existing_symbols = load_existing_symbols();
@@ -171,7 +173,8 @@ int main() {
     auto latest_price = bars.back().close;
     auto last_ts = bars.back().timestamp;
 
-    // During market hours, skip if latest bar is more than 10 minutes old
+    // During market hours, skip if latest bar is more than 20 minutes old.
+    // Alpaca free tier has a 15-minute data delay, so allow up to 20 minutes.
     if (market::market_open(last_ts)) {
       auto now = std::chrono::system_clock::now();
       auto bar_time = std::chrono::sys_seconds{};
@@ -179,7 +182,7 @@ int main() {
       std::chrono::from_stream(ss, "%Y-%m-%dT%H:%M:%SZ", bar_time);
       auto age =
           std::chrono::duration_cast<std::chrono::minutes>(now - bar_time);
-      if (age > std::chrono::minutes{10}) {
+      if (age > std::chrono::minutes{20}) {
         std::println("{} {:>8.2f}  ⏭️  stale ({}m)", prefix, latest_price,
                      age.count());
         continue;
@@ -187,11 +190,13 @@ int main() {
     }
 
     if (!market::market_open(last_ts)) {
-      std::println("{} {:>8.2f}  ⏭️  market closed", prefix, latest_price);
+      std::println("{} {:>8.2f}  ⏭️  market closed (last bar: {})", prefix,
+                   latest_price, last_ts);
       continue;
     }
     if (market::risk_off(last_ts)) {
-      std::println("{} {:>8.2f}  ⏭️  risk-off", prefix, latest_price);
+      std::println("{} {:>8.2f}  ⏭️  risk-off (last bar: {})", prefix,
+                   latest_price, last_ts);
       continue;
     }
 
@@ -201,16 +206,23 @@ int main() {
       continue;
     }
 
-    auto shares = static_cast<int>(position_size / latest_price);
+    auto shares = static_cast<int>(max_order_value / latest_price);
     if (shares < 1) {
-      std::println("{} {:>8.2f}  ❌ too small ({} shares)", prefix,
-                   latest_price, shares);
+      std::println("{} {:>8.2f}  ❌ too expensive (< 1 share for ${})", prefix,
+                   latest_price, static_cast<int>(max_order_value));
       continue;
     }
 
     auto order_value = shares * latest_price;
-    if (order_value > account.cash) {
-      std::println("{} {:>8.2f}  ❌ insufficient cash", prefix, latest_price);
+    if (order_value > max_order_value) {
+      // This should never happen — abort loudly if it does
+      std::println("❌ ABORT: order value ${:.2f} exceeds limit ${} — BUG",
+                   order_value, static_cast<int>(max_order_value));
+      return 1;
+    }
+    if (order_value > account.buying_power) {
+      std::println("{} {:>8.2f}  ❌ insufficient buying power", prefix,
+                   latest_price);
       continue;
     }
 
@@ -238,8 +250,7 @@ int main() {
     std::println("{} {:>8.2f}  ✅ buy {} shares (${:.2f})", prefix,
                  latest_price, shares, order_value);
 
-    // Deduct from available cash
-    account.cash -= order_value;
+    account.buying_power -= order_value;
   }
 
   // Write buy.fix — heartbeat always first so execute knows the module ran

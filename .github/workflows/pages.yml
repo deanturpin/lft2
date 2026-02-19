@@ -2,7 +2,7 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Every 4 hours
+    - cron: '0 * * * *'  # Every hour
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
@@ -42,9 +42,13 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          ALPACA_DATA_API_KEY: ${{ secrets.ALPACA_DATA_API_KEY }}
+          ALPACA_DATA_API_SECRET: ${{ secrets.ALPACA_DATA_API_SECRET }}
+          ALPACA_BASE_URL: ${{ secrets.ALPACA_BASE_URL }}
+          ALPACA_DATA_URL: ${{ secrets.ALPACA_DATA_URL }}
           # g++ in ubuntu:26.04 IS gcc-15; use it directly
           GCXX: g++
-        run: make backtest
+        run: make
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

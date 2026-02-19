@@ -90,12 +90,7 @@
       background: linear-gradient(135deg, #6cb6ff 0%, #58a6ff 100%);
       box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4);
     }
-    #callgraph-card svg {
-      width: 100%;
-      height: auto;
-      filter: invert(1) hue-rotate(180deg);
-    }
-  </style>
+</style>
 </head>
 <body>
   <h1>Low Frequency Trader</h1>
@@ -112,11 +107,6 @@
     </ul>
   </div>
 
-  <h2>Call Graph</h2>
-  <div class="card" id="callgraph-card">
-    <p class="loading" id="callgraph-loading">Loading call graph...</p>
-  </div>
-
   <h2>About</h2>
   <div class="card">
     <p style="margin-bottom: 1rem;">
@@ -129,17 +119,13 @@
       • <strong>GNU make</strong> — sequences modules in the correct order for live trading and backtest pipelines
     </p>
     <p style="margin-bottom: 1rem; color: #8b949e;">
-      <strong style="color: #c9d1d9;">Live Trading Loop</strong> (<code>make run</code>):<br>
-      <code>account → exits → wait-for-bar → fetch → entries → execute</code>
-    </p>
-    <p style="margin-bottom: 1rem; color: #8b949e;">
-      <strong style="color: #c9d1d9;">Backtest Pipeline</strong> (<code>make backtest</code>, scheduled CI):<br>
-      <code>fetch → filter → backtest</code>
+      <strong style="color: #c9d1d9;">Pipeline</strong> (<code>make</code>, runs hourly via CI):<br>
+      <code>fetch → filter → backtest → entries → exits → account → execute</code>
     </p>
     <p style="margin-bottom: 1rem; color: #8b949e;">
       <strong style="color: #c9d1d9;">Module Languages:</strong><br>
-      • <strong>Go</strong> — account, fetch, filter, wait-for-bar, execute (Alpaca API, shared <code>internal/alpaca</code> client)<br>
-      • <strong>C++26</strong> — exits, entries, backtest (constexpr strategy and market-time logic, FIX 5.0 SP2 messages)
+      • <strong>Go</strong> — account, fetch, filter, execute (Alpaca API)<br>
+      • <strong>C++26</strong> — backtest, entries, exits (constexpr strategy logic, FIX 5.0 SP2 messages)
     </p>
     <p style="color: #8b949e;">
       <strong style="color: #c9d1d9;">Tech Stack:</strong>
@@ -238,7 +224,6 @@
     loadMetadata();
     loadTechStack();
     loadFiles();
-    loadSvg('callgraph.svg',  'callgraph-card',  'callgraph-loading',  'Call graph');
   </script>
 </body>
 </html>
