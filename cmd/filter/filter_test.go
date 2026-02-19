@@ -89,12 +89,10 @@ func barData(symbol string, bars []Bar) *BarData {
 	return &BarData{Symbol: symbol, Bars: bars, Count: len(bars)}
 }
 
-// defaultCriteria mirrors the live filter; MinVolatility = 10% of 3% TP = 0.003.
 var defaultCriteria = FilterCriteria{
 	MinAvgVolume:   1000,
 	MinPrice:       10.0,
 	MaxPrice:       500.0,
-	MinVolatility:  0.003, // 0.3% avg bar range — 10% of 3% take profit
 	MinBarCount:    100,
 	MaxBarRangePct: 0.5,
 }
@@ -131,26 +129,6 @@ func TestFilterReason_PriceTooHigh(t *testing.T) {
 	}
 }
 
-func TestFilterReason_LowVolatility(t *testing.T) {
-	// spread=0.0001 → avg range = 0.0002/100 = 0.000002 (<< 0.003 = 10% of 3% TP)
-	// Stocks this flat can never plausibly reach a 3% take profit target.
-	bars := makeBars(100, 0.0001, 2000, 2000)
-	reason := filterReason(barData("X", bars), defaultCriteria)
-	if reason == "" {
-		t.Error("expected rejection for volatility too low to reach take profit, got pass")
-	}
-}
-
-func TestFilterReason_VolatilityBelowTPThreshold(t *testing.T) {
-	// spread=0.1 on close=100 → avg range = 0.2% which is below 0.3% (10% of 3% TP)
-	// These stocks move, but not enough to reliably reach the take profit.
-	bars := makeBars(100, 100.0, 0.1, 2000)
-	reason := filterReason(barData("X", bars), defaultCriteria)
-	if reason == "" {
-		t.Error("expected rejection for avg range below TP threshold, got pass")
-	}
-}
-
 func TestFilterReason_SpreadTooWide(t *testing.T) {
 	// 99 bars that pass everything, then one last bar with wide spread
 	bars := makeBars(99, 100.0, 0.1, 2000)
@@ -163,8 +141,7 @@ func TestFilterReason_SpreadTooWide(t *testing.T) {
 }
 
 func TestFilterReason_Passes(t *testing.T) {
-	// 100 bars: price $100, spread $0.2 → range 0.4% which is > 0.3% min volatility
-	// and < 0.5% max bar range, so all criteria pass
+	// 100 bars: price $100, spread $0.2 → range 0.4% which is < 0.5% max bar range
 	bars := makeBars(100, 100.0, 0.2, 2000)
 	reason := filterReason(barData("X", bars), defaultCriteria)
 	if reason != "" {
