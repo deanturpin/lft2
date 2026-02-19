@@ -2,7 +2,8 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
+    - cron: '*/20 * * * *'  # Every 20 minutes
+    # Note: Alpaca paper trading auto-liquidates all positions at 15:45 ET (45 min before close)
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
