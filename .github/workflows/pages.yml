@@ -42,8 +42,6 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
-          ALPACA_DATA_API_KEY: ${{ secrets.ALPACA_DATA_API_KEY }}
-          ALPACA_DATA_API_SECRET: ${{ secrets.ALPACA_DATA_API_SECRET }}
           ALPACA_BASE_URL: ${{ secrets.ALPACA_BASE_URL }}
           ALPACA_DATA_URL: ${{ secrets.ALPACA_DATA_URL }}
           # g++ in ubuntu:26.04 IS gcc-15; use it directly
