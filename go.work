@@ -1,10 +1,11 @@
 go 1.21
 
 use (
-	./internal/alpaca
 	./cmd/account
+	./cmd/execute
 	./cmd/fetch
 	./cmd/filter
+	./cmd/summary
 	./cmd/wait-for-bar
-	./cmd/execute
+	./internal/alpaca
 )

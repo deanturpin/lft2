@@ -70,12 +70,8 @@ jobs:
           GCXX: g++
         run: |
           echo "Generating end-of-day summary..."
-          make build
-          # Fetch today's positions/trades from Alpaca
-          cd cmd/account && go build -o ../../bin/account . && cd ../..
-          ./bin/account
-          # TODO: Create a Go module to fetch today's closed positions and generate docs/daily-summary.json
-          echo '{"message": "End-of-day summary - implementation pending (issue #29)"}' > docs/daily-summary.json
+          cd cmd/summary && go build -o ../../bin/summary . && cd ../..
+          ./bin/summary
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
