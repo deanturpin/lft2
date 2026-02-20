@@ -78,6 +78,7 @@ run: build
 	@if [ "$$(uname -s)" = "Linux" ]; then \
 	    lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
 	         --gcov-tool gcov-15 --ignore-errors mismatch \
+	    && lcov --remove docs/coverage.info '/usr/include/*' --output-file docs/coverage.info \
 	    && echo "→ captured coverage data" \
 	    || echo "→ warning: lcov capture failed"; \
 	    if [ -s docs/coverage.info ]; then \
@@ -135,6 +136,7 @@ profile: build
 	@if [ "$$(uname -s)" = "Linux" ]; then \
 	    lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
 	         --gcov-tool gcov-15 --ignore-errors mismatch \
+	    && lcov --remove docs/coverage.info '/usr/include/*' --output-file docs/coverage.info \
 	    && echo "→ captured coverage data" \
 	    || echo "→ warning: lcov capture failed"; \
 	    if [ -s docs/coverage.info ]; then \
