@@ -48,16 +48,16 @@ func main() {
 	}
 	client = alpaca.New(apiKey, apiSecret, os.Getenv("ALPACA_BASE_URL"), "")
 
-	// Fetch today's activities
+	// Fetch yesterday's activities (for testing - change to "today" in production)
 	now := time.Now()
-	today := now.Format("2006-01-02")
 	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
+	twoDaysAgo := now.AddDate(0, 0, -2).Format("2006-01-02")
 
-	fmt.Printf("Fetching activities from %s to %s...\n", yesterday, today)
+	fmt.Printf("Fetching activities from %s onwards (filtering to %s)...\n", twoDaysAgo, yesterday)
 
 	// Alpaca /v2/account/activities endpoint
 	url := fmt.Sprintf("%s/v2/account/activities?activity_types=FILL&after=%sT00:00:00Z",
-		client.BaseURL, yesterday)
+		client.BaseURL, twoDaysAgo)
 
 	body, err := client.Get(url)
 	if err != nil {
@@ -69,20 +69,20 @@ func main() {
 		log.Fatalf("parsing activities: %v", err)
 	}
 
-	// Filter to today only
-	var todayActivities []Activity
+	// Filter to yesterday only (for testing)
+	var targetActivities []Activity
 	for _, act := range activities {
-		if len(act.TransactTime) >= 10 && act.TransactTime[:10] == today {
-			todayActivities = append(todayActivities, act)
+		if len(act.TransactTime) >= 10 && act.TransactTime[:10] == yesterday {
+			targetActivities = append(targetActivities, act)
 		}
 	}
 
-	fmt.Printf("Found %d trades today\n", len(todayActivities))
+	fmt.Printf("Found %d trades on %s\n", len(targetActivities), yesterday)
 
 	// Calculate summary stats
 	buys := 0
 	sells := 0
-	for _, act := range todayActivities {
+	for _, act := range targetActivities {
 		if act.Side == "buy" {
 			buys++
 		} else if act.Side == "sell" {
@@ -91,10 +91,10 @@ func main() {
 	}
 
 	summary := DailySummary{
-		Date:       today,
-		Activities: todayActivities,
+		Date:       yesterday,
+		Activities: targetActivities,
 		Summary: TradingSummary{
-			TotalTrades: len(todayActivities),
+			TotalTrades: len(targetActivities),
 			Buys:        buys,
 			Sells:       sells,
 			NetPnL:      "calculated_by_dashboard", // Dashboard will compute from matched pairs
@@ -116,5 +116,5 @@ func main() {
 		log.Fatalf("writing JSON: %v", err)
 	}
 
-	fmt.Printf("\n✓ Wrote %s (%d activities)\n", outFile, len(todayActivities))
+	fmt.Printf("\n✓ Wrote %s (%d activities)\n", outFile, len(targetActivities))
 }
