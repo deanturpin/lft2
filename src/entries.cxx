@@ -35,7 +35,7 @@ std::vector<Candidate> load_candidates() {
   auto candidates = std::vector<Candidate>{};
 
   // Find the "recommendations" array
-  auto rec_start = content.find("\"recommendations\"");
+  auto rec_start = content.find(R"("recommendations")");
   if (rec_start == std::string::npos)
     return {};
 
