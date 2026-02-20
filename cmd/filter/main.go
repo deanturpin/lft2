@@ -61,6 +61,8 @@ type MarketStats struct {
 
 type CandidatesOutput struct {
 	Timestamp       string         `json:"timestamp"`
+	FirstBarTime    string         `json:"first_bar_time"`
+	LastBarTime     string         `json:"last_bar_time"`
 	Symbols         []string       `json:"symbols"`
 	Criteria        FilterCriteria `json:"criteria"`
 	MarketStats     MarketStats    `json:"market_stats"`
@@ -327,9 +329,26 @@ func main() {
 		return allStats[i].AvgVolume > allStats[j].AvgVolume
 	})
 
+	// Find earliest and latest bar timestamps across all symbols
+	var firstBarTime, lastBarTime string
+	for _, barData := range allBarData {
+		if len(barData.Bars) > 0 {
+			first := barData.Bars[0].Timestamp
+			last := barData.Bars[len(barData.Bars)-1].Timestamp
+			if firstBarTime == "" || first < firstBarTime {
+				firstBarTime = first
+			}
+			if lastBarTime == "" || last > lastBarTime {
+				lastBarTime = last
+			}
+		}
+	}
+
 	// Write candidates.json
 	output := CandidatesOutput{
 		Timestamp:       time.Now().UTC().Format(time.RFC3339),
+		FirstBarTime:    firstBarTime,
+		LastBarTime:     lastBarTime,
 		Symbols:         candidates,
 		Criteria:        criteria,
 		MarketStats:     marketStats,
