@@ -55,16 +55,24 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run Pipeline
+      - name: Run Pipeline (market hours)
         if: steps.market_check.outputs.skip != 'true'
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
           ALPACA_BASE_URL: ${{ secrets.ALPACA_BASE_URL }}
           ALPACA_DATA_URL: ${{ secrets.ALPACA_DATA_URL }}
-          # g++ in ubuntu:26.04 IS gcc-15; use it directly
           GCXX: g++
         run: make
+
+      - name: Update Dashboard (off-hours)
+        if: steps.market_check.outputs.skip == 'true'
+        env:
+          GCXX: g++
+        run: |
+          echo "Market closed — updating dashboard only (no trading)"
+          make build
+          make backtest
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
