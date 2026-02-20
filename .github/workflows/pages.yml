@@ -2,7 +2,8 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Every 10 minutes
+    - cron: '*/10 13-20 * * 1-5'  # Every 10 min during market hours (09:30-16:00 ET, covers DST+standard)
+    - cron: '10 21 * * 1-5'        # End-of-day summary at 16:10 ET (standard time)
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
@@ -38,25 +39,20 @@ jobs:
           go-version: '1.21'
           cache: false  # no root go.sum — workspace uses go.work
 
-      - name: Check Market Hours
-        id: market_check
+      - name: Detect Run Type
+        id: run_type
         run: |
-          # US market: 09:30-16:00 ET (14:30-21:00 UTC), Mon-Fri
           hour=$(date -u +%H)
-          dow=$(date -u +%u)  # 1=Mon, 7=Sun
-          if [ "$dow" -ge 6 ]; then
-            echo "Weekend - market closed"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          elif [ "$hour" -lt 14 ] || [ "$hour" -ge 21 ]; then
-            echo "Outside market hours (09:30-16:00 ET)"
-            echo "skip=true" >> $GITHUB_OUTPUT
+          if [ "$hour" -eq 21 ]; then
+            echo "End-of-day summary run (16:10 ET)"
+            echo "mode=eod" >> $GITHUB_OUTPUT
           else
-            echo "Market open - proceeding"
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Live trading run (market hours)"
+            echo "mode=live" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run Pipeline (market hours)
-        if: steps.market_check.outputs.skip != 'true'
+      - name: Run Pipeline (live trading)
+        if: steps.run_type.outputs.mode == 'live'
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
@@ -65,14 +61,21 @@ jobs:
           GCXX: g++
         run: make
 
-      - name: Update Dashboard (off-hours)
-        if: steps.market_check.outputs.skip == 'true'
+      - name: Generate End-of-Day Summary
+        if: steps.run_type.outputs.mode == 'eod'
         env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          ALPACA_BASE_URL: ${{ secrets.ALPACA_BASE_URL }}
           GCXX: g++
         run: |
-          echo "Market closed — updating dashboard only (no trading)"
+          echo "Generating end-of-day summary..."
           make build
-          make backtest
+          # Fetch today's positions/trades from Alpaca
+          cd cmd/account && go build -o ../../bin/account . && cd ../..
+          ./bin/account
+          # TODO: Create a Go module to fetch today's closed positions and generate docs/daily-summary.json
+          echo '{"message": "End-of-day summary - implementation pending (issue #29)"}' > docs/daily-summary.json
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
