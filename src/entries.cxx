@@ -34,29 +34,23 @@ std::vector<Candidate> load_candidates() {
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
   auto candidates = std::vector<Candidate>{};
 
+  // Find the "recommendations" array
   auto rec_start = content.find("\"recommendations\"");
   if (rec_start == std::string::npos)
     return {};
 
-  auto pos = content.find('[', rec_start) + 1;
-  while (pos < content.size()) {
-    auto obj_start = content.find('{', pos);
-    if (obj_start == std::string::npos)
-      break;
-    auto obj_end = content.find('}', obj_start);
-    if (obj_end == std::string::npos)
-      break;
+  auto array_start = content.find('[', rec_start);
+  if (array_start == std::string::npos)
+    return {};
 
-    auto obj = std::string_view{content}.substr(obj_start + 1,
-                                                obj_end - obj_start - 1);
-    auto c = Candidate{std::string{json_string(obj, "symbol")},
-                       std::string{json_string(obj, "strategy")}};
-
-    if (!c.symbol.empty() && !c.strategy.empty())
-      candidates.push_back(c);
-
-    pos = obj_end + 1;
-  }
+  // Parse objects in the array
+  json_foreach_object(
+      std::string_view{content}.substr(array_start), [&](std::string_view obj) {
+        auto c = Candidate{std::string{json_string(obj, "symbol")},
+                           std::string{json_string(obj, "strategy")}};
+        if (!c.symbol.empty() && !c.strategy.empty())
+          candidates.push_back(c);
+      });
 
   return candidates;
 }

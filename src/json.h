@@ -429,6 +429,55 @@ constexpr void json_string_array(std::string_view json, std::string_view key,
   }
 }
 
+// Iterate over objects in a JSON array, calling a function for each object.
+// Usage: json_foreach_object(json, [](std::string_view obj) { ... });
+template <typename Func>
+constexpr void json_foreach_object(std::string_view json, Func callback) {
+  auto pos = json.find('[');
+  if (pos == std::string_view::npos)
+    return;
+
+  pos++; // Skip opening '['
+  while (pos < json.size()) {
+    // Skip whitespace
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\n' ||
+                                 json[pos] == '\r' || json[pos] == '\t'))
+      pos++;
+
+    if (pos >= json.size() || json[pos] == ']')
+      break;
+
+    // Find object bounds
+    if (json[pos] != '{')
+      break;
+
+    auto obj_start = pos;
+    auto depth = 0;
+    while (pos < json.size()) {
+      if (json[pos] == '{')
+        depth++;
+      else if (json[pos] == '}') {
+        depth--;
+        if (depth == 0) {
+          pos++; // Include closing '}'
+          break;
+        }
+      }
+      pos++;
+    }
+
+    // Extract object content (excluding outer braces)
+    auto obj = json.substr(obj_start + 1, pos - obj_start - 2);
+    callback(obj);
+
+    // Skip comma and whitespace
+    while (pos < json.size() &&
+           (json[pos] == ',' || json[pos] == ' ' || json[pos] == '\n' ||
+            json[pos] == '\r' || json[pos] == '\t'))
+      pos++;
+  }
+}
+
 namespace {
 constexpr bool test_json_string_array() {
   constexpr auto json =
@@ -443,4 +492,18 @@ constexpr bool test_json_string_array() {
   return count == 3 && first == "AAPL";
 }
 static_assert(test_json_string_array());
+
+constexpr bool test_json_foreach_object() {
+  constexpr auto json = std::string_view{
+      R"([{"symbol":"AAPL","qty":"10"},{"symbol":"TSLA","qty":"5"}])"};
+  auto count = 0;
+  auto first_symbol = std::string_view{};
+  json_foreach_object(json, [&](std::string_view obj) {
+    if (count == 0)
+      first_symbol = json_string(obj, "symbol");
+    count++;
+  });
+  return count == 2 && first_symbol == "AAPL";
+}
+static_assert(test_json_foreach_object());
 } // namespace

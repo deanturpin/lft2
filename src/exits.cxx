@@ -29,29 +29,14 @@ std::vector<Position> load_positions() {
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
   auto positions = std::vector<Position>{};
 
-  auto pos = content.find('[');
-  if (pos == std::string::npos)
-    return {};
-
-  while (pos < content.size()) {
-    auto obj_start = content.find('{', pos);
-    if (obj_start == std::string::npos)
-      break;
-    auto obj_end = content.find('}', obj_start);
-    if (obj_end == std::string::npos)
-      break;
-
-    auto obj = std::string_view{content}.substr(obj_start + 1,
-                                                obj_end - obj_start - 1);
+  json_foreach_object(content, [&](std::string_view obj) {
     positions.push_back({
         .symbol = std::string{json_string(obj, "symbol")},
         .qty = json_number(obj, "qty"),
         .avg_entry_price = json_number(obj, "avg_entry_price"),
         .side = std::string{json_string(obj, "side")},
     });
-
-    pos = obj_end + 1;
-  }
+  });
 
   return positions;
 }

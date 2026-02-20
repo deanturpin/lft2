@@ -12,6 +12,7 @@ cmd/account/account
 cmd/execute/execute
 cmd/wait-for-bar/wait
 cmd/wait-for-bar/wait-for-bar
+cmd/filter/filter
 /fetch
 /filter
 
