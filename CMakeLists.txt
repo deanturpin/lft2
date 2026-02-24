@@ -32,12 +32,6 @@ target_include_directories(barlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_library(fixlib STATIC src/fix.cxx)
 target_include_directories(fixlib PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-add_executable(test src/test.cxx)
-
-target_include_directories(test PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/src
-)
 add_executable(profile src/profile.cxx)
 add_executable(evaluate src/evaluate.cxx)
 add_executable(backtest src/backtest.cxx)
