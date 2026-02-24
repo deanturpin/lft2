@@ -63,6 +63,78 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for details.
 
 Full architecture details at <https://lft.turpin.dev/#/about>
 
+## Modern C++ Features Showcase
+
+This project pushes the boundaries of modern C++ (C++23/26) to achieve compile-time trading logic validation and zero-overhead abstractions:
+
+### C++26 Features
+
+**`#embed` directive** - Embeds external files at compile time
+
+```cpp
+// Load 1000 bars of historical data directly into binary
+static constexpr char aapl_data[] = {
+#embed "aapl.json"
+};
+```
+
+Eliminates runtime file I/O for test data and enables compile-time data validation.
+
+**`constexpr std::format`** - Compile-time string formatting
+
+```cpp
+constexpr std::string build_fix_message(std::string_view symbol, int qty) {
+  return std::format("35=D|55={}|38={}|", symbol, qty);  // Evaluated at compile time
+}
+```
+
+Generates FIX protocol messages with zero runtime overhead.
+
+**`constexpr std::string`** - Compile-time string operations
+
+```cpp
+constexpr auto parse_bars(std::string_view json) {
+  // Full JSON parsing at compile time
+  return std::array<bar, 1000>{...};
+}
+static_assert(parse_bars(embedded_json)[0].close > 0.0);
+```
+
+Entire JSON parser runs at compile time with `static_assert` validation.
+
+### C++23 Features
+
+**`std::println`** - Modern output formatting
+
+```cpp
+std::println("✓ Processed {} bars for {}", count, symbol);
+```
+
+Replaces verbose `std::cout <<` chains with clean, format-string based output.
+
+**Deducing `this`** - Simplified CRTP patterns (planned)
+
+### C++20 Features
+
+**Ranges and views** - Functional data transformations
+
+```cpp
+auto top_candidates = candidates
+  | std::views::filter([](auto& c) { return c.score > 0.8; })
+  | std::views::take(10);
+```
+
+**Concepts** - Compile-time interface validation (used in constrained templates)
+
+**Three-way comparison (`<=>`)** - Automatic comparison operators
+
+### Why This Matters for Trading
+
+- **Compile-time validation** - Trading logic bugs caught before deployment
+- **Zero runtime cost** - All formatting and parsing optimized away
+- **Type safety** - `constexpr` guarantees ensure correctness
+- **Fast iteration** - `static_assert` tests run instantly during compilation
+
 ## License
 
 Private project - not open source.
