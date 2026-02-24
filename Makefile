@@ -11,11 +11,10 @@
 
 BUILD_DIR := build
 BACKTEST  := $(BUILD_DIR)/backtest
-PROFILE   := $(BUILD_DIR)/profile
 EXITS     := $(BUILD_DIR)/exits
 ENTRIES   := $(BUILD_DIR)/entries
 
-.PHONY: all build run profile clean \
+.PHONY: all build run clean \
         fetch-go filter-go backtest-cpp help
 
 # Default: compile then run live trading loop
@@ -94,7 +93,7 @@ run: build
 	        echo "→ skipping coverage (no coverage data)"; \
 	    fi; \
 	    if [ -s gmon.out ]; then \
-	        gprof $(PROFILE) gmon.out \
+	        gprof $(BACKTEST) gmon.out \
 	        | gprof2dot -f prof -n 10 -e 10 \
 	        | dot -Tsvg -o docs/callgraph.svg \
 	        && echo "→ wrote docs/callgraph.svg" \
@@ -129,40 +128,6 @@ filter-go:
 backtest-cpp: build
 	@echo "→ backtest"
 	@./$(BACKTEST)
-
-# Run the profile binary (instrumented with -pg/--coverage) to generate:
-#   docs/coverage/       - gcov HTML coverage report (lcov + genhtml)
-#   docs/callgraph.svg   - gprof call graph as SVG (Linux only, via gprof2dot + dot)
-profile: build
-	@echo "→ profile"
-	@./$(PROFILE) > /dev/null
-	@if [ "$$(uname -s)" = "Linux" ]; then \
-	    lcov --capture --directory $(BUILD_DIR) --output-file docs/coverage.info \
-	         --gcov-tool gcov-15 --ignore-errors mismatch \
-	    && lcov --remove docs/coverage.info '/usr/include/*' --output-file docs/coverage.info \
-	    && echo "→ captured coverage data" \
-	    || echo "→ warning: lcov capture failed"; \
-	    if [ -s docs/coverage.info ]; then \
-	        genhtml docs/coverage.info --output-directory docs/coverage \
-	                --title "LFT2 Coverage" --quiet \
-	                --ignore-errors inconsistent,corrupt \
-	        && echo "→ wrote docs/coverage/" \
-	        || echo "→ warning: genhtml failed"; \
-	    else \
-	        echo "→ skipping coverage (no coverage data)"; \
-	    fi; \
-	    if [ -s gmon.out ]; then \
-	        gprof $(PROFILE) gmon.out \
-	        | gprof2dot -f prof -n 10 -e 10 \
-	        | dot -Tsvg -o docs/callgraph.svg \
-	        && echo "→ wrote docs/callgraph.svg" \
-	        || echo "→ callgraph failed"; \
-	    else \
-	        echo "→ skipping callgraph (no gmon.out)"; \
-	    fi; \
-	else \
-	    echo "→ skipping coverage and callgraph (Linux only)"; \
-	fi
 
 # ============================================================
 # Housekeeping
