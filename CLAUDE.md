@@ -90,12 +90,11 @@ Use `nstd::` for functions not yet constexpr in C++20/23:
 ## File Structure
 
 ```text
-cmd/           - Go binaries (account, fetch, execute, filter, backtest)
+cmd/           - Go binaries (account, fetch, execute, filter, summary)
 src/           - C++ source (strategies, backtesting, signal generation)
 web/           - Svelte dashboard (builds to docs/ for GitHub Pages)
 docs/          - Built static site (GitHub Pages)
-snapshots/     - Pre-compiled historical bar data headers (backtesting)
-bin/           - Helper shell scripts (e.g. generate_data_headers.sh)
+bin/           - Built Go binaries
 .github/workflows/pages.yml - CI/CD pipeline (build + deploy)
 ```
 
