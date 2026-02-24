@@ -60,6 +60,30 @@ export default {
       }
     }
 
+    if (url.pathname === '/api/daily-summary') {
+      try {
+        const response = await fetch('https://deanturpin.github.io/lft2/daily-summary.json');
+        if (!response.ok) {
+          throw new Error(`GitHub Pages returned ${response.status}`);
+        }
+        const data = await response.json();
+        return new Response(JSON.stringify(data), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+    }
+
     return new Response('Not Found', { status: 404 });
   },
 };

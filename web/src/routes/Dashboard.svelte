@@ -51,7 +51,7 @@
 
   async function fetchDailySummary() {
     try {
-      const response = await fetch('https://deanturpin.github.io/lft2/daily-summary.json');
+      const response = await fetch(`${API_URL}/api/daily-summary`);
       if (!response.ok) return;
       dailySummary = await response.json();
     } catch (err) {
