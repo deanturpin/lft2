@@ -1,10 +1,10 @@
 #pragma once
+#include <format>
 #include <string>
 #include <string_view>
 
 // FIX 5.0 SP2 protocol implementation
 // Simple text-based format: tag=value|tag=value|...
-// Both C++ and Go can read/write this format without linking
 
 namespace fix {
 
@@ -48,17 +48,52 @@ constexpr auto TIME_IN_FORCE_FOK = "4"; // Fill or kill
 
 // Build a complete FIX message from a pre-assembled body string.
 // Adds standard header (BeginString, BodyLength) and trailer (Checksum).
-std::string build(std::string_view, std::string_view, int = 1);
+constexpr std::string build(std::string_view msg_type, std::string_view body,
+                            int seq_num = 1) {
+  auto msg_body =
+      std::format("{}={}|{}={}|{}=LFT2|{}=ALPACA|{}", MSG_TYPE, msg_type,
+                  MSG_SEQ_NUM, seq_num, SENDER_COMP_ID, TARGET_COMP_ID, body);
 
-// Heartbeat message — prepended to every .fix file so execute can confirm
-// the C++ binary ran successfully even when there are no orders.
-std::string heartbeat(std::string_view);
+  // Calculate simple checksum (sum of all bytes mod 256)
+  auto checksum = 0;
+  for (auto c : msg_body)
+    checksum += static_cast<unsigned char>(c);
+  checksum %= 256;
+
+  return std::format("{}=FIX.5.0SP2|{}={}|{}{}={:03d}|\n", BEGIN_STRING,
+                     BODY_LENGTH, msg_body.size(), msg_body, CHECKSUM,
+                     checksum);
+}
 
 // Build a NewOrderSingle (D) FIX message for a market or limit order.
 // price > 0 adds tag 44; text non-empty adds tag 58.
-std::string new_order_single(std::string_view, std::string_view,
-                             std::string_view, int, int = 1,
-                             std::string_view = ORD_TYPE_MARKET, double = 0.0,
-                             std::string_view = "");
+constexpr std::string
+new_order_single(std::string_view order_id, std::string_view symbol,
+                 std::string_view side, int quantity, int seq_num = 1,
+                 std::string_view ord_type = ORD_TYPE_MARKET,
+                 double price = 0.0, std::string_view text = "") {
+  auto body = std::format("{}={}|{}=1|{}={}|{}={}|{}={}|{}={}|{}={}|",
+                          CL_ORD_ID, order_id, HANDL_INST, SYMBOL, symbol, SIDE,
+                          side, ORDER_QTY, quantity, ORD_TYPE, ord_type,
+                          TIME_IN_FORCE, TIME_IN_FORCE_DAY);
+
+  if (price > 0.0)
+    body += std::format("{}={:.2f}|", PRICE, price);
+
+  if (!text.empty())
+    body += std::format("{}={}|", TEXT, text);
+
+  return build(NEW_ORDER_SINGLE, body, seq_num);
+}
+
+// Heartbeat message — prepended to every .fix file so execute can confirm
+// the C++ binary ran successfully even when there are no orders.
+// NOT constexpr because it uses std::chrono::system_clock::now()
+std::string heartbeat(std::string_view);
+
+// NOTE: build() and new_order_single() are marked constexpr for future C++26
+// compliance, but std::format isn't fully constexpr in gcc-15 yet. The
+// functions work correctly at runtime and will become compile-time evaluable
+// when the compiler catches up to the C++26 standard.
 
 } // namespace fix
