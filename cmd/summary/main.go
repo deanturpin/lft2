@@ -55,8 +55,8 @@ func main() {
 
 	fmt.Printf("Fetching activities from %s onwards (filtering to %s)...\n", yesterday, today)
 
-	// Alpaca /v2/account/activities endpoint
-	url := fmt.Sprintf("%s/v2/account/activities?activity_types=FILL&after=%sT00:00:00Z",
+	// Alpaca /v2/account/activities endpoint (without FILL filter to get consolidated trades)
+	url := fmt.Sprintf("%s/v2/account/activities?after=%sT00:00:00Z",
 		client.BaseURL, yesterday)
 
 	body, err := client.Get(url)
