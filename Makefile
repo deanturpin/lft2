@@ -65,6 +65,9 @@ run: build
 	@echo "→ execute"
 	@cd cmd/execute && go build -o ../../bin/execute . && cd ../.. && ./bin/execute
 	@echo ""
+	@echo "→ summary"
+	@cd cmd/summary && go build -o ../../bin/summary . && cd ../.. && ./bin/summary
+	@echo ""
 	@echo "=== done ==="
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
 	@echo '{'                                                                        > docs/tech-stack.json

@@ -2,8 +2,7 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '*/5 13-20 * * 1-5'  # Every 5 min during market hours (09:30-16:00 ET, covers DST+standard)
-    - cron: '10 21 * * 1-5'       # End-of-day summary at 16:10 ET (standard time)
+    - cron: '*/5 13-21 * * 1-5'  # Every 5 min during market hours and after close (09:30-17:00 ET)
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
@@ -39,20 +38,7 @@ jobs:
           go-version: '1.21'
           cache: false  # no root go.sum — workspace uses go.work
 
-      - name: Detect Run Type
-        id: run_type
-        run: |
-          hour=$(date -u +%H)
-          if [ "$hour" -eq 21 ]; then
-            echo "End-of-day summary run (16:10 ET)"
-            echo "mode=eod" >> $GITHUB_OUTPUT
-          else
-            echo "Live trading run (market hours)"
-            echo "mode=live" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run Pipeline (live trading)
-        if: steps.run_type.outputs.mode == 'live'
+      - name: Run Pipeline
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
@@ -60,19 +46,6 @@ jobs:
           ALPACA_DATA_URL: ${{ secrets.ALPACA_DATA_URL }}
           GCXX: g++
         run: make
-
-      - name: Generate End-of-Day Summary
-        if: steps.run_type.outputs.mode == 'eod'
-        env:
-          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
-          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
-          ALPACA_BASE_URL: ${{ secrets.ALPACA_BASE_URL }}
-          GCXX: g++
-        run: |
-          echo "Generating end-of-day summary..."
-          make build  # Generate tech-stack.json and other metadata
-          cd cmd/summary && go build -o ../../bin/summary . && cd ../..
-          ./bin/summary
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
