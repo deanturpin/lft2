@@ -285,7 +285,7 @@
               </td>
               <td><strong>{activity.symbol}</strong></td>
               <td class={activity.side === 'buy' ? 'positive' : 'negative'}>
-                {activity.side}
+                {activity.side === 'buy' ? '▲' : '▼'} {activity.side}
               </td>
               <td>{activity.qty}</td>
               <td>{formatCurrency(activity.price)}</td>
