@@ -112,6 +112,39 @@ std::println("✓ Processed {} bars for {}", count, symbol);
 
 Replaces verbose `std::cout <<` chains with clean, format-string based output.
 
+### C++20 Features
+
+**`uz` suffix** - Type-safe size_t literals
+
+```cpp
+auto bar_count = 0uz;  // Type is size_t, not int
+for (auto i = 0uz; i < bars.size(); ++i) { ... }
+```
+
+Eliminates implicit conversions and signed/unsigned comparison warnings.
+
+**`std::string_view`** - Non-owning string references
+
+```cpp
+constexpr auto parse_bars(std::string_view json) {
+  // Parse JSON without copying or allocating
+  return extract_bars(json);
+}
+```
+
+Zero-cost string slicing and substring operations.
+
+**`std::span`** - Non-owning array views
+
+```cpp
+constexpr bool is_entry(std::span<const bar> history) {
+  // Access array elements without copying
+  return volume_surge_dip(history);
+}
+```
+
+Type-safe array access with bounds checking at no runtime cost.
+
 ### Why This Matters for Trading
 
 - **Compile-time validation** - Trading logic bugs caught before deployment
