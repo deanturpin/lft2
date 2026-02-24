@@ -9,6 +9,7 @@
   let interval;
   let chartCanvas;
   let chart;
+  let dailySummary = null;
 
   const API_URL = import.meta.env.VITE_API_URL ||
     (import.meta.env.PROD ? 'https://lft.turpin.dev' : 'http://localhost:8080');
@@ -45,6 +46,16 @@
       }
     } catch (err) {
       console.error('Error fetching history:', err);
+    }
+  }
+
+  async function fetchDailySummary() {
+    try {
+      const response = await fetch('https://deanturpin.github.io/lft2/daily-summary.json');
+      if (!response.ok) return;
+      dailySummary = await response.json();
+    } catch (err) {
+      console.error('Error fetching daily summary:', err);
     }
   }
 
@@ -111,10 +122,12 @@
   onMount(() => {
     fetchDashboard();
     fetchHistory();
+    fetchDailySummary();
     // Refresh every minute
     interval = setInterval(() => {
       fetchDashboard();
       fetchHistory();
+      fetchDailySummary();
     }, 60000);
   });
 
@@ -247,6 +260,45 @@
     <div class="card">
       <h2>Open Positions</h2>
       <p style="color: #8b949e;">No open positions</p>
+    </div>
+  {/if}
+
+  {#if dailySummary && dailySummary.activities && dailySummary.activities.length > 0}
+    <div class="card">
+      <h2>Today's Trades ({dailySummary.activities.length})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Symbol</th>
+            <th>Side</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Net Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each dailySummary.activities as activity}
+            <tr>
+              <td style="color: #8b949e; font-size: 0.9em;">
+                {activity.transaction_time.substring(11, 19)}
+              </td>
+              <td><strong>{activity.symbol}</strong></td>
+              <td class={activity.side === 'buy' ? 'positive' : 'negative'}>
+                {activity.side}
+              </td>
+              <td>{activity.qty}</td>
+              <td>{formatCurrency(activity.price)}</td>
+              <td>{formatCurrency(activity.net_amount)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {:else if dailySummary}
+    <div class="card">
+      <h2>Today's Trades</h2>
+      <p style="color: #8b949e;">No trades executed today</p>
     </div>
   {/if}
 {/if}
