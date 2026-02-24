@@ -32,7 +32,7 @@
 
   async function fetchHistory() {
     try {
-      const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1H`);
+      const response = await fetch(`${API_URL}/api/history?period=5D&timeframe=1H`);
       if (!response.ok) return;
       const data = await response.json();
 
@@ -211,7 +211,7 @@
 
   {#if history.length > 0}
     <div class="card">
-      <h2>Portfolio History (7 days)</h2>
+      <h2>Portfolio History (5 days)</h2>
       <div class="chart-container">
         <canvas bind:this={chartCanvas}></canvas>
       </div>
