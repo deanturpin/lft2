@@ -364,12 +364,12 @@ constexpr bool test_size_mismatch() {
 static_assert(test_size_mismatch());
 
 // Stress test with real historical data (1000 bars from AAPL)
-// Uses C++26 #embed to load test_data_aapl.json
+// Uses C++26 #embed to load aapl.json from src directory
 // Too large for compile-time evaluation (exceeds constexpr-ops-limit), but
 // validates parser handles real-world data with complete history
 inline bool test_real_data_runtime() {
   static constexpr char aapl_data[] = {
-#embed "../test_data_aapl.json"
+#embed "aapl.json"
   };
   auto json = std::string_view{aapl_data, std::size(aapl_data)};
   auto bars = parse_bars<1000>(json);
