@@ -67,6 +67,8 @@ run: build
 	@echo "→ summary"
 	@cd cmd/summary && go build -o ../../bin/summary . && cd ../.. && ./bin/summary
 	@echo ""
+	@cp -f buy.fix docs/buy.fix 2>/dev/null || echo "8=FIX.5.0SP2|9=0|35=D|10=000|" > docs/buy.fix
+	@cp -f sell.fix docs/sell.fix 2>/dev/null || echo "8=FIX.5.0SP2|9=0|35=D|10=000|" > docs/sell.fix
 	@echo "=== done ==="
 	@echo "{\"timestamp\": \"$$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > docs/pipeline-metadata.json
 	@echo '{'                                                                        > docs/tech-stack.json
