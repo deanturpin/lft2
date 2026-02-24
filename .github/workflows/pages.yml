@@ -2,8 +2,8 @@ name: GitHub Pages Pipeline
 
 on:
   schedule:
-    - cron: '*/10 13-20 * * 1-5'  # Every 10 min during market hours (09:30-16:00 ET, covers DST+standard)
-    - cron: '10 21 * * 1-5'        # End-of-day summary at 16:10 ET (standard time)
+    - cron: '*/5 13-20 * * 1-5'  # Every 5 min during market hours (09:30-16:00 ET, covers DST+standard)
+    - cron: '10 21 * * 1-5'       # End-of-day summary at 16:10 ET (standard time)
   workflow_dispatch:  # Manual trigger for ad-hoc runs
 
 permissions:
