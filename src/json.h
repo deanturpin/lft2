@@ -362,6 +362,28 @@ constexpr bool test_size_mismatch() {
          bars[1].timestamp.empty();
 }
 static_assert(test_size_mismatch());
+
+// Stress test with real historical data (1000 bars from AAPL)
+// Uses C++26 #embed to load test_data_aapl.json
+// Too large for compile-time evaluation (exceeds constexpr-ops-limit), but
+// validates parser handles real-world data with complete history
+inline bool test_real_data_runtime() {
+  static constexpr char aapl_data[] = {
+#embed "../test_data_aapl.json"
+  };
+  auto json = std::string_view{aapl_data, std::size(aapl_data)};
+  auto bars = parse_bars<1000>(json);
+
+  // Verify we parsed all 1000 bars
+  auto bar_count = 0uz;
+  for (const auto &bar : bars) {
+    if (bar.close > 0.0)
+      bar_count++;
+  }
+
+  // Should have exactly 1000 bars with valid data
+  return bar_count == 1000 && bars[0].close > 0.0 && bars[999].close > 0.0;
+}
 } // namespace
 
 // ============================================================
