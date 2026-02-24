@@ -70,6 +70,7 @@ jobs:
           GCXX: g++
         run: |
           echo "Generating end-of-day summary..."
+          make build  # Generate tech-stack.json and other metadata
           cd cmd/summary && go build -o ../../bin/summary . && cd ../..
           ./bin/summary
 
