@@ -5,7 +5,6 @@ compatibility_date = "2024-01-01"
 # Cloudflare Workers configuration
 # Deploy with: npx wrangler deploy
 
-[env.production]
 routes = [
   { pattern = "lft.turpin.dev/api/*", zone_name = "turpin.dev" }
 ]
