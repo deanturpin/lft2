@@ -112,22 +112,6 @@ std::println("✓ Processed {} bars for {}", count, symbol);
 
 Replaces verbose `std::cout <<` chains with clean, format-string based output.
 
-**Deducing `this`** - Simplified CRTP patterns (planned)
-
-### C++20 Features
-
-**Ranges and views** - Functional data transformations
-
-```cpp
-auto top_candidates = candidates
-  | std::views::filter([](auto& c) { return c.score > 0.8; })
-  | std::views::take(10);
-```
-
-**Concepts** - Compile-time interface validation (used in constrained templates)
-
-**Three-way comparison (`<=>`)** - Automatic comparison operators
-
 ### Why This Matters for Trading
 
 - **Compile-time validation** - Trading logic bugs caught before deployment
