@@ -17,7 +17,7 @@ make help
 
 ## Project Structure
 
-```
+```text
 lft2/
 ├── cmd/          # Go executables (fetch, filter, execute)
 ├── src/          # C++ modules (backtest, evaluate)
@@ -29,11 +29,13 @@ lft2/
 ## Development
 
 **Requirements:**
+
 - C++26 compiler (g++-15 or clang-18+)
 - Go 1.21+
 - Node.js 20+
 
 **Build:**
+
 ```bash
 # Analysis pipeline
 make pipeline
@@ -65,7 +67,8 @@ Full architecture details at <https://lft.turpin.dev/#/about>
 
 ## Modern C++ Features Showcase
 
-This project pushes the boundaries of modern C++ (C++23/26) to achieve compile-time trading logic validation and zero-overhead abstractions:
+This project pushes the boundaries of modern C++ (C++23/26) to achieve compile-time
+trading logic validation and zero-overhead abstractions:
 
 ### C++26 Features
 

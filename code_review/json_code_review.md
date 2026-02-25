@@ -49,7 +49,9 @@ constexpr void skip_comma(std::string_view& s) {
 
 Example:
 
-    1.23e-4
+```text
+1.23e-4
+```
 
 Your scanning logic includes digits, '.', '+', '-', 'e', 'E' --- but
 your actual parsing ignores the exponent entirely.
@@ -78,7 +80,9 @@ while (!s.empty() && s[0] != '"')
 
 This fails for strings like:
 
-    "he said "hi""
+```text
+"he said "hi""
+```
 
 Since you only target Alpaca's JSON (which contains no escapes), this is
 acceptable --- but **should be explicitly documented**.
@@ -136,7 +140,7 @@ std::size_t len = 0;
 
 # 🟩 What You Did Very Well
 
-### ✔ Excellent use of `constexpr`/`static_assert` tests
+## ✔ Excellent use of `constexpr`/`static_assert` tests
 
 Your coverage is surprisingly thorough.
 
@@ -192,9 +196,9 @@ exponent parsing. Everything else is solid.
 
 If you want a:
 
--   cleaned‑up version of your header\
--   version with stricter validation\
--   safer/faster version\
--   constexpr tokenizer version
+- cleaned‑up version of your header\
+- version with stricter validation\
+- safer/faster version\
+- constexpr tokenizer version
 
 ...just ask and I'll generate it.

@@ -10,7 +10,8 @@
 
 - why go stuff at top level? go.work
 - review alpaca usage across all Go modules, seems a bit light: internal/alpaca/alpaca.go
-- do we accept duplication of alpaca account access in worker code: workers/account.js? I.e., could we actually do this in Go?
+- do we accept duplication of alpaca account access in worker code: workers/account.js?
+  I.e., could we actually do this in Go?
 
 ## Misc
 
