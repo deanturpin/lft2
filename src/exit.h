@@ -12,7 +12,7 @@ struct position {
 // Exit reason classification
 enum class exit_reason {
   none,          // Still holding
-  take_profit,   // Hit 3% gain
+  take_profit,   // Hit 2% gain
   stop_loss,     // Hit 2% loss
   trailing_stop, // Fell 1% below peak
   risk_off,      // Market closing (15:30 ET)
