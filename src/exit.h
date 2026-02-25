@@ -9,15 +9,38 @@ struct position {
   double trailing_stop; // Absolute price level (updated each bar)
 };
 
+// Exit reason classification
+enum class exit_reason {
+  none,           // Still holding
+  take_profit,    // Hit 3% gain
+  stop_loss,      // Hit 2% loss
+  trailing_stop,  // Fell 1% below peak
+  risk_off,       // Market closing (15:30 ET)
+  end_of_data     // Backtest data ran out
+};
+
+// Returns specific exit reason if any condition met
+constexpr exit_reason check_exit(const position &pos, const bar &current) {
+  if (!is_valid(current))
+    return exit_reason::none;
+
+  const auto price = current.close;
+
+  // Check in priority order: take profit first (most desirable)
+  if (price >= pos.take_profit)
+    return exit_reason::take_profit;
+  if (price <= pos.stop_loss)
+    return exit_reason::stop_loss;
+  if (price <= pos.trailing_stop)
+    return exit_reason::trailing_stop;
+
+  return exit_reason::none;
+}
+
 // Exit evaluation: called every 5 minutes with current bar and position
 // Returns true if position should be closed
 constexpr bool is_exit(const position &pos, const bar &current) {
-  if (!is_valid(current))
-    return false;
-
-  const auto price = current.close;
-  return price >= pos.take_profit || price <= pos.stop_loss ||
-         price <= pos.trailing_stop;
+  return check_exit(pos, current) != exit_reason::none;
 }
 
 // Unit tests

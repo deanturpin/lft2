@@ -22,6 +22,17 @@
 #include <string>
 #include <vector>
 
+struct Trade {
+  double entry_price;
+  double exit_price;
+  double profit_pct;
+  bool win;
+  int duration_bars;
+  exit_reason reason;           // Why did it exit?
+  std::string entry_timestamp;  // When entered
+  std::string exit_timestamp;   // When exited
+};
+
 struct StrategyResult {
   std::string symbol;
   std::string strategy_name;
@@ -33,15 +44,26 @@ struct StrategyResult {
   int max_duration_bars = 0;
   std::string first_timestamp;
   std::string last_timestamp;
+  std::vector<Trade> trades; // Per-trade details for debug output
 };
 
-struct Trade {
-  double entry_price;
-  double exit_price;
-  double profit_pct;
-  bool win;
-  int duration_bars;
-};
+// Convert exit_reason to string for output
+constexpr std::string_view exit_reason_str(exit_reason r) {
+  switch (r) {
+  case exit_reason::take_profit:
+    return "take_profit";
+  case exit_reason::stop_loss:
+    return "stop_loss";
+  case exit_reason::trailing_stop:
+    return "trailing_stop";
+  case exit_reason::risk_off:
+    return "risk_off";
+  case exit_reason::end_of_data:
+    return "end_of_data";
+  default:
+    return "none";
+  }
+}
 
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
@@ -78,12 +100,15 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
     if (position && market::risk_off(now.timestamp)) {
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
-      trades.push_back(
-          Trade{.entry_price = position->entry_price,
-                .exit_price = next.open,
-                .profit_pct = profit_pct,
-                .win = profit_pct > 0.0,
-                .duration_bars = static_cast<int>(i - entry_bar_index)});
+      trades.push_back(Trade{
+          .entry_price = position->entry_price,
+          .exit_price = next.open,
+          .profit_pct = profit_pct,
+          .win = profit_pct > 0.0,
+          .duration_bars = static_cast<int>(i - entry_bar_index),
+          .reason = exit_reason::risk_off,
+          .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
+          .exit_timestamp = std::string{next.timestamp}});
       position.reset();
       continue;
     }
@@ -98,15 +123,19 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
     }
 
     // Exit signal fires on now's close; fill at next bar's open
-    if (position && is_exit(*position, now)) {
+    auto exit_check = position ? check_exit(*position, now) : exit_reason::none;
+    if (exit_check != exit_reason::none) {
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
-      trades.push_back(
-          Trade{.entry_price = position->entry_price,
-                .exit_price = next.open,
-                .profit_pct = profit_pct,
-                .win = profit_pct > 0.0,
-                .duration_bars = static_cast<int>(i - entry_bar_index)});
+      trades.push_back(Trade{
+          .entry_price = position->entry_price,
+          .exit_price = next.open,
+          .profit_pct = profit_pct,
+          .win = profit_pct > 0.0,
+          .duration_bars = static_cast<int>(i - entry_bar_index),
+          .reason = exit_check,
+          .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
+          .exit_timestamp = std::string{next.timestamp}});
       position.reset();
     }
     // Entry signal fires on now's close; fill at next bar's open
@@ -145,6 +174,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
   result.total_return = total_profit;
   result.min_duration_bars = min_duration;
   result.max_duration_bars = max_duration;
+  result.trades = trades; // Store for debug output
 
   return result;
 }
@@ -219,11 +249,19 @@ int main() {
     results[4].symbol = symbol;
 
     // Debug output showing trade counts and win rates
-    for (const auto &r : results)
-      if (r.trade_count > 0)
+    for (const auto &r : results) {
+      if (r.trade_count > 0) {
         std::println("    {} - {}: {} trades, {:.1f}% win, {:.2f}% avg profit",
                      symbol, r.strategy_name, r.trade_count, r.win_rate * 100.0,
                      r.avg_profit * 100.0);
+        // Show per-trade breakdown
+        for (const auto &t : r.trades) {
+          std::println("      ${:.2f} → ${:.2f} ({:+.2f}%, {}, {} bars)",
+                       t.entry_price, t.exit_price, t.profit_pct * 100.0,
+                       exit_reason_str(t.reason), t.duration_bars);
+        }
+      }
+    }
 
     // Find best strategy for this symbol
     auto best = std::max_element(
@@ -297,12 +335,25 @@ int main() {
       "min_duration_bars": {},
       "max_duration_bars": {},
       "first_timestamp": "{}",
-      "last_timestamp": "{}"
-    }}{}
+      "last_timestamp": "{}",
+      "trades": [
 )",
         rec.symbol, rec.strategy_name, rec.win_rate, rec.avg_profit,
         rec.trade_count, rec.min_duration_bars, rec.max_duration_bars,
-        rec.first_timestamp, rec.last_timestamp, sep);
+        rec.first_timestamp, rec.last_timestamp);
+
+    // Export per-trade details
+    for (auto j = 0uz; j < rec.trades.size(); ++j) {
+      const auto &t = rec.trades[j];
+      auto trade_sep = j + 1 < rec.trades.size() ? "," : "";
+      ofs << std::format(
+          R"(        {{"entry": {:.2f}, "exit": {:.2f}, "profit_pct": {:.4f}, "reason": "{}", "duration": {}}}{}
+)",
+          t.entry_price, t.exit_price, t.profit_pct,
+          exit_reason_str(t.reason), t.duration_bars, trade_sep);
+    }
+
+    ofs << std::format("      ]\n    }}{}\n", sep);
   }
 
   ofs << "]}\n";
