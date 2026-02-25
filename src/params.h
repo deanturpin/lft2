@@ -11,7 +11,7 @@ struct trading_params {
 
 // Default trading parameters
 constexpr auto default_params = trading_params{
-    .take_profit_pct = 0.02, .stop_loss_pct = 0.02, .trailing_stop_pct = 0.01};
+    .take_profit_pct = 0.0125, .stop_loss_pct = 0.0125, .trailing_stop_pct = 0.01};
 
 // Calculate absolute price levels from entry price and parameters
 constexpr auto calculate_levels(double entry_price, trading_params params) {
@@ -50,10 +50,12 @@ static_assert(
     []() constexpr {
       auto entry = 100.0;
       auto levels = calculate_levels(entry, default_params);
-      return levels.take_profit == 102.0 && levels.stop_loss == 98.0 &&
-             levels.trailing_stop == 99.0;
+      // Use entry * (1 + pct) for exact floating point match
+      return levels.take_profit == entry * 1.0125 &&
+             levels.stop_loss == entry * 0.9875 &&
+             levels.trailing_stop == entry * 0.99;
     }(),
-    "Default params should give TP=102, SL=98, trailing=99 for entry=100");
+    "Default params should give TP=+1.25%, SL=-1.25%, trailing=-1% for entry=100");
 
 // Test: calculate levels with custom params
 static_assert(
