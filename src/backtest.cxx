@@ -28,9 +28,9 @@ struct Trade {
   double profit_pct;
   bool win;
   int duration_bars;
-  exit_reason reason;           // Why did it exit?
-  std::string entry_timestamp;  // When entered
-  std::string exit_timestamp;   // When exited
+  exit_reason reason;          // Why did it exit?
+  std::string entry_timestamp; // When entered
+  std::string exit_timestamp;  // When exited
 };
 
 struct StrategyResult {
@@ -100,15 +100,15 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
     if (position && market::risk_off(now.timestamp)) {
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
-      trades.push_back(Trade{
-          .entry_price = position->entry_price,
-          .exit_price = next.open,
-          .profit_pct = profit_pct,
-          .win = profit_pct > 0.0,
-          .duration_bars = static_cast<int>(i - entry_bar_index),
-          .reason = exit_reason::risk_off,
-          .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
-          .exit_timestamp = std::string{next.timestamp}});
+      trades.push_back(
+          Trade{.entry_price = position->entry_price,
+                .exit_price = next.open,
+                .profit_pct = profit_pct,
+                .win = profit_pct > 0.0,
+                .duration_bars = static_cast<int>(i - entry_bar_index),
+                .reason = exit_reason::risk_off,
+                .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
+                .exit_timestamp = std::string{next.timestamp}});
       position.reset();
       continue;
     }
@@ -127,15 +127,15 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
     if (exit_check != exit_reason::none) {
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
-      trades.push_back(Trade{
-          .entry_price = position->entry_price,
-          .exit_price = next.open,
-          .profit_pct = profit_pct,
-          .win = profit_pct > 0.0,
-          .duration_bars = static_cast<int>(i - entry_bar_index),
-          .reason = exit_check,
-          .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
-          .exit_timestamp = std::string{next.timestamp}});
+      trades.push_back(
+          Trade{.entry_price = position->entry_price,
+                .exit_price = next.open,
+                .profit_pct = profit_pct,
+                .win = profit_pct > 0.0,
+                .duration_bars = static_cast<int>(i - entry_bar_index),
+                .reason = exit_check,
+                .entry_timestamp = std::string{bars[entry_bar_index].timestamp},
+                .exit_timestamp = std::string{next.timestamp}});
       position.reset();
     }
     // Entry signal fires on now's close; fill at next bar's open
@@ -349,8 +349,8 @@ int main() {
       ofs << std::format(
           R"(        {{"entry": {:.2f}, "exit": {:.2f}, "profit_pct": {:.4f}, "reason": "{}", "duration": {}}}{}
 )",
-          t.entry_price, t.exit_price, t.profit_pct,
-          exit_reason_str(t.reason), t.duration_bars, trade_sep);
+          t.entry_price, t.exit_price, t.profit_pct, exit_reason_str(t.reason),
+          t.duration_bars, trade_sep);
     }
 
     ofs << std::format("      ]\n    }}{}\n", sep);
