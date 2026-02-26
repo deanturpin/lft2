@@ -175,7 +175,7 @@ tr:hover {
 /* Force landscape orientation on mobile devices */
 @media screen and (max-width: 768px) and (orientation: portrait) {
   body::before {
-    content: "⟲ Please rotate your device to landscape mode for the best experience";
+    content: "⟲";
     position: fixed;
     top: 0;
     left: 0;
@@ -187,10 +187,8 @@ tr:hover {
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 1.25rem;
-    padding: 2rem;
+    font-size: 4rem;
     z-index: 9999;
-    line-height: 1.8;
   }
 
   #app {
