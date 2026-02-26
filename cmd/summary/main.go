@@ -19,7 +19,8 @@ type Activity struct {
 	Price          string `json:"price"`
 	Side           string `json:"side"` // "buy" or "sell"
 	NetAmount      string `json:"net_amount"`
-	ClientOrderID  string `json:"order_id"`  // Format: SYMBOL_strategy_tp3_sl2_tsl1_timestamp
+	OrderID        string `json:"order_id"`        // Alpaca's internal order ID
+	ClientOrderID  string `json:"client_order_id"` // Our custom ID: SYMBOL_strategy_tp3_sl2_tsl1_timestamp
 }
 
 // DailySummary represents the JSON output for GitHub Pages
