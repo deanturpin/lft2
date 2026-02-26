@@ -231,7 +231,6 @@
             <th>Market Value</th>
             <th>Unrealised P&L</th>
             <th>P&L %</th>
-            <th>Today</th>
           </tr>
         </thead>
         <tbody>
@@ -247,9 +246,6 @@
               </td>
               <td class={parseFloat(position.unrealized_plpc) >= 0 ? 'positive' : 'negative'}>
                 {formatPercent(position.unrealized_plpc)}
-              </td>
-              <td class={parseFloat(position.change_today) >= 0 ? 'positive' : 'negative'}>
-                {formatPercent(position.change_today)}
               </td>
             </tr>
           {/each}
