@@ -29,7 +29,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y g++ make git curl cmake binutils \
-            lcov graphviz python3-pip
+            lcov graphviz python3-pip doxygen
           pip3 install gprof2dot --break-system-packages
 
       - name: Setup Go
@@ -48,6 +48,20 @@ jobs:
           ALPACA_DATA_URL: ${{ secrets.ALPACA_DATA_URL }}
           GCXX: g++
         run: make
+
+      - name: Generate Doxygen documentation
+        run: |
+          doxygen -g Doxyfile
+          sed -i 's/PROJECT_NAME *=.*/PROJECT_NAME = "LFT2"/' Doxyfile
+          sed -i 's/PROJECT_BRIEF *=.*/PROJECT_BRIEF = "Low Frequency Trader v2"/' Doxyfile
+          sed -i 's/OUTPUT_DIRECTORY *=.*/OUTPUT_DIRECTORY = docs\/doxygen/' Doxyfile
+          sed -i 's/INPUT *=.*/INPUT = src/' Doxyfile
+          sed -i 's/RECURSIVE *=.*/RECURSIVE = YES/' Doxyfile
+          sed -i 's/EXTRACT_ALL *=.*/EXTRACT_ALL = YES/' Doxyfile
+          sed -i 's/EXTRACT_STATIC *=.*/EXTRACT_STATIC = YES/' Doxyfile
+          sed -i 's/GENERATE_LATEX *=.*/GENERATE_LATEX = NO/' Doxyfile
+          sed -i 's/HTML_COLORSTYLE *=.*/HTML_COLORSTYLE = DARK/' Doxyfile
+          doxygen Doxyfile
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
