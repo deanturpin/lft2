@@ -141,19 +141,7 @@ doxygen:
 		exit 1; \
 	fi
 	@echo "Generating Doxygen documentation..."
-	@doxygen -g Doxyfile 2>&1 | grep -v "Warning:"
-	@sed -i.bak 's/PROJECT_NAME *=.*/PROJECT_NAME = "LFT2"/' Doxyfile
-	@sed -i.bak 's/PROJECT_BRIEF *=.*/PROJECT_BRIEF = "Low Frequency Trader v2"/' Doxyfile
-	@sed -i.bak 's/OUTPUT_DIRECTORY *=.*/OUTPUT_DIRECTORY = docs\/doxygen/' Doxyfile
-	@sed -i.bak 's/INPUT *=.*/INPUT = src/' Doxyfile
-	@sed -i.bak 's/RECURSIVE *=.*/RECURSIVE = YES/' Doxyfile
-	@sed -i.bak 's/EXTRACT_ALL *=.*/EXTRACT_ALL = YES/' Doxyfile
-	@sed -i.bak 's/EXTRACT_STATIC *=.*/EXTRACT_STATIC = YES/' Doxyfile
-	@sed -i.bak 's/GENERATE_LATEX *=.*/GENERATE_LATEX = NO/' Doxyfile
-	@sed -i.bak 's/HTML_COLORSTYLE *=.*/HTML_COLORSTYLE = DARK/' Doxyfile
-	@rm -f Doxyfile.bak
 	@doxygen Doxyfile 2>&1 | grep -v "Warning:" || true
-	@rm -f Doxyfile
 	@echo "✓ Documentation generated in docs/doxygen/"
 
 # ============================================================
