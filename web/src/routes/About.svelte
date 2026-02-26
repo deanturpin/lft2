@@ -138,6 +138,8 @@
   <p style="color: #8b949e;">
     <a href="https://github.com/deanturpin/lft2" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Source Code (GitHub)</a><br>
     <a href="https://deanturpin.github.io/lft2/" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Analysis Results (GitHub Pages)</a><br>
+    <a href="https://deanturpin.github.io/lft2/doxygen/" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">API Documentation (Doxygen)</a><br>
+    <a href="https://deanturpin.github.io/lft2/coverage/" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Coverage Report (lcov)</a><br>
     <a href="https://deanturpin.github.io/lft2/candidates.json" target="_blank" rel="noopener noreferrer" style="color: #58a6ff; text-decoration: none;">Unfiltered Candidates (JSON)</a>
   </p>
 </div>
