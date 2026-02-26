@@ -24,8 +24,8 @@ constexpr auto SESSION_OPEN_ET = 9h + 30min; // 09:30 ET
 constexpr auto SESSION_CLOSE_ET = 16h;       // 16:00 ET
 
 // Risk window offsets
-constexpr auto RISK_ON_DELAY = 60min;  // Skip the volatile first hour
-constexpr auto RISK_OFF_START = 30min; // Stop 30 minutes before close
+constexpr auto RISK_ON_DELAY = 15min;  // Skip the volatile first 15 minutes
+constexpr auto RISK_OFF_START = 45min; // Stop 45 minutes before close
 
 // Returns the UTC offset for America/New_York based on month alone.
 // EDT (UTC-4) applies April–October; EST (UTC-5) otherwise.
@@ -117,7 +117,7 @@ static_assert(market_open("2026-07-01T19:59:00Z"));  // 15:59 ET - open
 static_assert(!market_open("2026-07-01T13:29:00Z")); // 09:29 ET - not yet open
 static_assert(!market_open("2026-07-01T20:00:00Z")); // 16:00 ET - closed
 
-// True during the risk-off period: first hour after open and last 30 min.
+// True during the risk-off period: first 15 min after open and last 45 min.
 //
 // Intended usage:
 //   if (!market_open(ts)) return;    // market closed - nothing to do
@@ -128,21 +128,21 @@ constexpr bool risk_off(std::string_view timestamp) {
     return false;
 
   auto t = ny_minutes(timestamp);
-  auto risk_start = SESSION_OPEN_ET + RISK_ON_DELAY; // 10:30 ET
-  auto risk_end = SESSION_CLOSE_ET - RISK_OFF_START; // 15:30 ET
+  auto risk_start = SESSION_OPEN_ET + RISK_ON_DELAY; // 09:45 ET
+  auto risk_end = SESSION_CLOSE_ET - RISK_OFF_START; // 15:15 ET
 
   return t < risk_start || t >= risk_end;
 }
-// Unsafe: 09:30–10:29 ET and 15:30–15:59 ET; safe: 10:30–15:29 ET
-static_assert(risk_off("2026-02-16T14:30:00Z")); // 09:30 ET - first hour
+// Unsafe: 09:30–09:44 ET and 15:15–15:59 ET; safe: 09:45–15:14 ET
+static_assert(risk_off("2026-02-16T14:30:00Z")); // 09:30 ET - first 15 min
 static_assert(
-    risk_off("2026-02-16T15:29:00Z")); // 10:29 ET - one minute before safe
+    risk_off("2026-02-16T14:44:00Z")); // 09:44 ET - one minute before safe
 static_assert(
-    !risk_off("2026-02-16T15:30:00Z")); // 10:30 ET - safe window starts
+    !risk_off("2026-02-16T14:45:00Z")); // 09:45 ET - safe window starts
 static_assert(!risk_off("2026-02-16T18:00:00Z")); // 13:00 ET - mid-day
 static_assert(
-    !risk_off("2026-02-16T20:29:00Z")); // 15:29 ET - one minute before cutoff
-static_assert(risk_off("2026-02-16T20:30:00Z"));  // 15:30 ET - last 30 minutes
+    !risk_off("2026-02-16T20:14:00Z")); // 15:14 ET - one minute before cutoff
+static_assert(risk_off("2026-02-16T20:15:00Z"));  // 15:15 ET - last 45 minutes
 static_assert(!risk_off("2026-02-16T21:00:00Z")); // 16:00 ET - market closed
 static_assert(!risk_off("2026-02-16T13:00:00Z")); // 08:00 ET - pre-market
 
