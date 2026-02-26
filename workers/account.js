@@ -84,26 +84,6 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/activities') {
-      try {
-        const activities = await fetchActivities(env);
-        return new Response(JSON.stringify(activities), {
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        });
-      }
-    }
-
     return new Response('Not Found', { status: 404 });
   },
 };
@@ -181,35 +161,6 @@ async function fetchPortfolioHistory(env, period, timeframe) {
 
   if (!response.ok) {
     throw new Error(`Alpaca portfolio history API returned ${response.status}`);
-  }
-
-  return response.json();
-}
-
-async function fetchActivities(env) {
-  const baseUrl = env.ALPACA_BASE_URL || 'https://paper-api.alpaca.markets';
-  const apiKey = env.ALPACA_API_KEY;
-  const apiSecret = env.ALPACA_API_SECRET;
-
-  if (!apiKey || !apiSecret) {
-    throw new Error('Alpaca API credentials not configured');
-  }
-
-  const headers = {
-    'APCA-API-KEY-ID': apiKey,
-    'APCA-API-SECRET-KEY': apiSecret,
-  };
-
-  // Fetch last 7 days of FILL activities (completed trades)
-  const after = new Date();
-  after.setDate(after.getDate() - 7);
-  const afterISO = after.toISOString().split('T')[0];
-
-  const url = `${baseUrl}/v2/account/activities/FILL?after=${afterISO}&direction=desc&page_size=500`;
-  const response = await fetch(url, { headers });
-
-  if (!response.ok) {
-    throw new Error(`Alpaca activities API returned ${response.status}`);
   }
 
   return response.json();
