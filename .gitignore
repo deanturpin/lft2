@@ -44,3 +44,7 @@ docs/callgraph.svg
 docs/gprof.txt
 callgrind.out
 compile_commands.json
+
+# Doxygen
+Doxyfile
+docs/doxygen/

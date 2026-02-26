@@ -132,16 +132,42 @@ backtest-cpp: build
 	@./$(BACKTEST)
 
 # ============================================================
+# Documentation
+# ============================================================
+doxygen:
+	@if ! command -v doxygen >/dev/null 2>&1; then \
+		echo "Error: doxygen not installed"; \
+		echo "Install with: brew install doxygen (macOS) or apt-get install doxygen (Linux)"; \
+		exit 1; \
+	fi
+	@echo "Generating Doxygen documentation..."
+	@doxygen -g Doxyfile 2>&1 | grep -v "Warning:"
+	@sed -i.bak 's/PROJECT_NAME *=.*/PROJECT_NAME = "LFT2"/' Doxyfile
+	@sed -i.bak 's/PROJECT_BRIEF *=.*/PROJECT_BRIEF = "Low Frequency Trader v2"/' Doxyfile
+	@sed -i.bak 's/OUTPUT_DIRECTORY *=.*/OUTPUT_DIRECTORY = docs\/doxygen/' Doxyfile
+	@sed -i.bak 's/INPUT *=.*/INPUT = src/' Doxyfile
+	@sed -i.bak 's/RECURSIVE *=.*/RECURSIVE = YES/' Doxyfile
+	@sed -i.bak 's/EXTRACT_ALL *=.*/EXTRACT_ALL = YES/' Doxyfile
+	@sed -i.bak 's/EXTRACT_STATIC *=.*/EXTRACT_STATIC = YES/' Doxyfile
+	@sed -i.bak 's/GENERATE_LATEX *=.*/GENERATE_LATEX = NO/' Doxyfile
+	@sed -i.bak 's/HTML_COLORSTYLE *=.*/HTML_COLORSTYLE = DARK/' Doxyfile
+	@rm -f Doxyfile.bak
+	@doxygen Doxyfile 2>&1 | grep -v "Warning:" || true
+	@rm -f Doxyfile
+	@echo "✓ Documentation generated in docs/doxygen/"
+
+# ============================================================
 # Housekeeping
 # ============================================================
 clean:
 	rm -rf $(BUILD_DIR) bin/
-	rm -rf docs/bars/
+	rm -rf docs/bars/ docs/doxygen/
 	rm -f docs/candidates.json docs/strategies.json
 
 help:
 	@echo "LFT2 Build System"
 	@echo ""
-	@echo "  make        - compile and run full pipeline (fetch → filter → backtest → entries → execute)"
-	@echo "  make build  - cmake: compile C++ modules only"
-	@echo "  make clean  - remove all build artefacts and fetched data"
+	@echo "  make          - compile and run full pipeline (fetch → filter → backtest → entries → execute)"
+	@echo "  make build    - cmake: compile C++ modules only"
+	@echo "  make doxygen  - generate C++ API documentation"
+	@echo "  make clean    - remove all build artefacts and fetched data"
