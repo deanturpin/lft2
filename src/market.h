@@ -24,8 +24,8 @@ constexpr auto SESSION_OPEN_ET = 9h + 30min; // 09:30 ET
 constexpr auto SESSION_CLOSE_ET = 16h;       // 16:00 ET
 
 // Risk window offsets
-constexpr auto RISK_ON_DELAY = 15min;  // Skip the volatile first 15 minutes
-constexpr auto RISK_OFF_START = 45min; // Stop 45 minutes before close
+constexpr auto RISK_ON_DELAY = 15min;  // Skip volatile opening period
+constexpr auto RISK_OFF_START = 45min; // Start liquidation before close
 
 // Returns the UTC offset for America/New_York based on month alone.
 // EDT (UTC-4) applies April–October; EST (UTC-5) otherwise.
@@ -117,7 +117,7 @@ static_assert(market_open("2026-07-01T19:59:00Z"));  // 15:59 ET - open
 static_assert(!market_open("2026-07-01T13:29:00Z")); // 09:29 ET - not yet open
 static_assert(!market_open("2026-07-01T20:00:00Z")); // 16:00 ET - closed
 
-// True during the risk-off period: first 15 min after open and last 45 min.
+// True during the risk-off period: opening volatility window and pre-close liquidation window.
 //
 // Intended usage:
 //   if (!market_open(ts)) return;    // market closed - nothing to do
@@ -128,8 +128,8 @@ constexpr bool risk_off(std::string_view timestamp) {
     return false;
 
   auto t = ny_minutes(timestamp);
-  auto risk_start = SESSION_OPEN_ET + RISK_ON_DELAY; // 09:45 ET
-  auto risk_end = SESSION_CLOSE_ET - RISK_OFF_START; // 15:15 ET
+  auto risk_start = SESSION_OPEN_ET + RISK_ON_DELAY;
+  auto risk_end = SESSION_CLOSE_ET - RISK_OFF_START;
 
   return t < risk_start || t >= risk_end;
 }
