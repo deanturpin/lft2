@@ -1,5 +1,10 @@
 # Low Frequency Trader
 
+[![GitHub Pages Pipeline](https://github.com/deanturpin/lft2/actions/workflows/pages.yml/badge.svg)](https://github.com/deanturpin/lft2/actions/workflows/pages.yml)
+[![Coverage](https://img.shields.io/badge/coverage-view%20report-blue)](https://deanturpin.github.io/lft2/coverage/)
+[![API Docs](https://img.shields.io/badge/docs-doxygen-blue)](https://deanturpin.github.io/lft2/doxygen/)
+[![Live Dashboard](https://img.shields.io/badge/dashboard-live-green)](https://lft.turpin.dev)
+
 Fully automated algorithmic trading platform with constexpr-first C++26 architecture.
 
 **Live Dashboard**: <https://lft.turpin.dev>
