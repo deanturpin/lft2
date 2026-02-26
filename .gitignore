@@ -32,7 +32,7 @@ node_modules/
 web/node_modules/
 web/dist/
 
-# Cloudflare Pages build output
+# Cloudflare Pages build output (not web/public/ which has source assets)
 public/
 
 # GitHub Pages generated data (keep index.html, ignore generated files)

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#0d1117"/>
+
+  <!-- Stylized candlestick chart bars -->
+  <rect x="15" y="40" width="8" height="30" fill="#3fb950" rx="1"/>
+  <rect x="18" y="35" width="2" height="40" fill="#3fb950"/>
+
+  <rect x="35" y="50" width="8" height="25" fill="#f85149" rx="1"/>
+  <rect x="38" y="45" width="2" height="35" fill="#f85149"/>
+
+  <rect x="55" y="30" width="8" height="35" fill="#3fb950" rx="1"/>
+  <rect x="58" y="25" width="2" height="45" fill="#3fb950"/>
+
+  <rect x="75" y="45" width="8" height="20" fill="#58a6ff" rx="1"/>
+  <rect x="78" y="40" width="2" height="30" fill="#58a6ff"/>
+
+  <!-- Trend line overlay -->
+  <polyline points="19,65 39,70 59,40 79,55"
+            stroke="#58a6ff"
+            stroke-width="2"
+            fill="none"
+            opacity="0.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"/>
+</svg>
