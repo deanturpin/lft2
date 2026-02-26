@@ -155,6 +155,21 @@
     const sign = num >= 0 ? '+' : '';
     return `${sign}${num.toFixed(2)}%`;
   }
+
+  // Parse client_order_id to extract trade parameters
+  // Format: AAPL_mean_reversion_tp3_sl2_tsl1_20260218T143000
+  function parseOrderID(orderId) {
+    if (!orderId) return null;
+    const parts = orderId.split('_');
+    if (parts.length < 6) return null;
+
+    const strategy = parts.slice(1, parts.length - 4).join('_');
+    const tp = parts[parts.length - 4].replace('tp', '');
+    const sl = parts[parts.length - 3].replace('sl', '');
+    const tsl = parts[parts.length - 2].replace('tsl', '');
+
+    return { strategy, tp, sl, tsl };
+  }
 </script>
 
 {#if dashboard && dashboard.clock}
@@ -270,11 +285,12 @@
             <th>Side</th>
             <th>Quantity</th>
             <th>Price</th>
-            <th>Value</th>
+            <th>Strategy / Exits</th>
           </tr>
         </thead>
         <tbody>
           {#each dailySummary.activities as activity}
+            {@const params = parseOrderID(activity.order_id)}
             <tr>
               <td style="color: #8b949e; font-size: 0.9em;">
                 {activity.transaction_time.substring(11, 19)}
@@ -285,7 +301,13 @@
               </td>
               <td>{activity.qty}</td>
               <td>{formatCurrency(activity.price)}</td>
-              <td>{formatCurrency(parseFloat(activity.qty) * parseFloat(activity.price))}</td>
+              <td style="color: #8b949e; font-size: 0.9em;">
+                {#if params}
+                  {params.strategy} (TP:{params.tp}% SL:{params.sl}% TSL:{params.tsl}%)
+                {:else}
+                  —
+                {/if}
+              </td>
             </tr>
           {/each}
         </tbody>

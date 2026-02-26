@@ -12,13 +12,14 @@ import (
 
 // Activity represents a trade or position change from Alpaca /v2/account/activities
 type Activity struct {
-	ActivityType string  `json:"activity_type"` // "FILL", "DIV", etc.
-	TransactTime string  `json:"transaction_time"`
-	Symbol       string  `json:"symbol"`
-	Qty          string  `json:"qty"`
-	Price        string  `json:"price"`
-	Side         string  `json:"side"` // "buy" or "sell"
-	NetAmount    string  `json:"net_amount"`
+	ActivityType   string `json:"activity_type"` // "FILL", "DIV", etc.
+	TransactTime   string `json:"transaction_time"`
+	Symbol         string `json:"symbol"`
+	Qty            string `json:"qty"`
+	Price          string `json:"price"`
+	Side           string `json:"side"` // "buy" or "sell"
+	NetAmount      string `json:"net_amount"`
+	ClientOrderID  string `json:"order_id"`  // Format: SYMBOL_strategy_tp3_sl2_tsl1_timestamp
 }
 
 // DailySummary represents the JSON output for GitHub Pages
