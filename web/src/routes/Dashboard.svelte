@@ -333,7 +333,6 @@
             <th>Side</th>
             <th>Quantity</th>
             <th>Price</th>
-            <th>Net Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -343,12 +342,11 @@
                 {activity.transaction_time.substring(11, 19)}
               </td>
               <td><strong>{activity.symbol}</strong></td>
-              <td class={activity.side === 'buy' ? 'positive' : 'negative'}>
-                {activity.side === 'buy' ? '▲' : '▼'} {activity.side}
+              <td style="color: {activity.side === 'buy' ? '#56d364' : '#8b949e'};">
+                {activity.side}
               </td>
               <td>{activity.qty}</td>
               <td>{formatCurrency(activity.price)}</td>
-              <td>{activity.net_amount ? formatCurrency(activity.net_amount) : '—'}</td>
             </tr>
           {/each}
         </tbody>
