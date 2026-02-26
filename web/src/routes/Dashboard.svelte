@@ -333,6 +333,7 @@
             <th>Side</th>
             <th>Quantity</th>
             <th>Price</th>
+            <th>Net Amount</th>
           </tr>
         </thead>
         <tbody>
@@ -347,6 +348,9 @@
               </td>
               <td>{activity.qty}</td>
               <td>{formatCurrency(activity.price)}</td>
+              <td class={parseFloat(activity.net_amount || 0) >= 0 ? 'positive' : 'negative'}>
+                {activity.net_amount ? formatCurrency(activity.net_amount) : '—'}
+              </td>
             </tr>
           {/each}
         </tbody>
