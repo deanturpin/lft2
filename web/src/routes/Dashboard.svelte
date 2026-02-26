@@ -10,6 +10,7 @@
   let chartCanvas;
   let chart;
   let dailySummary = null;
+  let activities = [];
 
   const API_URL = import.meta.env.VITE_API_URL ||
     (import.meta.env.PROD ? 'https://lft.turpin.dev' : 'http://localhost:8080');
@@ -32,7 +33,7 @@
 
   async function fetchHistory() {
     try {
-      const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1H`);
+      const response = await fetch(`${API_URL}/api/history?period=1W&timeframe=1D`);
       if (!response.ok) return;
       const data = await response.json();
 
@@ -59,6 +60,16 @@
     }
   }
 
+  async function fetchActivities() {
+    try {
+      const response = await fetch(`${API_URL}/api/activities`);
+      if (!response.ok) return;
+      activities = await response.json();
+    } catch (err) {
+      console.error('Error fetching activities:', err);
+    }
+  }
+
   function updateChart() {
     if (!chartCanvas || history.length === 0) return;
 
@@ -66,13 +77,29 @@
       chart.destroy();
     }
 
+    // Aggregate trades by day from activities (last 7 days)
+    const tradesByDay = {};
+    if (activities && activities.length > 0) {
+      activities.forEach(activity => {
+        const date = activity.transaction_time.substring(0, 10); // YYYY-MM-DD
+        tradesByDay[date] = (tradesByDay[date] || 0) + 1;
+      });
+    }
+
+    // Match trade counts to history timestamps
+    const tradeCounts = history.map(h => {
+      const date = new Date(h.timestamp * 1000);
+      const dateStr = date.toISOString().substring(0, 10);
+      return tradesByDay[dateStr] || 0;
+    });
+
     const ctx = chartCanvas.getContext('2d');
     chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: history.map(h => {
           const date = new Date(h.timestamp * 1000); // Unix timestamp to milliseconds
-          return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'America/New_York' });
+          return date.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
         }),
         datasets: [{
           label: 'Equity',
@@ -81,6 +108,15 @@
           backgroundColor: 'rgba(88, 166, 255, 0.1)',
           tension: 0.1,
           fill: true,
+          yAxisID: 'y',
+        }, {
+          label: 'Trades',
+          data: tradeCounts,
+          borderColor: '#56d364',
+          backgroundColor: 'rgba(86, 211, 100, 0.1)',
+          tension: 0.1,
+          fill: false,
+          yAxisID: 'y1',
         }]
       },
       options: {
@@ -88,11 +124,16 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false
+            display: true,
+            labels: {
+              color: '#8b949e'
+            }
           }
         },
         scales: {
           y: {
+            type: 'linear',
+            position: 'left',
             ticks: {
               callback: function(value) {
                 return '$' + value.toLocaleString();
@@ -101,6 +142,17 @@
             },
             grid: {
               color: '#30363d'
+            }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            ticks: {
+              color: '#8b949e',
+              stepSize: 1
+            },
+            grid: {
+              display: false
             }
           },
           x: {
@@ -123,11 +175,13 @@
     fetchDashboard();
     fetchHistory();
     fetchDailySummary();
+    fetchActivities();
     // Refresh every minute
     interval = setInterval(() => {
       fetchDashboard();
       fetchHistory();
       fetchDailySummary();
+      fetchActivities();
     }, 60000);
   });
 
@@ -136,8 +190,13 @@
     if (chart) chart.destroy();
   });
 
-  // Reactively update chart when history or chartCanvas changes
+  // Reactively update chart when history, activities, or chartCanvas changes
   $: if (chartCanvas && history.length > 0) {
+    updateChart();
+  }
+
+  // Also update when activities change (for trade counts)
+  $: if (chartCanvas && history.length > 0 && activities) {
     updateChart();
   }
 
