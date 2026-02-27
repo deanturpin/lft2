@@ -231,10 +231,10 @@ int main() {
                               std::chrono::floor<std::chrono::seconds>(
                                   std::chrono::system_clock::now()));
     auto order_id = std::format(
-        "{}_{}_tp{}_sl{}_tsl{}_{}", candidate.symbol, candidate.strategy,
-        static_cast<int>(default_params.take_profit_pct * 100),
-        static_cast<int>(default_params.stop_loss_pct * 100),
-        static_cast<int>(default_params.trailing_stop_pct * 100), now_ts);
+        "{}_{}_tp{:.2f}_sl{:.2f}_tsl{:.2f}_{}", candidate.symbol, candidate.strategy,
+        default_params.take_profit_pct * 100,
+        default_params.stop_loss_pct * 100,
+        default_params.trailing_stop_pct * 100, now_ts);
 
     buy_orders.push_back(fix::new_order_single(
         order_id, candidate.symbol, fix::SIDE_BUY, shares, seq_num,
