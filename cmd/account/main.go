@@ -41,6 +41,14 @@ type Position struct {
 	AssetClass     string `json:"asset_class"`
 }
 
+// Order data from Alpaca /v2/orders
+type Order struct {
+	Symbol        string `json:"symbol"`
+	ClientOrderID string `json:"client_order_id"`
+	Side          string `json:"side"`
+	Status        string `json:"status"`
+}
+
 
 var client alpaca.Client
 
@@ -81,6 +89,21 @@ func fetchPositions() ([]Position, error) {
 	}
 
 	return positions, nil
+}
+
+// Fetch open buy orders to get client_order_id for each position
+func fetchOpenOrders() ([]Order, error) {
+	body, err := client.Get(client.BaseURL + "/v2/orders?status=open&side=buy&limit=500")
+	if err != nil {
+		return nil, err
+	}
+
+	var orders []Order
+	if err := json.Unmarshal(body, &orders); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 
@@ -139,6 +162,20 @@ func main() {
 			pos.Symbol, pos.Qty, pos.AvgEntryPrice, pos.UnrealizedPL, pos.UnrealizedPLPC)
 	}
 
+	// Fetch open orders to get client_order_id for each position
+	orders, err := fetchOpenOrders()
+	if err != nil {
+		log.Fatalf("Error fetching orders: %v", err)
+	}
+
+	// Build map of symbol → client_order_id from buy orders
+	orderIDMap := make(map[string]string)
+	for _, order := range orders {
+		if order.Side == "buy" && order.ClientOrderID != "" {
+			orderIDMap[order.Symbol] = order.ClientOrderID
+		}
+	}
+
 	// Write positions.json for exits module
 	positionsFile, err := os.Create("docs/positions.json")
 	if err != nil {
@@ -146,12 +183,13 @@ func main() {
 	}
 	defer positionsFile.Close()
 
-	// Simplified position data for exits module
+	// Simplified position data for exits module with client_order_id
 	type SimplePosition struct {
 		Symbol        string `json:"symbol"`
 		Qty           string `json:"qty"`
 		AvgEntryPrice string `json:"avg_entry_price"`
 		Side          string `json:"side"`
+		ClientOrderID string `json:"client_order_id"` // Original buy order ID
 	}
 
 	simplePositions := make([]SimplePosition, len(positions))
@@ -161,6 +199,7 @@ func main() {
 			Qty:           pos.Qty,
 			AvgEntryPrice: pos.AvgEntryPrice,
 			Side:          pos.Side,
+			ClientOrderID: orderIDMap[pos.Symbol], // Lookup from orders
 		}
 	}
 

@@ -18,6 +18,8 @@ struct Position {
   double qty;
   double avg_entry_price;
   std::string side;
+  std::string client_order_id; // Original buy order ID (contains strategy +
+                               // exit params)
 };
 
 // Parse positions.json from account module
@@ -35,6 +37,7 @@ std::vector<Position> load_positions() {
         .qty = json_number(obj, "qty"),
         .avg_entry_price = json_number(obj, "avg_entry_price"),
         .side = std::string{json_string(obj, "side")},
+        .client_order_id = std::string{json_string(obj, "client_order_id")},
     });
   });
 
@@ -125,10 +128,14 @@ int main() {
     if (should_exit) {
       std::println("   ✅ Exit signal: {}", exit_reason);
 
-      // Generate FIX sell order
-      auto order_id = std::format(
-          "EXIT_{}_{}_{}", pos.symbol, seq_num,
-          std::chrono::system_clock::now().time_since_epoch().count());
+      // Reuse original buy order's client_order_id so the sell is linked to the
+      // buy Falls back to generating an ID if client_order_id is missing
+      auto order_id =
+          pos.client_order_id.empty()
+              ? std::format(
+                    "EXIT_{}_{}_{}", pos.symbol, seq_num,
+                    std::chrono::system_clock::now().time_since_epoch().count())
+              : pos.client_order_id;
 
       sell_orders.push_back(fix::new_order_single(
           order_id, pos.symbol, fix::SIDE_SELL, static_cast<int>(pos.qty),
