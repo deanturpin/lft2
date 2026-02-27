@@ -10,17 +10,27 @@ import (
 	"github.com/deanturpin/lft2/internal/alpaca"
 )
 
-// Activity represents a trade or position change from Alpaca /v2/account/activities
+// Order represents an order from Alpaca /v2/orders
+type Order struct {
+	CreatedAt     string `json:"created_at"`
+	FilledAt      string `json:"filled_at"`
+	Symbol        string `json:"symbol"`
+	Qty           string `json:"qty"`
+	FilledQty     string `json:"filled_qty"`
+	FilledAvgPrice string `json:"filled_avg_price"`
+	Side          string `json:"side"` // "buy" or "sell"
+	Status        string `json:"status"` // "filled", "partially_filled", etc.
+	ClientOrderID string `json:"client_order_id"` // Our custom ID: SYMBOL_strategy_tp3_sl2_tsl1_timestamp
+}
+
+// Activity represents a processed trade for display
 type Activity struct {
-	ActivityType   string `json:"activity_type"` // "FILL", "DIV", etc.
-	TransactTime   string `json:"transaction_time"`
-	Symbol         string `json:"symbol"`
-	Qty            string `json:"qty"`
-	Price          string `json:"price"`
-	Side           string `json:"side"` // "buy" or "sell"
-	NetAmount      string `json:"net_amount"`
-	OrderID        string `json:"order_id"`        // Alpaca's internal order ID
-	ClientOrderID  string `json:"client_order_id"` // Our custom ID: SYMBOL_strategy_tp3_sl2_tsl1_timestamp
+	TransactTime  string `json:"transaction_time"`
+	Symbol        string `json:"symbol"`
+	Qty           string `json:"qty"`
+	Price         string `json:"price"`
+	Side          string `json:"side"` // "buy" or "sell"
+	ClientOrderID string `json:"order_id"` // Our custom ID for dashboard display
 }
 
 // DailySummary represents the JSON output for GitHub Pages
@@ -50,36 +60,47 @@ func main() {
 	}
 	client = alpaca.New(apiKey, apiSecret, os.Getenv("ALPACA_BASE_URL"), "")
 
-	// Fetch today's activities
+	// Fetch today's filled orders from /v2/orders endpoint
 	now := time.Now()
 	today := now.Format("2006-01-02")
 	yesterday := now.AddDate(0, 0, -1).Format("2006-01-02")
 
-	fmt.Printf("Fetching activities from %s onwards (filtering to %s)...\n", yesterday, today)
+	fmt.Printf("Fetching filled orders from %s onwards (filtering to %s)...\n", yesterday, today)
 
-	// Alpaca /v2/account/activities endpoint (without FILL filter to get consolidated trades)
-	url := fmt.Sprintf("%s/v2/account/activities?after=%sT00:00:00Z",
+	// Alpaca /v2/orders endpoint with filled status and date filter
+	url := fmt.Sprintf("%s/v2/orders?status=filled&after=%sT00:00:00Z&limit=500",
 		client.BaseURL, yesterday)
 
 	body, err := client.Get(url)
 	if err != nil {
-		log.Fatalf("fetching activities: %v", err)
+		log.Fatalf("fetching orders: %v", err)
 	}
 
-	var activities []Activity
-	if err := json.Unmarshal(body, &activities); err != nil {
-		log.Fatalf("parsing activities: %v", err)
+	var orders []Order
+	if err := json.Unmarshal(body, &orders); err != nil {
+		log.Fatalf("parsing orders: %v", err)
 	}
 
-	// Filter to today only
+	// Convert orders to activities and filter to today only
 	var targetActivities []Activity
-	for _, act := range activities {
-		if len(act.TransactTime) >= 10 && act.TransactTime[:10] == today {
-			targetActivities = append(targetActivities, act)
+	for _, order := range orders {
+		// Use filled_at timestamp for filtering
+		if order.FilledAt == "" {
+			continue
+		}
+		if len(order.FilledAt) >= 10 && order.FilledAt[:10] == today {
+			targetActivities = append(targetActivities, Activity{
+				TransactTime:  order.FilledAt,
+				Symbol:        order.Symbol,
+				Qty:           order.FilledQty,
+				Price:         order.FilledAvgPrice,
+				Side:          order.Side,
+				ClientOrderID: order.ClientOrderID,
+			})
 		}
 	}
 
-	fmt.Printf("Found %d trades on %s\n", len(targetActivities), today)
+	fmt.Printf("Found %d filled orders on %s\n", len(targetActivities), today)
 
 	// Calculate summary stats
 	buys := 0
@@ -234,7 +255,7 @@ func generateHTML(s DailySummary) string {
                 <th>Side</th>
                 <th>Quantity</th>
                 <th>Price</th>
-                <th>Net Amount</th>
+                <th>Strategy / Exits</th>
             </tr>
         </thead>
         <tbody>
@@ -251,13 +272,19 @@ func generateHTML(s DailySummary) string {
 				sideClass = " class=\"sell\""
 			}
 
+			// Parse client_order_id to show strategy params
+			strategyInfo := act.ClientOrderID
+			if strategyInfo == "" {
+				strategyInfo = "—"
+			}
+
 			html += `            <tr>
                 <td class="time">` + time + `</td>
                 <td><strong>` + act.Symbol + `</strong></td>
                 <td` + sideClass + `>` + act.Side + `</td>
                 <td>` + act.Qty + `</td>
                 <td>$` + act.Price + `</td>
-                <td>$` + act.NetAmount + `</td>
+                <td style="font-size: 0.85em; color: #7d8793;">` + strategyInfo + `</td>
             </tr>
 `
 		}
