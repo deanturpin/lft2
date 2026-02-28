@@ -43,9 +43,15 @@ std::vector<Candidate> load_candidates() {
   if (array_start == std::string::npos)
     return {};
 
-  // Parse objects in the array
+  // Parse objects in the array — only include viable strategies (≥50% win
+  // rate, ≥5 trades)
   json_foreach_object(
       std::string_view{content}.substr(array_start), [&](std::string_view obj) {
+        // Check viable flag — skip if false or missing
+        auto viable_str = json_string(obj, "viable");
+        if (viable_str != "true")
+          return; // Skip non-viable strategies
+
         auto c = Candidate{std::string{json_string(obj, "symbol")},
                            std::string{json_string(obj, "strategy")}};
         if (!c.symbol.empty() && !c.strategy.empty())
@@ -230,11 +236,11 @@ int main() {
     auto now_ts = std::format("{:%Y%m%dT%H%M%S}",
                               std::chrono::floor<std::chrono::seconds>(
                                   std::chrono::system_clock::now()));
-    auto order_id = std::format(
-        "{}_{}_tp{:.2f}_sl{:.2f}_tsl{:.2f}_{}", candidate.symbol, candidate.strategy,
-        default_params.take_profit_pct * 100,
-        default_params.stop_loss_pct * 100,
-        default_params.trailing_stop_pct * 100, now_ts);
+    auto order_id =
+        std::format("{}_{}_tp{:.2f}_sl{:.2f}_tsl{:.2f}_{}", candidate.symbol,
+                    candidate.strategy, default_params.take_profit_pct * 100,
+                    default_params.stop_loss_pct * 100,
+                    default_params.trailing_stop_pct * 100, now_ts);
 
     buy_orders.push_back(fix::new_order_single(
         order_id, candidate.symbol, fix::SIDE_BUY, shares, seq_num,

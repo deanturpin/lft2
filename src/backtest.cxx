@@ -45,6 +45,7 @@ struct StrategyResult {
   std::string first_timestamp;
   std::string last_timestamp;
   std::vector<Trade> trades; // Per-trade details for debug output
+  bool viable = false;       // True if win_rate >= 0.50 && trade_count >= 5
 };
 
 // Convert exit_reason to string for output
@@ -248,67 +249,65 @@ int main() {
         backtest_strategy(bars, volatility_breakout, "volatility_breakout"));
     results[4].symbol = symbol;
 
-    // Debug output showing trade counts and win rates
-    for (const auto &r : results) {
+    // Mark each strategy as viable and collect ALL results (not just best)
+    auto viable_count = 0;
+    for (auto &r : results) {
+      // Viable = win_rate >= 50% AND minimum 5 trades for statistical validity
+      r.viable = (r.win_rate >= 0.50 && r.trade_count >= 5);
+
       if (r.trade_count > 0) {
-        std::println("    {} - {}: {} trades, {:.1f}% win, {:.2f}% avg profit",
-                     symbol, r.strategy_name, r.trade_count, r.win_rate * 100.0,
-                     r.avg_profit * 100.0);
+        auto viable_marker = r.viable ? "✓" : "✗";
+        std::println("    {} {} - {}: {} trades, {:.1f}% win, {:.2f}% avg "
+                     "profit",
+                     viable_marker, symbol, r.strategy_name, r.trade_count,
+                     r.win_rate * 100.0, r.avg_profit * 100.0);
+
         // Show per-trade breakdown
         for (const auto &t : r.trades) {
           std::println("      ${:.2f} → ${:.2f} ({:+.2f}%, {}, {} bars)",
                        t.entry_price, t.exit_price, t.profit_pct * 100.0,
                        exit_reason_str(t.reason), t.duration_bars);
         }
+
+        if (r.viable)
+          viable_count++;
+
+        // Add ALL results with trades to output (entries module will filter
+        // by viable flag)
+        all_results.push_back(r);
       }
     }
 
-    // Find best strategy for this symbol
-    auto best = std::max_element(
-        results.begin(), results.end(), [](const auto &a, const auto &b) {
-          // Prefer strategies with more trades and higher win rate
-          if (a.trade_count == 0 && b.trade_count == 0)
-            return false;
-          if (a.trade_count == 0)
-            return true;
-          if (b.trade_count == 0)
-            return false;
-
-          // Score = win_rate * avg_profit * sqrt(trade_count)
-          auto score_a = a.win_rate * a.avg_profit *
-                         std::sqrt(static_cast<double>(a.trade_count));
-          auto score_b = b.win_rate * b.avg_profit *
-                         std::sqrt(static_cast<double>(b.trade_count));
-          return score_a < score_b;
-        });
-
-    // Include if it meets minimum criteria
-    // Accept: (1 trade with 100% win and >5% profit) OR (2+ trades with 40% win
-    // and >0.1% profit)
-    bool passes = (best->trade_count >= 1 && best->win_rate == 1.0 &&
-                   best->avg_profit >= 0.05) ||
-                  (best->trade_count >= 2 && best->win_rate >= 0.40 &&
-                   best->avg_profit >= 0.001);
-
-    if (passes) {
-      std::println("✓ {} - {} (win: {:.1f}%, profit: {:.2f}%, trades: {})",
-                   symbol, best->strategy_name, best->win_rate * 100.0,
-                   best->avg_profit * 100.0, best->trade_count);
-      all_results.push_back(*best);
+    if (viable_count > 0) {
+      std::println("✓ {} - {} viable strateg{}", symbol, viable_count,
+                   viable_count == 1 ? "y" : "ies");
     } else {
-      std::println("✗ {} - no profitable strategy found", symbol);
+      std::println("✗ {} - no viable strategies (none met ≥50% win rate with "
+                   "≥5 trades)",
+                   symbol);
     }
   }
 
   std::println("");
-  std::println("Profitable strategies: {}/{}", all_results.size(),
-               candidates.size());
 
-  // Sort by total return (best first)
-  std::sort(all_results.begin(), all_results.end(),
-            [](const auto &a, const auto &b) {
-              return a.total_return > b.total_return;
-            });
+  // Count viable vs non-viable
+  auto viable_count = std::ranges::count_if(
+      all_results, [](const auto &r) { return r.viable; });
+  std::println("Strategy/symbol combinations:");
+  std::println("  Total tested: {}", all_results.size());
+  std::println("  Viable (≥50% win, ≥5 trades): {}", viable_count);
+  std::println("  Non-viable: {}", all_results.size() - viable_count);
+
+  // Sort by: symbol (alphabetical) → viable (true first) → win_rate
+  // (descending) This ensures entries module sees viable strategies first for
+  // each symbol
+  std::ranges::sort(all_results, [](const auto &a, const auto &b) {
+    if (a.symbol != b.symbol)
+      return a.symbol < b.symbol; // Alphabetical by symbol
+    if (a.viable != b.viable)
+      return a.viable > b.viable;   // Viable first
+    return a.win_rate > b.win_rate; // Higher win rate first
+  });
 
   // Write strategies.json
   auto output_file = std::filesystem::path{paths::strategies};
@@ -332,6 +331,7 @@ int main() {
       "win_rate": {:.3f},
       "avg_profit": {:.4f},
       "trade_count": {},
+      "viable": {},
       "min_duration_bars": {},
       "max_duration_bars": {},
       "first_timestamp": "{}",
@@ -339,8 +339,8 @@ int main() {
       "trades": [
 )",
         rec.symbol, rec.strategy_name, rec.win_rate, rec.avg_profit,
-        rec.trade_count, rec.min_duration_bars, rec.max_duration_bars,
-        rec.first_timestamp, rec.last_timestamp);
+        rec.trade_count, rec.viable ? "true" : "false", rec.min_duration_bars,
+        rec.max_duration_bars, rec.first_timestamp, rec.last_timestamp);
 
     // Export per-trade details
     for (auto j = 0uz; j < rec.trades.size(); ++j) {
