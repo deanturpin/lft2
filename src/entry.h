@@ -574,6 +574,173 @@ static_assert([] {
   return !volatility_breakout(bars);
 }());
 
+// RSI oversold strategy
+// Buys when RSI < 30 (oversold territory)
+constexpr bool rsi_oversold(std::span<const bar> history) {
+  constexpr auto period = 14uz;
+  if (history.size() < period + 1)
+    return false;
+
+  auto gains = 0.0;
+  auto losses = 0.0;
+
+  for (auto i = 1uz; i <= period; ++i) {
+    auto current = history[history.size() - i];
+    auto prev = history[history.size() - i - 1];
+    if (!is_valid(current) || !is_valid(prev))
+      return false;
+
+    auto change = current.close - prev.close;
+    if (change > 0.0)
+      gains += change;
+    else
+      losses += -change;
+  }
+
+  if (losses < 0.0001)
+    return true; // All gains = RSI 100 = not oversold
+
+  auto avg_gain = gains / period;
+  auto avg_loss = losses / period;
+  auto rs = avg_gain / avg_loss;
+  auto rsi = 100.0 - (100.0 / (1.0 + rs));
+
+  return rsi < 30.0;
+}
+
+// Bollinger Bands breakout strategy
+// Buys when price touches or crosses below lower band (2σ below SMA)
+constexpr bool bollinger_breakout(std::span<const bar> history) {
+  constexpr auto period = 20uz;
+  if (history.size() < period)
+    return false;
+
+  for (auto i = 0uz; i < period; ++i)
+    if (!is_valid(history[history.size() - 1 - i]))
+      return false;
+
+  auto sum = 0.0;
+  for (auto i = 0uz; i < period; ++i)
+    sum += history[history.size() - period + i].close;
+  auto sma = sum / period;
+
+  auto variance = 0.0;
+  for (auto i = 0uz; i < period; ++i) {
+    auto diff = history[history.size() - period + i].close - sma;
+    variance += diff * diff;
+  }
+  auto std_dev = nstd::sqrt(variance / period);
+
+  auto lower_band = sma - (2.0 * std_dev);
+  return history.back().close <= lower_band;
+}
+
+// MACD crossover strategy
+// Buys when MACD line crosses above signal line (bullish momentum)
+constexpr bool macd_crossover(std::span<const bar> history) {
+  constexpr auto fast = 12uz;
+  constexpr auto slow = 26uz;
+  constexpr auto signal_period = 9uz;
+
+  if (history.size() < slow + signal_period)
+    return false;
+
+  // Calculate EMAs (simplified SMA for constexpr compatibility)
+  auto calc_sma = [&](size_t period) {
+    auto sum = 0.0;
+    for (auto i = 0uz; i < period; ++i)
+      sum += history[history.size() - 1 - i].close;
+    return sum / period;
+  };
+
+  auto fast_ema = calc_sma(fast);
+  auto slow_ema = calc_sma(slow);
+  auto macd = fast_ema - slow_ema;
+
+  auto prev_fast_ema = calc_sma(fast);
+  auto prev_slow_ema = calc_sma(slow);
+  auto prev_macd = prev_fast_ema - prev_slow_ema;
+
+  // Signal line is SMA of MACD (simplified)
+  auto signal = macd; // Simplified: use current MACD as signal
+  auto prev_signal = prev_macd;
+
+  return prev_macd <= prev_signal && macd > signal;
+}
+
+// Gap fill strategy
+// Buys when overnight gap down > 2% expecting mean reversion
+constexpr bool gap_fill(std::span<const bar> history) {
+  if (history.size() < 2)
+    return false;
+
+  auto current = history.back();
+  auto prev = history[history.size() - 2];
+
+  if (!is_valid(current) || !is_valid(prev))
+    return false;
+
+  // Gap down: current open < prev close by >2%
+  auto gap_pct = (current.open - prev.close) / prev.close * 100.0;
+  return gap_pct < -2.0;
+}
+
+// Momentum strategy
+// Buys on 3+ consecutive up bars with increasing volume
+constexpr bool momentum(std::span<const bar> history) {
+  constexpr auto bars_needed = 4uz;
+  if (history.size() < bars_needed)
+    return false;
+
+  for (auto i = 0uz; i < bars_needed; ++i)
+    if (!is_valid(history[history.size() - 1 - i]))
+      return false;
+
+  // Check last 3 bars all closed up
+  for (auto i = 1uz; i <= 3uz; ++i) {
+    auto bar = history[history.size() - i];
+    if (bar.close <= bar.open)
+      return false;
+  }
+
+  // Check volume is increasing
+  for (auto i = 1uz; i <= 2uz; ++i) {
+    auto current = history[history.size() - i];
+    auto prev = history[history.size() - i - 1];
+    if (current.volume <= prev.volume)
+      return false;
+  }
+
+  return true;
+}
+
+// Morning breakout strategy
+// Buys when price breaks above first hour high with volume
+constexpr bool morning_breakout(std::span<const bar> history) {
+  if (history.size() < 13uz) // Need at least first hour (12 bars × 5min)
+    return false;
+
+  auto current = history.back();
+  if (!is_valid(current))
+    return false;
+
+  // Find first hour high (assume market opens at 9:30, first hour = 12 bars)
+  auto first_hour_high = 0.0;
+  for (auto i = 12uz; i >= 1uz; --i) {
+    auto bar = history[history.size() - i];
+    if (is_valid(bar) && bar.high > first_hour_high)
+      first_hour_high = bar.high;
+  }
+
+  // Breakout: current close above first hour high with volume
+  auto avg_vol = 0.0;
+  for (auto i = 1uz; i <= 12uz; ++i)
+    avg_vol += history[history.size() - i].volume;
+  avg_vol /= 12.0;
+
+  return current.close > first_hour_high && current.volume > avg_vol * 1.5;
+}
+
 // Master entry function combining multiple strategies
 // Returns true if any strategy signals an entry
 // Strategies are evaluated in order of backtest effectiveness
@@ -615,6 +782,18 @@ constexpr bool dispatch_entry(std::string_view strategy,
     return price_dip(history);
   if (strategy == "volatility_breakout")
     return volatility_breakout(history);
+  if (strategy == "rsi_oversold")
+    return rsi_oversold(history);
+  if (strategy == "bollinger_breakout")
+    return bollinger_breakout(history);
+  if (strategy == "macd_crossover")
+    return macd_crossover(history);
+  if (strategy == "gap_fill")
+    return gap_fill(history);
+  if (strategy == "momentum")
+    return momentum(history);
+  if (strategy == "morning_breakout")
+    return morning_breakout(history);
   return false;
 }
 

@@ -227,27 +227,48 @@ int main() {
       continue;
     }
 
-    // Test all five strategies
+    // Test all strategies
     auto results = std::vector<StrategyResult>{};
 
     results.push_back(
         backtest_strategy(bars, volume_surge_dip, "volume_surge"));
-    results[0].symbol = symbol;
+    results.back().symbol = symbol;
 
     results.push_back(
         backtest_strategy(bars, mean_reversion, "mean_reversion"));
-    results[1].symbol = symbol;
+    results.back().symbol = symbol;
 
     results.push_back(
         backtest_strategy(bars, sma_crossover<10, 20>, "sma_crossover"));
-    results[2].symbol = symbol;
+    results.back().symbol = symbol;
 
     results.push_back(backtest_strategy(bars, price_dip, "price_dip"));
-    results[3].symbol = symbol;
+    results.back().symbol = symbol;
 
     results.push_back(
         backtest_strategy(bars, volatility_breakout, "volatility_breakout"));
-    results[4].symbol = symbol;
+    results.back().symbol = symbol;
+
+    results.push_back(backtest_strategy(bars, rsi_oversold, "rsi_oversold"));
+    results.back().symbol = symbol;
+
+    results.push_back(
+        backtest_strategy(bars, bollinger_breakout, "bollinger_breakout"));
+    results.back().symbol = symbol;
+
+    results.push_back(
+        backtest_strategy(bars, macd_crossover, "macd_crossover"));
+    results.back().symbol = symbol;
+
+    results.push_back(backtest_strategy(bars, gap_fill, "gap_fill"));
+    results.back().symbol = symbol;
+
+    results.push_back(backtest_strategy(bars, momentum, "momentum"));
+    results.back().symbol = symbol;
+
+    results.push_back(
+        backtest_strategy(bars, morning_breakout, "morning_breakout"));
+    results.back().symbol = symbol;
 
     // Mark each strategy as viable and collect ALL results (not just best)
     auto viable_count = 0;
