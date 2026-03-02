@@ -15,6 +15,7 @@
   <nav class="nav">
     <a href="#/" class="nav-link">Dashboard</a>
     <a href="#/about" class="nav-link">About</a>
+    <a href="doxygen/html/index.html" class="nav-link" target="_blank">API Docs</a>
   </nav>
 
   <Router {routes} />
