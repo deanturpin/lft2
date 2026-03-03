@@ -14,12 +14,12 @@
 #include <string>
 #include <vector>
 
-struct Candidate {
+struct candidate {
   std::string symbol;
   std::string strategy;
 };
 
-struct Signal {
+struct trade_signal {
   std::string symbol;
   std::string strategy;
   std::string action; // "entry" or "exit"
@@ -27,7 +27,7 @@ struct Signal {
   std::string timestamp;
 };
 
-std::vector<Candidate> load_strategies() {
+std::vector<candidate> load_strategies() {
   auto ifs = std::ifstream{paths::strategies};
   if (!ifs) {
     std::println("Error: strategies.json not found");
@@ -35,7 +35,7 @@ std::vector<Candidate> load_strategies() {
   }
 
   auto json_str = std::string{std::istreambuf_iterator<char>(ifs), {}};
-  auto candidates = std::vector<Candidate>{};
+  auto candidates = std::vector<candidate>{};
 
   auto rec_pos = json_str.find("\"recommendations\"");
   if (rec_pos == std::string::npos)
@@ -52,7 +52,7 @@ std::vector<Candidate> load_strategies() {
 
     auto obj = std::string_view{json_str}.substr(obj_start + 1,
                                                  obj_end - obj_start - 1);
-    auto c = Candidate{std::string{json_string(obj, "symbol")},
+    auto c = candidate{std::string{json_string(obj, "symbol")},
                        std::string{json_string(obj, "strategy")}};
 
     if (!c.symbol.empty() && !c.strategy.empty())
@@ -75,7 +75,7 @@ int main() {
 
   std::println("Loaded {} candidates from strategies.json", candidates.size());
 
-  auto signals = std::vector<Signal>{};
+  auto signals = std::vector<trade_signal>{};
 
   for (const auto &candidate : candidates) {
     auto bars = load_bars(candidate.symbol);

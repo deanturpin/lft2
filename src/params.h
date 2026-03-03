@@ -10,8 +10,9 @@ struct trading_params {
 };
 
 // Default trading parameters
-constexpr auto default_params = trading_params{
-    .take_profit_pct = 0.0125, .stop_loss_pct = 0.0125, .trailing_stop_pct = 0.01};
+constexpr auto default_params = trading_params{.take_profit_pct = 0.0125,
+                                               .stop_loss_pct = 0.0125,
+                                               .trailing_stop_pct = 0.01};
 
 // Calculate absolute price levels from entry price and parameters
 constexpr auto calculate_levels(double entry_price, trading_params params) {
@@ -39,9 +40,8 @@ static_assert(default_params.trailing_stop_pct > 0.0,
               "Trailing stop percentage must be positive");
 
 // Test: risk/reward relationship makes sense
-static_assert(
-    default_params.take_profit_pct >= default_params.stop_loss_pct,
-    "Take profit should be >= stop loss for positive expectancy");
+static_assert(default_params.take_profit_pct >= default_params.stop_loss_pct,
+              "Take profit should be >= stop loss for positive expectancy");
 static_assert(default_params.trailing_stop_pct < default_params.stop_loss_pct,
               "Trailing stop should be tighter than initial stop loss");
 
@@ -55,7 +55,8 @@ static_assert(
              levels.stop_loss == entry * 0.9875 &&
              levels.trailing_stop == entry * 0.99;
     }(),
-    "Default params should give TP=+1.25%, SL=-1.25%, trailing=-1% for entry=100");
+    "Default params should give TP=+1.25%, SL=-1.25%, trailing=-1% for "
+    "entry=100");
 
 // Test: calculate levels with custom params
 static_assert(

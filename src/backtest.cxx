@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-struct Trade {
+struct trade {
   double entry_price;
   double exit_price;
   double profit_pct;
@@ -33,7 +33,7 @@ struct Trade {
   std::string exit_timestamp;  // When exited
 };
 
-struct StrategyResult {
+struct strategy_result {
   std::string symbol;
   std::string strategy_name;
   double win_rate = 0.0;
@@ -44,7 +44,7 @@ struct StrategyResult {
   int max_duration_bars = 0;
   std::string first_timestamp;
   std::string last_timestamp;
-  std::vector<Trade> trades; // Per-trade details for debug output
+  std::vector<trade> trades; // Per-trade details for debug output
   bool viable = false;       // True if win_rate >= 0.50 && trade_count >= 5
 };
 
@@ -68,10 +68,10 @@ constexpr std::string_view exit_reason_str(exit_reason r) {
 
 // Backtest a specific strategy on bar data
 template <typename EntryFunc>
-StrategyResult backtest_strategy(std::span<const bar> bars,
-                                 EntryFunc entry_func,
-                                 std::string_view strategy_name) {
-  auto result = StrategyResult{};
+strategy_result backtest_strategy(std::span<const bar> bars,
+                                  EntryFunc entry_func,
+                                  std::string_view strategy_name) {
+  auto result = strategy_result{};
   result.strategy_name = std::string{strategy_name};
 
   if (bars.empty()) {
@@ -82,7 +82,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
   result.first_timestamp = std::string{bars.front().timestamp};
   result.last_timestamp = std::string{bars.back().timestamp};
 
-  auto trades = std::vector<Trade>{};
+  auto trades = std::vector<trade>{};
   auto position = std::optional<::position>{};
   auto entry_bar_index = 0uz;
 
@@ -102,7 +102,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
       trades.push_back(
-          Trade{.entry_price = position->entry_price,
+          trade{.entry_price = position->entry_price,
                 .exit_price = next.open,
                 .profit_pct = profit_pct,
                 .win = profit_pct > 0.0,
@@ -129,7 +129,7 @@ StrategyResult backtest_strategy(std::span<const bar> bars,
       auto profit_pct =
           (next.open - position->entry_price) / position->entry_price;
       trades.push_back(
-          Trade{.entry_price = position->entry_price,
+          trade{.entry_price = position->entry_price,
                 .exit_price = next.open,
                 .profit_pct = profit_pct,
                 .win = profit_pct > 0.0,
@@ -213,7 +213,7 @@ int main() {
   std::println("Testing {} candidates from filter", candidates.size());
   std::println("");
 
-  auto all_results = std::vector<StrategyResult>{};
+  auto all_results = std::vector<strategy_result>{};
 
   // Test each candidate with all three strategies
   for (const auto &symbol : candidates) {
@@ -228,7 +228,7 @@ int main() {
     }
 
     // Test all strategies
-    auto results = std::vector<StrategyResult>{};
+    auto results = std::vector<strategy_result>{};
 
     results.push_back(
         backtest_strategy(bars, volume_surge_dip, "volume_surge"));

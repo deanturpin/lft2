@@ -1,3 +1,4 @@
+#include "alpaca.h"
 #include "bar.h"
 #include "exit.h"
 #include "fix.h"
@@ -12,24 +13,14 @@
 #include <string>
 #include <vector>
 
-// Position from account module
-struct Position {
-  std::string symbol;
-  double qty;
-  double avg_entry_price;
-  std::string side;
-  std::string client_order_id; // Original buy order ID (contains strategy +
-                               // exit params)
-};
-
 // Parse positions.json from account module
-std::vector<Position> load_positions() {
+std::vector<alpaca_position> load_positions() {
   auto ifs = std::ifstream{paths::positions};
   if (!ifs)
     return {};
 
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
-  auto positions = std::vector<Position>{};
+  auto positions = std::vector<alpaca_position>{};
 
   json_foreach_object(content, [&](std::string_view obj) {
     positions.push_back({

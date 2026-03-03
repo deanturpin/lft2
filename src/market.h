@@ -117,7 +117,8 @@ static_assert(market_open("2026-07-01T19:59:00Z"));  // 15:59 ET - open
 static_assert(!market_open("2026-07-01T13:29:00Z")); // 09:29 ET - not yet open
 static_assert(!market_open("2026-07-01T20:00:00Z")); // 16:00 ET - closed
 
-// True during the risk-off period: opening volatility window and pre-close liquidation window.
+// True during the risk-off period: opening volatility window and pre-close
+// liquidation window.
 //
 // Intended usage:
 //   if (!market_open(ts)) return;    // market closed - nothing to do

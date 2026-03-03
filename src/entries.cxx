@@ -13,26 +13,26 @@
 #include <vector>
 
 // Candidate from strategies.json
-struct Candidate {
+struct candidate {
   std::string symbol;
   std::string strategy;
 };
 
 // Account info
-struct AccountInfo {
+struct account_info {
   double cash;
   double portfolio_value;
   double buying_power;
 };
 
 // Load recommended candidates from strategies.json
-std::vector<Candidate> load_candidates() {
+std::vector<candidate> load_candidates() {
   auto ifs = std::ifstream{paths::strategies};
   if (!ifs)
     return {};
 
   auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
-  auto candidates = std::vector<Candidate>{};
+  auto candidates = std::vector<candidate>{};
 
   // Find the "recommendations" array
   auto rec_start = content.find(R"("recommendations")");
@@ -52,7 +52,7 @@ std::vector<Candidate> load_candidates() {
         if (viable_str != "true")
           return; // Skip non-viable strategies
 
-        auto c = Candidate{std::string{json_string(obj, "symbol")},
+        auto c = candidate{std::string{json_string(obj, "symbol")},
                            std::string{json_string(obj, "strategy")}};
         if (!c.symbol.empty() && !c.strategy.empty())
           candidates.push_back(c);
@@ -62,7 +62,7 @@ std::vector<Candidate> load_candidates() {
 }
 
 // Load account balance
-AccountInfo load_account_info() {
+account_info load_account_info() {
   auto ifs = std::ifstream{paths::account};
   if (!ifs)
     return {};
