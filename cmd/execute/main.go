@@ -180,51 +180,77 @@ func main() {
 		log.Fatal("reading buy.fix: ", err)
 	}
 
-	buysSubmitted := 0
-	pendingBuys := make(map[string]bool) // Track symbols we're buying in this run
+	// Merge multiple strategy signals for same symbol into single order
+	type mergedOrder struct {
+		symbol      string
+		totalQty    int
+		strategies  []string
+		clientOrdID string // Use first strategy's order ID
+	}
+	merged := make(map[string]*mergedOrder)
+
 	for _, fields := range buyOrders {
 		symbol := fields["55"]
-		clientOrdID := fields["11"] // symbol_strategy_tp_sl_tsl_timestamp — built by entries.cxx
-		strategy := fields["58"]    // FIX tag 58: strategy name for display only
+		clientOrdID := fields["11"]
+		strategy := fields["58"]
+		qtyStr := fields["38"]
 
 		if symbol == "" {
 			fmt.Printf("  [skip] missing symbol\n")
 			continue
 		}
 
-		// Skip if we already hold this stock — API is the source of truth
+		// Skip if we already hold this stock
 		if held, ok := positions[symbol]; ok {
 			fmt.Printf("  [skip] %s already held (qty=%s side=%s)\n",
 				symbol, held.Qty, held.Side)
 			continue
 		}
 
-		// Skip if we've already queued a buy for this symbol in this run
-		if pendingBuys[symbol] {
-			fmt.Printf("  [skip] %s buy already queued (strategy=%s)\n", symbol, strategy)
+		// Parse quantity
+		var qty int
+		if _, err := fmt.Sscanf(qtyStr, "%d", &qty); err != nil || qty <= 0 {
+			fmt.Printf("  [skip] %s invalid qty=%s\n", symbol, qtyStr)
 			continue
 		}
 
-		// Quantity is set by entries.cxx (FIX tag 38) — trust it, don't recalculate
-		qty := fields["38"]
-		if qty == "" || qty == "0" {
-			fmt.Printf("  [skip] %s missing qty in FIX message\n", symbol)
-			continue
+		// Track multiple strategies for same symbol (don't increase qty)
+		if order, exists := merged[symbol]; exists {
+			order.strategies = append(order.strategies, strategy)
+			fmt.Printf("  [merge] %s strategy=%s (multiple signals, qty unchanged)\n",
+				symbol, strategy)
+		} else {
+			merged[symbol] = &mergedOrder{
+				symbol:      symbol,
+				totalQty:    qty,
+				strategies:  []string{strategy},
+				clientOrdID: clientOrdID,
+			}
+			fmt.Printf("  [queue] %s %d shares (strategy=%s)\n", symbol, qty, strategy)
 		}
+	}
 
-		fmt.Printf("  [buy]  %s strategy=%s qty=%s id=%s\n", symbol, strategy, qty, clientOrdID)
+	// Submit merged orders
+	buysSubmitted := 0
+	for _, order := range merged {
+		strategyLabel := order.strategies[0]
+		if len(order.strategies) > 1 {
+			strategyLabel = fmt.Sprintf("multiple (%d strategies)", len(order.strategies))
+		}
+		fmt.Printf("  [buy]  %s qty=%d strategy=%s id=%s\n",
+			order.symbol, order.totalQty, strategyLabel, order.clientOrdID)
 		if err := submitOrder(OrderRequest{
-			Symbol:      symbol,
-			Qty:         qty,
+			Symbol:      order.symbol,
+			Qty:         fmt.Sprintf("%d", order.totalQty),
 			Side:        "buy",
 			Type:        "market",
 			TimeInForce: "day",
-			ClientOrdID: clientOrdID,
+			ClientOrdID: order.clientOrdID,
 		}); err != nil {
 			fmt.Printf("  [ERROR] %v\n", err)
+		} else {
+			buysSubmitted++
 		}
-		pendingBuys[symbol] = true // Mark this symbol as queued
-		buysSubmitted++
 	}
 	if buysSubmitted == 0 && len(buyOrders) == 0 {
 		fmt.Println("  (no orders)")
