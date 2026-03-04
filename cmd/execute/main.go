@@ -302,6 +302,7 @@ func main() {
 	for _, fields := range sellOrders {
 		symbol := fields["55"]
 		clOrdID := fields["11"]
+		exitReason := fields["58"] // FIX tag 58: TEXT field from exits.cxx
 
 		if symbol == "" {
 			fmt.Printf("  [skip] missing symbol in order id=%s\n", clOrdID)
@@ -318,7 +319,11 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("  [sell] %s qty=%s (full position)\n", symbol, held.Qty)
+		reasonLabel := exitReason
+		if reasonLabel == "" {
+			reasonLabel = "unknown"
+		}
+		fmt.Printf("  [sell] %s qty=%s reason=%s\n", symbol, held.Qty, reasonLabel)
 		if err := submitOrder(OrderRequest{
 			Symbol:      symbol,
 			Qty:         held.Qty,
