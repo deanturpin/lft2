@@ -181,6 +181,7 @@ func main() {
 	}
 
 	buysSubmitted := 0
+	pendingBuys := make(map[string]bool) // Track symbols we're buying in this run
 	for _, fields := range buyOrders {
 		symbol := fields["55"]
 		clientOrdID := fields["11"] // symbol_strategy_tp_sl_tsl_timestamp — built by entries.cxx
@@ -195,6 +196,12 @@ func main() {
 		if held, ok := positions[symbol]; ok {
 			fmt.Printf("  [skip] %s already held (qty=%s side=%s)\n",
 				symbol, held.Qty, held.Side)
+			continue
+		}
+
+		// Skip if we've already queued a buy for this symbol in this run
+		if pendingBuys[symbol] {
+			fmt.Printf("  [skip] %s buy already queued (strategy=%s)\n", symbol, strategy)
 			continue
 		}
 
@@ -216,6 +223,7 @@ func main() {
 		}); err != nil {
 			fmt.Printf("  [ERROR] %v\n", err)
 		}
+		pendingBuys[symbol] = true // Mark this symbol as queued
 		buysSubmitted++
 	}
 	if buysSubmitted == 0 && len(buyOrders) == 0 {
