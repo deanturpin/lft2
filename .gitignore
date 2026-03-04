@@ -42,6 +42,7 @@ docs/coverage/
 docs/coverage.info
 docs/callgraph.svg
 docs/gprof.txt
+docs/daily-summary.html
 callgrind.out
 compile_commands.json
 
