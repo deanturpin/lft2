@@ -37,6 +37,21 @@ type OrderRequest struct {
 
 var client alpaca.Client
 
+// Strategy name abbreviations (2 chars each, can chain: "mr+bb+vo")
+var strategyAbbrev = map[string]string{
+	"mean_reversion":      "mr",
+	"sma_crossover":       "sc",
+	"rsi_oversold":        "ro",
+	"volatility_breakout": "vb",
+	"bollinger_breakout":  "bb",
+	"momentum":            "mo",
+	"price_dip":           "pd",
+	"volume_surge":        "vs",
+	"macd_crossover":      "mc",
+	"gap_fill":            "gf",
+	"morning_breakout":    "mb",
+}
+
 func fetchAccount() (*Account, error) {
 	body, err := client.Get(client.BaseURL + "/v2/account")
 	if err != nil {
@@ -238,8 +253,18 @@ func main() {
 
 		// Update client_order_id if multiple strategies triggered
 		if len(order.strategies) > 1 {
-			strategyLabel = fmt.Sprintf("multiple_%d", len(order.strategies))
-			// Replace strategy name in client_order_id: AAPL_mean_reversion_... → AAPL_multiple_2_...
+			// Build compact strategy code: "mr+bb+vb" instead of "multiple_3"
+			var codes []string
+			for _, strat := range order.strategies {
+				if abbrev, ok := strategyAbbrev[strat]; ok {
+					codes = append(codes, abbrev)
+				} else {
+					codes = append(codes, strat[:2]) // Fallback: first 2 chars
+				}
+			}
+			strategyLabel = strings.Join(codes, "+")
+
+			// Replace strategy name in client_order_id: AAPL_mean_reversion_... → AAPL_mr+bb+vb_...
 			// Format: symbol_strategy_tp_sl_tsl_timestamp
 			parts := strings.SplitN(clientOrdID, "_", 3) // Split into [symbol, strategy, rest]
 			if len(parts) >= 3 {
