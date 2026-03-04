@@ -147,6 +147,8 @@ int main() {
 
   // Collect buy orders
   auto buy_orders = std::vector<std::string>{};
+  auto pending_symbols =
+      std::vector<std::string>{}; // Track symbols we're about to buy
   auto seq_num = 1;
 
   std::println("\n{:<6} {:<24} {:>8}  {}", "Symbol", "Strategy", "Price",
@@ -157,9 +159,17 @@ int main() {
     auto prefix =
         std::format("{:<6} {:<24}", candidate.symbol, candidate.strategy);
 
+    // Skip if already holding this symbol
     if (std::ranges::find(existing_symbols, candidate.symbol) !=
         existing_symbols.end()) {
       std::println("{}           ⏭️  holding", prefix);
+      continue;
+    }
+
+    // Skip if we're already buying this symbol in this run
+    if (std::ranges::find(pending_symbols, candidate.symbol) !=
+        pending_symbols.end()) {
+      std::println("{}           ⏭️  order pending", prefix);
       continue;
     }
 
@@ -227,6 +237,9 @@ int main() {
 
     std::println("   ✅ Entry signal! Buying {} shares (${:.2f})", shares,
                  order_value);
+
+    // Track this symbol to prevent duplicate orders in this run
+    pending_symbols.push_back(candidate.symbol);
 
     // Generate FIX buy order — encode symbol, strategy and risk params in the
     // client_order_id (tag 11) so every field is visible in Alpaca's order
