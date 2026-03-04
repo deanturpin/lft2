@@ -234,18 +234,28 @@ func main() {
 	buysSubmitted := 0
 	for _, order := range merged {
 		strategyLabel := order.strategies[0]
+		clientOrdID := order.clientOrdID
+
+		// Update client_order_id if multiple strategies triggered
 		if len(order.strategies) > 1 {
-			strategyLabel = fmt.Sprintf("multiple (%d strategies)", len(order.strategies))
+			strategyLabel = fmt.Sprintf("multiple_%d", len(order.strategies))
+			// Replace strategy name in client_order_id: AAPL_mean_reversion_... → AAPL_multiple_2_...
+			// Format: symbol_strategy_tp_sl_tsl_timestamp
+			parts := strings.SplitN(clientOrdID, "_", 3) // Split into [symbol, strategy, rest]
+			if len(parts) >= 3 {
+				clientOrdID = fmt.Sprintf("%s_%s_%s", parts[0], strategyLabel, parts[2])
+			}
 		}
+
 		fmt.Printf("  [buy]  %s qty=%d strategy=%s id=%s\n",
-			order.symbol, order.totalQty, strategyLabel, order.clientOrdID)
+			order.symbol, order.totalQty, strategyLabel, clientOrdID)
 		if err := submitOrder(OrderRequest{
 			Symbol:      order.symbol,
 			Qty:         fmt.Sprintf("%d", order.totalQty),
 			Side:        "buy",
 			Type:        "market",
 			TimeInForce: "day",
-			ClientOrdID: order.clientOrdID,
+			ClientOrdID: clientOrdID,
 		}); err != nil {
 			fmt.Printf("  [ERROR] %v\n", err)
 		} else {
