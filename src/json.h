@@ -415,6 +415,40 @@ constexpr std::string_view json_string(std::string_view obj,
   return {};
 }
 
+// Extract a boolean value for a given key from a JSON object fragment.
+// Returns false if the key is not found or value is not true/false.
+constexpr bool json_bool(std::string_view obj, std::string_view key) {
+  auto s = obj;
+  while (!s.empty()) {
+    skip_ws(s);
+    auto k = parse_string(s);
+    if (!expect(s, ':'))
+      return false;
+    if (k == key) {
+      skip_ws(s);
+      if (s.starts_with("true")) {
+        s.remove_prefix(4);
+        return true;
+      }
+      if (s.starts_with("false")) {
+        s.remove_prefix(5);
+        return false;
+      }
+      return false;
+    }
+    // Skip the value and move to next key
+    skip_ws(s);
+    if (s.starts_with('"'))
+      parse_string(s);
+    else if (s.starts_with("true") || s.starts_with("false"))
+      s.remove_prefix(s.starts_with("true") ? 4 : 5);
+    else
+      parse_number<double>(s);
+    skip_comma(s);
+  }
+  return false;
+}
+
 // Extract a numeric value for a given key from a JSON object fragment.
 // Handles both bare numbers and quoted numbers ("3.5" or 3.5) — Alpaca
 // returns numeric fields like qty and avg_entry_price as quoted strings.

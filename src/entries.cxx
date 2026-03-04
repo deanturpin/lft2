@@ -48,8 +48,7 @@ std::vector<candidate> load_candidates() {
   json_foreach_object(
       std::string_view{content}.substr(array_start), [&](std::string_view obj) {
         // Check viable flag — skip if false or missing
-        auto viable_str = json_string(obj, "viable");
-        if (viable_str != "true")
+        if (!json_bool(obj, "viable"))
           return; // Skip non-viable strategies
 
         auto c = candidate{std::string{json_string(obj, "symbol")},
