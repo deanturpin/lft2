@@ -54,19 +54,19 @@ var strategyAbbrev = map[string]string{
 
 // Strategy allowlist for live trading (true = enabled, false = disabled)
 // All strategies still backtest for analysis, but only enabled ones trade live
-// Based on performance review: disabled ones need longer hold times than intraday
+// Disabled = conceptually unsuitable for intraday (backtest filter handles poor performers)
 var strategyAllowlist = map[string]bool{
-	"mean_reversion":      true,  // ✅ +£24.54 total, strong intraday performer
-	"volatility_breakout": true,  // ✅ +£5.10, catches intraday bursts
-	"bollinger_breakout":  true,  // ✅ Works well intraday
+	"mean_reversion":      true,  // ✅ Intraday mean reversion works well
+	"volatility_breakout": true,  // ✅ Catches intraday bursts
+	"bollinger_breakout":  true,  // ✅ Intraday breakouts
 	"price_dip":           true,  // ✅ Quick intraday reversals
-	"volume_surge":        true,  // ✅ Intraday momentum
-	"macd_crossover":      true,  // ✅ Can work intraday
+	"volume_surge":        true,  // ✅ Intraday momentum bursts
+	"macd_crossover":      true,  // ✅ Can signal intraday momentum shifts
 	"gap_fill":            true,  // ✅ Intraday mean reversion
 	"morning_breakout":    true,  // ✅ Early session momentum
-	"rsi_oversold":        false, // ❌ -£12.03, needs 4-48 hours not 1-2 hours
-	"momentum":            false, // ❌ -£4.18, late session fades
-	"sma_crossover":       false, // ❌ Trend strategy needs time, not intraday
+	"sma_crossover":       true,  // ✅ Let backtest decide (made +£69.50)
+	"rsi_oversold":        false, // ❌ Needs 4-48 hours, not 1-2 hour intraday holds
+	"momentum":            false, // ❌ Late session entries fade before close
 }
 
 func fetchAccount() (*Account, error) {
