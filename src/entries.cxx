@@ -157,12 +157,6 @@ int main() {
     auto prefix =
         std::format("{:<6} {:<24}", candidate.symbol, candidate.strategy);
 
-    // Skip strategies blocked from live trading
-    if (is_blocked(candidate.strategy)) {
-      std::println("{}           🚫 blocked", prefix);
-      continue;
-    }
-
     if (std::ranges::find(existing_symbols, candidate.symbol) !=
         existing_symbols.end()) {
       std::println("{}           ⏭️  holding", prefix);
