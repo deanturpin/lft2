@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <string_view>
 
 // Trading parameters for position management
 struct trading_params {
@@ -13,6 +15,23 @@ struct trading_params {
 constexpr auto default_params = trading_params{.take_profit_pct = 0.0125,
                                                .stop_loss_pct = 0.0125,
                                                .trailing_stop_pct = 0.01};
+
+// Strategies blocked from live trading (still backtest for analysis)
+// Based on performance review: these need longer hold times than intraday
+constexpr std::array blocked_strategies = {
+    std::string_view{"rsi_oversold"},  // Needs 4-48 hours to mean revert
+    std::string_view{"momentum"},      // Late session entries fade into close
+    std::string_view{"sma_crossover"}, // Trend strategy needs time
+};
+
+// Check if a strategy is blocked from live trading
+constexpr bool is_blocked(std::string_view strategy) {
+  for (const auto &blocked : blocked_strategies) {
+    if (strategy == blocked)
+      return true;
+  }
+  return false;
+}
 
 // Calculate absolute price levels from entry price and parameters
 constexpr auto calculate_levels(double entry_price, trading_params params) {
