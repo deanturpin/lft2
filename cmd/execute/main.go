@@ -52,12 +52,21 @@ var strategyAbbrev = map[string]string{
 	"morning_breakout":    "mb",
 }
 
-// Strategies blocked from live trading (still backtest for analysis)
-// Based on performance review: these need longer hold times than intraday
-var blockedStrategies = map[string]bool{
-	"rsi_oversold":  true, // Needs 4-48 hours to mean revert, not 1-2 hours (-£12.03)
-	"momentum":      true, // Late session entries fade into close (-£4.18)
-	"sma_crossover": true, // Trend strategy needs time, not intraday holds
+// Strategy allowlist for live trading (true = enabled, false = disabled)
+// All strategies still backtest for analysis, but only enabled ones trade live
+// Based on performance review: disabled ones need longer hold times than intraday
+var strategyAllowlist = map[string]bool{
+	"mean_reversion":      true,  // ✅ +£24.54 total, strong intraday performer
+	"volatility_breakout": true,  // ✅ +£5.10, catches intraday bursts
+	"bollinger_breakout":  true,  // ✅ Works well intraday
+	"price_dip":           true,  // ✅ Quick intraday reversals
+	"volume_surge":        true,  // ✅ Intraday momentum
+	"macd_crossover":      true,  // ✅ Can work intraday
+	"gap_fill":            true,  // ✅ Intraday mean reversion
+	"morning_breakout":    true,  // ✅ Early session momentum
+	"rsi_oversold":        false, // ❌ -£12.03, needs 4-48 hours not 1-2 hours
+	"momentum":            false, // ❌ -£4.18, late session fades
+	"sma_crossover":       false, // ❌ Trend strategy needs time, not intraday
 }
 
 func fetchAccount() (*Account, error) {
@@ -223,9 +232,9 @@ func main() {
 			continue
 		}
 
-		// Skip blocked strategies (unsuitable for day trading)
-		if blockedStrategies[strategy] {
-			fmt.Printf("  [skip] %s strategy=%s (blocked from live trading)\n", symbol, strategy)
+		// Skip disabled strategies (unsuitable for day trading)
+		if allowed, exists := strategyAllowlist[strategy]; exists && !allowed {
+			fmt.Printf("  [skip] %s strategy=%s (disabled in allowlist)\n", symbol, strategy)
 			continue
 		}
 
