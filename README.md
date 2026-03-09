@@ -5,6 +5,8 @@
 [![API Docs](https://img.shields.io/badge/docs-doxygen-blue)](https://deanturpin.github.io/lft2/doxygen/)
 [![Live Dashboard](https://img.shields.io/badge/dashboard-live-green)](https://lft.turpin.dev)
 
+> "Is this data from before lunch or after lunch? Hard to tell!"
+
 Fully automated algorithmic trading platform with constexpr-first C++26 architecture.
 
 **Live Dashboard**: <https://lft.turpin.dev>
