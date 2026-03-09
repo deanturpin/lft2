@@ -84,22 +84,12 @@ int main() {
     auto should_exit = false;
     auto exit_reason = std::string{};
 
-    // Get current time for risk-off check (don't use bar timestamp - it may be
-    // delayed)
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto now_tm = std::gmtime(&now_time_t);
-    auto now_str =
-        std::format("{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}Z",
-                    now_tm->tm_year + 1900, now_tm->tm_mon + 1, now_tm->tm_mday,
-                    now_tm->tm_hour, now_tm->tm_min, now_tm->tm_sec);
-
     // Force exit during risk-off period (last 45 min of trading day)
-    if (market::risk_off(now_str)) {
+    if (market::risk_off(bars.back().timestamp)) {
       should_exit = true;
       exit_reason = "risk_off_liquidation";
-      std::println("⚠️  Risk-off period - liquidating (current time: {})",
-                   now_str);
+      std::println("⚠️  Risk-off period - liquidating at {}",
+                   std::string{bars.back().timestamp});
     }
     // Check normal exit conditions using our exit logic
     else {
