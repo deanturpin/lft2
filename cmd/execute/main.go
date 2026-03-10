@@ -107,6 +107,8 @@ type Order struct {
 
 // fetchOpenSellOrders returns a set of symbols with pending sell orders
 func fetchOpenSellOrders() (map[string]bool, error) {
+	// Query for open orders (status=open means non-filled/non-cancelled)
+	// Then filter for sell side only
 	body, err := client.Get(client.BaseURL + "/v2/orders?status=open&side=sell&limit=500")
 	if err != nil {
 		return nil, err
@@ -353,7 +355,14 @@ func main() {
 		fmt.Println("  Continuing without duplicate check...")
 		pendingSells = make(map[string]bool) // Empty map, no filtering
 	} else if len(pendingSells) > 0 {
-		fmt.Printf("  Found %d symbol(s) with pending sell orders\n", len(pendingSells))
+		fmt.Printf("  Found %d symbol(s) with pending sell orders: ", len(pendingSells))
+		symbols := make([]string, 0, len(pendingSells))
+		for sym := range pendingSells {
+			symbols = append(symbols, sym)
+		}
+		fmt.Printf("%v\n", symbols)
+	} else {
+		fmt.Println("  No pending sell orders found")
 	}
 
 	sellsSubmitted := 0
