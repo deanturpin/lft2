@@ -99,11 +99,27 @@ int main() {
     else {
       // Create position using shared params from params.h
       auto levels = calculate_levels(pos.avg_entry_price, default_params);
+
+      // Calculate proper trailing stop: track 1% below peak price
+      // Scan all bars since entry to find peak, then set trailing stop below it
+      auto peak_price = pos.avg_entry_price;
+      for (const auto &b : bars) {
+        if (b.close > peak_price)
+          peak_price = b.close;
+      }
+
+      // Trailing stop: 1% below peak (only active if peak > entry)
+      auto trailing_stop_price = peak_price * (1.0 - default_params.trailing_stop_pct);
+
+      // Don't let trailing stop fall below initial stop loss
+      if (trailing_stop_price < levels.stop_loss)
+        trailing_stop_price = levels.stop_loss;
+
       auto mock_position = position{
           .entry_price = pos.avg_entry_price,
           .take_profit = levels.take_profit,
           .stop_loss = levels.stop_loss,
-          .trailing_stop = levels.trailing_stop,
+          .trailing_stop = trailing_stop_price,
       };
 
       // Check exit strategy
