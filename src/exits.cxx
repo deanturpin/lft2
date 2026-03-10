@@ -77,8 +77,8 @@ int main() {
     auto profit_pct =
         ((latest_price - pos.avg_entry_price) / pos.avg_entry_price) * 100.0;
 
-    std::println("   Current price: ${:.2f} ({:+.2f}%)", latest_price,
-                 profit_pct);
+    std::println("   Latest bar: {} (${:.2f}, {:+.2f}%)",
+                 std::string{bars.back().timestamp}, latest_price, profit_pct);
 
     // Check exit conditions
     auto should_exit = false;
