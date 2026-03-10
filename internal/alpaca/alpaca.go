@@ -31,7 +31,7 @@ func New(apiKey, apiSecret, baseURL, dataURL string) Client {
 	return Client{APIKey: apiKey, APISecret: apiSecret, BaseURL: baseURL, DataURL: dataURL}
 }
 
-var httpClient = &http.Client{Timeout: 10 * time.Second}
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 // Post performs an authenticated POST request with a JSON body and returns the response body.
 func (c Client) Post(url string, body []byte) ([]byte, error) {

@@ -98,6 +98,31 @@ func fetchPositions() (map[string]Position, error) {
 	return positions, nil
 }
 
+// Order represents an open order from Alpaca
+type Order struct {
+	Symbol string `json:"symbol"`
+	Side   string `json:"side"`
+	Status string `json:"status"`
+}
+
+// fetchOpenSellOrders returns a set of symbols with pending sell orders
+func fetchOpenSellOrders() (map[string]bool, error) {
+	body, err := client.Get(client.BaseURL + "/v2/orders?status=open&side=sell&limit=500")
+	if err != nil {
+		return nil, err
+	}
+	var orders []Order
+	if err := json.Unmarshal(body, &orders); err != nil {
+		return nil, err
+	}
+	// Build set of symbols with open sell orders
+	pending := make(map[string]bool, len(orders))
+	for _, o := range orders {
+		pending[o.Symbol] = true
+	}
+	return pending, nil
+}
+
 // parseFIX parses a single FIX message line into a tag→value map.
 // Format: 8=FIX.5.0SP2|9=...|35=D|...|
 func parseFIX(line string) map[string]string {
@@ -321,6 +346,16 @@ func main() {
 		log.Fatal("reading sell.fix: ", err)
 	}
 
+	// Fetch existing open sell orders to avoid duplicates
+	pendingSells, err := fetchOpenSellOrders()
+	if err != nil {
+		fmt.Printf("  [WARNING] Could not fetch open sell orders: %v\n", err)
+		fmt.Println("  Continuing without duplicate check...")
+		pendingSells = make(map[string]bool) // Empty map, no filtering
+	} else if len(pendingSells) > 0 {
+		fmt.Printf("  Found %d symbol(s) with pending sell orders\n", len(pendingSells))
+	}
+
 	sellsSubmitted := 0
 	for _, fields := range sellOrders {
 		symbol := fields["55"]
@@ -329,6 +364,12 @@ func main() {
 
 		if symbol == "" {
 			fmt.Printf("  [skip] missing symbol in order id=%s\n", clOrdID)
+			continue
+		}
+
+		// Skip if there's already a pending sell order for this symbol
+		if pendingSells[symbol] {
+			fmt.Printf("  [skip] %s already has pending sell order\n", symbol)
 			continue
 		}
 
