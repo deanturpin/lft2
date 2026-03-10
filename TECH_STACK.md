@@ -58,18 +58,92 @@ Complete technology stack for the Low Frequency Trader algorithmic trading platf
 
 **Purpose:** User interface and edge API
 
-**Frontend Framework:** Svelte 5.0
+#### Frontend Stack
+
+**Framework:** Svelte 5.0
+
+- Reactive component framework with minimal runtime overhead
+- Compiles to vanilla JavaScript (no virtual DOM)
+- Significantly smaller bundle size vs React/Vue
+- Built-in reactivity without hooks or state management libraries
 
 **Build Tool:** Vite 5.0
 
-**Dependencies:**
-- `svelte-spa-router` 4.0 - Client-side routing
-- `chart.js` 4.5 - Performance visualisations
+- Lightning-fast ES modules-based dev server
+- Hot Module Replacement (HMR) for instant updates
+- Optimised production builds with tree-shaking and code-splitting
+- Native ES modules support (no bundler in dev mode)
 
-**Cloudflare Workers:**
-- Edge API at `lft.turpin.dev/api/*`
-- Proxies Alpaca API with authentication
-- Sub-100ms response times via edge network
+**Router:** svelte-spa-router 4.0
+
+- Hash-based client-side routing (`#/`, `#/about`)
+- No server-side configuration needed
+- Works seamlessly with GitHub Pages static hosting
+
+**Visualisation:** Chart.js 4.5
+
+- Interactive performance charts
+- Strategy win rates and profit visualisations
+- Lightweight canvas-based rendering
+
+**Build Output:**
+
+- Static HTML/CSS/JS to `web/public/`
+- Copied to `docs/` for GitHub Pages deployment
+- Single-page application with code-splitting
+- Typical bundle size: ~270KB JS (92KB gzipped)
+
+#### Development Workflow
+
+**Dev Server:**
+
+```bash
+cd web && npm run dev
+# Runs on http://localhost:5173
+# HMR updates in <100ms
+```
+
+**Production Build:**
+
+```bash
+cd web && npm run build
+# Outputs to web/public/
+# Optimised, minified, tree-shaken
+```
+
+**Preview:**
+
+```bash
+cd web && npm run preview
+# Test production build locally
+```
+
+#### Edge API (Cloudflare Workers)
+
+**Runtime:** V8 isolates (not Node.js)
+
+- Runs JavaScript at Cloudflare's edge network
+- 300+ locations worldwide
+- Cold start: <5ms, warm: <1ms
+
+**Purpose:**
+
+- Proxy Alpaca API requests from dashboard
+- Hide API credentials from client-side code
+- Add CORS headers for browser access
+- Rate limiting and request validation
+
+**Configuration:** wrangler.toml
+
+- Route pattern: `lft.turpin.dev/api/*`
+- Secrets managed via `npx wrangler secret put`
+- Auto-deploy on push via Cloudflare integration
+
+**Performance:**
+
+- Sub-100ms response times globally
+- Zero cold starts (always-warm isolates)
+- Automatic global load balancing
 
 ## Infrastructure & Deployment
 
@@ -98,12 +172,15 @@ Complete technology stack for the Low Frequency Trader algorithmic trading platf
 - Auto-deployed via GitHub Actions
 
 **Edge API:** Cloudflare Workers
+
 - Global edge network (300+ locations)
 - Runs at `lft.turpin.dev/api/*`
 
-**Trading Execution:** Fasthosts VPS
-- Cron jobs for pipeline execution
-- Direct access to Alpaca API (no CORS)
+**Trading Execution:** GitHub Actions
+
+- Automated pipeline runs every 5 minutes during market hours
+- Direct access to Alpaca API via repository secrets
+- No VPS required - fully serverless architecture
 
 ### Trading Platform
 
@@ -243,22 +320,29 @@ GCXX=g++-15  # macOS: specify gcc-15 from Homebrew
 - Git
 
 **Optional Packages:**
+
 - lcov (coverage reports)
 - graphviz (call graphs)
 - doxygen (documentation)
 - clang-format (code formatting)
 
-### Production (VPS)
+### Production (Serverless)
 
-**Operating System:** Ubuntu 24.04+
+**Infrastructure:** Fully serverless - no VPS required
 
-**Required Packages:**
-- gcc-15
-- Go 1.21+
-- cron (pipeline scheduling)
-- git (deployment)
+**CI/CD Platform:** GitHub Actions (Ubuntu 26.04 containers)
 
-**Network:** Unrestricted access to Alpaca API endpoints
+**Execution:**
+
+- Automated pipeline runs every 5 minutes during market hours
+- All trading logic executes in GitHub Actions runners
+- Stateless architecture using JSON file communication
+
+**Requirements:**
+
+- GitHub repository secrets for Alpaca API credentials
+- GitHub Pages enabled for dashboard hosting
+- Cloudflare Pages connected for CDN deployment
 
 ## Trading Strategy Framework
 
