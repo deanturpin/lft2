@@ -151,14 +151,14 @@ int main() {
     if (should_exit) {
       std::println("   ✅ Exit signal: {}", exit_reason);
 
-      // Reuse original buy order's client_order_id so the sell is linked to the
-      // buy Falls back to generating an ID if client_order_id is missing
-      auto order_id =
-          pos.client_order_id.empty()
-              ? std::format(
-                    "EXIT_{}_{}_{}", pos.symbol, seq_num,
-                    std::chrono::system_clock::now().time_since_epoch().count())
-              : pos.client_order_id;
+      // Build exit order ID with exit reason so dashboard can display it
+      // Format: EXIT_SYMBOL_REASON_timestamp
+      // This goes in client_order_id which Alpaca persists and returns in API
+      auto order_id = std::format(
+          "EXIT_{}_{}_{}",
+          pos.symbol,
+          exit_reason,
+          std::chrono::system_clock::now().time_since_epoch().count());
 
       sell_orders.push_back(fix::new_order_single(
           order_id, pos.symbol, fix::SIDE_SELL, static_cast<int>(pos.qty),

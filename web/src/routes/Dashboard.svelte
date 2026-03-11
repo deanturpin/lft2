@@ -157,10 +157,23 @@
   }
 
   // Parse client_order_id to extract trade parameters
-  // Format: AAPL_mean_reversion_tp3_sl2_tsl1_20260218T143000
+  // Buy format: AAPL_mean_reversion_tp3_sl2_tsl1_20260218T143000
+  // Sell format: EXIT_AAPL_take_profit_1773171991902440579
   function parseOrderID(orderId) {
     if (!orderId) return null;
     const parts = orderId.split('_');
+
+    // Check if it's an exit order
+    if (parts[0] === 'EXIT' && parts.length >= 3) {
+      const exitReason = parts[2];
+      // Format exit reason nicely: take_profit → Take Profit
+      const formatted = exitReason.split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      return { exitReason: formatted };
+    }
+
+    // Parse buy order format
     if (parts.length < 6) return null;
 
     const strategy = parts.slice(1, parts.length - 4).join('_');
@@ -302,7 +315,9 @@
               <td>{activity.qty}</td>
               <td>{formatCurrency(activity.price)}</td>
               <td style="color: #8b949e; font-size: 0.9em;">
-                {#if params}
+                {#if params && params.exitReason}
+                  {params.exitReason}
+                {:else if params}
                   {params.strategy} (TP:{params.tp}% SL:{params.sl}% TSL:{params.tsl}%)
                 {:else}
                   —
