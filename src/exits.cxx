@@ -122,17 +122,29 @@ int main() {
           .trailing_stop = trailing_stop_price,
       };
 
+      // Debug: show exit levels
+      std::println("   Exit levels: TP=${:.2f}, SL=${:.2f}, Trail=${:.2f} (peak=${:.2f})",
+                   levels.take_profit, levels.stop_loss, trailing_stop_price, peak_price);
+
       // Check exit strategy
-      if (is_exit(mock_position, bars.back())) {
+      auto exit_check = check_exit(mock_position, bars.back());
+      if (exit_check != exit_reason::none) {
         should_exit = true;
 
-        // Determine which condition triggered
-        if (profit_pct >= default_params.take_profit_pct * 100.0)
+        // Use the specific exit reason from check_exit
+        switch (exit_check) {
+        case exit_reason::take_profit:
           exit_reason = "take_profit";
-        else if (profit_pct <= -default_params.stop_loss_pct * 100.0)
+          break;
+        case exit_reason::stop_loss:
           exit_reason = "stop_loss";
-        else
+          break;
+        case exit_reason::trailing_stop:
           exit_reason = "trailing_stop";
+          break;
+        default:
+          exit_reason = "unknown";
+        }
       }
     }
 
