@@ -392,11 +392,18 @@ func main() {
 			continue
 		}
 
+		// Validate quantity >= 1 (should never happen, but safety check)
+		var qty int
+		if _, err := fmt.Sscanf(held.Qty, "%d", &qty); err != nil || qty < 1 {
+			fmt.Printf("  [WARNING] %s invalid qty=%s — skipping\n", symbol, held.Qty)
+			continue
+		}
+
 		reasonLabel := exitReason
 		if reasonLabel == "" {
 			reasonLabel = "unknown"
 		}
-		fmt.Printf("  [sell] %s qty=%s reason=%s\n", symbol, held.Qty, reasonLabel)
+		fmt.Printf("  [sell] %s qty=%d reason=%s\n", symbol, qty, reasonLabel)
 		if err := submitOrder(OrderRequest{
 			Symbol:      symbol,
 			Qty:         held.Qty,
