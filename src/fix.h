@@ -71,11 +71,12 @@ constexpr std::string
 new_order_single(std::string_view order_id, std::string_view symbol,
                  std::string_view side, int quantity, int seq_num = 1,
                  std::string_view ord_type = ORD_TYPE_MARKET,
-                 double price = 0.0, std::string_view text = "") {
+                 double price = 0.0, std::string_view text = "",
+                 std::string_view time_in_force = TIME_IN_FORCE_DAY) {
   auto body = std::format("{}={}|{}=1|{}={}|{}={}|{}={}|{}={}|{}={}|",
                           CL_ORD_ID, order_id, HANDL_INST, SYMBOL, symbol, SIDE,
                           side, ORDER_QTY, quantity, ORD_TYPE, ord_type,
-                          TIME_IN_FORCE, TIME_IN_FORCE_DAY);
+                          TIME_IN_FORCE, time_in_force);
 
   if (price > 0.0)
     body += std::format("{}={:.2f}|", PRICE, price);

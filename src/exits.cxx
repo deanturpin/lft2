@@ -89,7 +89,8 @@ int main() {
     // trigger until after market close. This will be resolved when upgrading to
     // paid real-time data ($99/month). For now, manual monitoring recommended
     // near EOD.
-    if (market::risk_off(bars.back().timestamp)) {
+    auto is_risk_off = market::risk_off(bars.back().timestamp);
+    if (is_risk_off) {
       should_exit = true;
       exit_reason = "risk_off_liquidation";
       std::println("⚠️  Risk-off period - liquidating at {}",
@@ -160,9 +161,13 @@ int main() {
           exit_reason,
           std::chrono::system_clock::now().time_since_epoch().count());
 
+      // Use IOC (Immediate-Or-Cancel) for risk-off to prevent overnight holds
+      // Use DAY for normal exits (take profit, stop loss, trailing stop)
+      auto tif = is_risk_off ? fix::TIME_IN_FORCE_IOC : fix::TIME_IN_FORCE_DAY;
+
       sell_orders.push_back(fix::new_order_single(
           order_id, pos.symbol, fix::SIDE_SELL, static_cast<int>(pos.qty),
-          seq_num, fix::ORD_TYPE_MARKET, 0.0, exit_reason));
+          seq_num, fix::ORD_TYPE_MARKET, 0.0, exit_reason, tif));
       seq_num++;
     } else {
       std::println("   ⏭️  No exit signal - holding position");
