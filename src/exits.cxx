@@ -84,11 +84,10 @@ int main() {
     auto should_exit = false;
     auto exit_reason = std::string{};
 
-    // Force exit during risk-off period (last 45 min of trading day)
-    // NOTE: Alpaca free tier has 15-minute delayed data, so this check may not
-    // trigger until after market close. This will be resolved when upgrading to
-    // paid real-time data ($99/month). For now, manual monitoring recommended
-    // near EOD.
+    // Force exit during risk-off period (last 75 min of trading day, 2:45-4:00 PM ET)
+    // With 15-minute delayed data, this gives ~60 minutes of real liquidation time
+    // NOTE: Alpaca free tier delay means actual trigger may be later than ideal
+    // Upgrading to real-time data ($99/month) would provide full 75-minute window
     auto is_risk_off = market::risk_off(bars.back().timestamp);
     if (is_risk_off) {
       should_exit = true;

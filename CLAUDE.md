@@ -79,12 +79,13 @@ Use `nstd::` for functions not yet constexpr in C++20/23:
 
 ### Order Fill Policy
 
-**Risk-Off Liquidation** (15:15-16:00 ET):
+**Risk-Off Liquidation** (14:45-16:00 ET, last 75 minutes):
 
 - Time-In-Force: **IOC** (Immediate-Or-Cancel)
 - Policy: "Fill immediately or cancel"
 - If order doesn't fill within seconds → auto-cancelled, retry on next pipeline run
 - Prevents overnight holds and next-day fills at wrong prices
+- Extended window (75 min) accounts for 15-minute data delay (~60 min real time)
 
 **Normal Exits** (Take Profit / Stop Loss / Trailing Stop):
 
