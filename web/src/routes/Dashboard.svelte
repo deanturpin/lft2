@@ -158,14 +158,24 @@
 
   // Parse client_order_id to extract trade parameters
   // Buy format: AAPL_mean_reversion_tp3_sl2_tsl1_20260218T143000
-  // Sell format: EXIT_AAPL_take_profit_1773171991902440579
+  // Sell format (new): EXIT_AAPL_take_profit_1773171991902440579
+  // Sell format (old): EXIT_AAPL_2_1773171991902440579 (sequence number)
   function parseOrderID(orderId) {
     if (!orderId) return null;
     const parts = orderId.split('_');
 
     // Check if it's an exit order
-    if (parts[0] === 'EXIT' && parts.length >= 3) {
+    if (parts[0] === 'EXIT' && parts.length >= 4) {
       const exitReason = parts[2];
+
+      // Old format: sequence number (single digit or small number)
+      // New format: exit reason (contains underscores or text)
+      if (/^\d+$/.test(exitReason) && parseInt(exitReason) < 100) {
+        // Old format with sequence number - no exit reason available
+        return null;
+      }
+
+      // New format with exit reason
       // Format exit reason nicely: take_profit → Take Profit
       const formatted = exitReason.split('_')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
