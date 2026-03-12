@@ -29,24 +29,35 @@ constexpr auto RISK_OFF_START = 75min; // Start liquidation before close (3:45 P
                                         // With 15-min data delay, gives ~60 min real time
                                         // to liquidate before 4:00 PM close
 
-// Returns the UTC offset for America/New_York based on month alone.
-// EDT (UTC-4) applies April–October; EST (UTC-5) otherwise.
-constexpr minutes utc_offset(unsigned mo) {
+// Returns the UTC offset for America/New_York based on month and day.
+// EDT (UTC-4) applies mid-March to early November; EST (UTC-5) otherwise.
+// DST starts second Sunday of March (Mar 8-14), ends first Sunday of November (Nov 1-7).
+constexpr minutes utc_offset(unsigned mo, unsigned day) {
   constexpr auto EST = minutes{-5h}; // UTC-5
   constexpr auto EDT = minutes{-4h}; // UTC-4
-  return (mo >= 4 && mo <= 10) ? EDT : EST;
+
+  // March: DST starts second Sunday (day 8-14), so assume EDT from day 9 onward
+  if (mo == 3) return day >= 9 ? EDT : EST;
+
+  // November: DST ends first Sunday (day 1-7), so assume EST from day 2 onward
+  if (mo == 11) return day >= 2 ? EST : EDT;
+
+  // April-October: EDT
+  if (mo >= 4 && mo <= 10) return EDT;
+
+  // December-February: EST
+  return EST;
 }
-static_assert(utc_offset(1) == minutes{-5h}); // January   - EST
-static_assert(
-    utc_offset(3) ==
-    minutes{-5h}); // March     - EST (transition month, non-trading Sunday)
-static_assert(utc_offset(4) == minutes{-4h});  // April     - EDT
-static_assert(utc_offset(7) == minutes{-4h});  // July      - EDT
-static_assert(utc_offset(10) == minutes{-4h}); // October   - EDT
-static_assert(
-    utc_offset(11) ==
-    minutes{-5h}); // November  - EST (transition month, non-trading Sunday)
-static_assert(utc_offset(12) == minutes{-5h}); // December  - EST
+static_assert(utc_offset(1, 15) == minutes{-5h});  // January - EST
+static_assert(utc_offset(3, 8) == minutes{-5h});   // March 8 - EST (DST starts)
+static_assert(utc_offset(3, 9) == minutes{-4h});   // March 9 - EDT (after transition)
+static_assert(utc_offset(3, 15) == minutes{-4h});  // March 15 - EDT
+static_assert(utc_offset(4, 15) == minutes{-4h});  // April - EDT
+static_assert(utc_offset(7, 15) == minutes{-4h});  // July - EDT
+static_assert(utc_offset(10, 15) == minutes{-4h}); // October - EDT
+static_assert(utc_offset(11, 1) == minutes{-4h});  // November 1 - EDT (DST ends)
+static_assert(utc_offset(11, 2) == minutes{-5h});  // November 2 - EST (after transition)
+static_assert(utc_offset(12, 15) == minutes{-5h}); // December - EST
 
 // Parse two ASCII digits from a string_view, returns -1 on invalid input.
 constexpr int parse2(std::string_view s) {
@@ -68,14 +79,15 @@ constexpr minutes ny_minutes(std::string_view ts) {
     return -1min;
 
   auto mo = parse2(ts.substr(5, 2));
+  auto day = parse2(ts.substr(8, 2));
   auto h = parse2(ts.substr(11, 2));
   auto m = parse2(ts.substr(14, 2));
 
-  if (mo < 0 || h < 0 || m < 0)
+  if (mo < 0 || day < 0 || h < 0 || m < 0)
     return -1min;
 
   auto utc_min = minutes{h * 60 + m};
-  auto offset = utc_offset(static_cast<unsigned>(mo));
+  auto offset = utc_offset(static_cast<unsigned>(mo), static_cast<unsigned>(day));
 
   // Apply offset, wrapping into [0, 24h)
   auto local_min = utc_min + offset;
