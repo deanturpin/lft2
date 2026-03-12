@@ -77,6 +77,21 @@ Use `nstd::` for functions not yet constexpr in C++20/23:
 
 - `nstd::sqrt()` - Newton-Raphson square root (replace with `std::sqrt` in C++26)
 
+### Order Fill Policy
+
+**Risk-Off Liquidation** (15:15-16:00 ET):
+
+- Time-In-Force: **IOC** (Immediate-Or-Cancel)
+- Policy: "Fill immediately or cancel"
+- If order doesn't fill within seconds → auto-cancelled, retry on next pipeline run
+- Prevents overnight holds and next-day fills at wrong prices
+
+**Normal Exits** (Take Profit / Stop Loss / Trailing Stop):
+
+- Time-In-Force: **DAY** (Good-Till-Day)
+- Policy: "Fill anytime before market close"
+- Price-based exits where timing matters less than target price
+
 ### Common Issues
 
 **Go modules fail to build**: Run `go mod tidy` to sync dependencies

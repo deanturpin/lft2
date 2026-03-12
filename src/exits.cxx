@@ -161,8 +161,13 @@ int main() {
           exit_reason,
           std::chrono::system_clock::now().time_since_epoch().count());
 
-      // Use IOC (Immediate-Or-Cancel) for risk-off to prevent overnight holds
-      // Use DAY for normal exits (take profit, stop loss, trailing stop)
+      // Fill Policy:
+      // - Risk-off liquidation: IOC (Immediate-Or-Cancel) - fill within seconds or cancel
+      //   * Must close before market close, can't risk overnight holds
+      //   * If order doesn't fill immediately, cancel and retry on next pipeline run
+      // - Normal exits: DAY (Good-Till-Day) - fill anytime before market close
+      //   * Take profit, stop loss, trailing stop based on price levels
+      //   * Timing within day matters less than getting target price
       auto tif = is_risk_off ? fix::TIME_IN_FORCE_IOC : fix::TIME_IN_FORCE_DAY;
 
       sell_orders.push_back(fix::new_order_single(
