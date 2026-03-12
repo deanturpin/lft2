@@ -207,10 +207,11 @@ int main() {
       continue;
     }
 
+    // Signal fired! Now check if we can afford to take the trade
     auto shares = static_cast<int>(max_order_value / latest_price);
     if (shares < 1) {
-      std::println("{} {:>8.2f}  ❌ too expensive (< 1 share for ${:.2f})", prefix,
-                   latest_price, max_order_value);
+      std::println("{} {:>8.2f}  📊 signal fired — too expensive (< 1 share for ${:.2f})",
+                   prefix, latest_price, max_order_value);
       continue;
     }
 
@@ -222,13 +223,13 @@ int main() {
       return 1;
     }
     if (order_value > account.buying_power) {
-      std::println("{} {:>8.2f}  ❌ insufficient buying power", prefix,
-                   latest_price);
+      std::println("{} {:>8.2f}  📊 signal fired — insufficient buying power (need ${:.2f}, have ${:.2f})",
+                   prefix, latest_price, order_value, account.buying_power);
       continue;
     }
 
-    std::println("   ✅ Entry signal! Buying {} shares (${:.2f})", shares,
-                 order_value);
+    std::println("{} {:>8.2f}  ✅ buying {} shares (${:.2f})", prefix, latest_price,
+                 shares, order_value);
 
     // Generate FIX buy order — encode symbol, strategy and risk params in the
     // client_order_id (tag 11) so every field is visible in Alpaca's order
