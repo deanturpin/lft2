@@ -139,7 +139,9 @@ int main() {
   std::println("  Portfolio Value: ${:.2f}", account.portfolio_value);
   std::println("  Buying Power: ${:.2f}", account.buying_power);
 
-  constexpr auto max_order_value = 2000.0;
+  // Risk management: 2% of portfolio value per position (max 50 positions)
+  auto max_order_value = account.portfolio_value * 0.02;
+  std::println("  Max Order Value: ${:.2f} (2% of portfolio)", max_order_value);
 
   // Load existing positions to avoid duplicates
   auto existing_symbols = load_existing_symbols();
@@ -207,16 +209,16 @@ int main() {
 
     auto shares = static_cast<int>(max_order_value / latest_price);
     if (shares < 1) {
-      std::println("{} {:>8.2f}  ❌ too expensive (< 1 share for ${})", prefix,
-                   latest_price, static_cast<int>(max_order_value));
+      std::println("{} {:>8.2f}  ❌ too expensive (< 1 share for ${:.2f})", prefix,
+                   latest_price, max_order_value);
       continue;
     }
 
     auto order_value = shares * latest_price;
     if (order_value > max_order_value) {
       // This should never happen — abort loudly if it does
-      std::println("❌ ABORT: order value ${:.2f} exceeds limit ${} — BUG",
-                   order_value, static_cast<int>(max_order_value));
+      std::println("❌ ABORT: order value ${:.2f} exceeds limit ${:.2f} — BUG",
+                   order_value, max_order_value);
       return 1;
     }
     if (order_value > account.buying_power) {
