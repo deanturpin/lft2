@@ -101,19 +101,25 @@ int main() {
       auto levels = calculate_levels(pos.avg_entry_price, default_params);
 
       // Calculate proper trailing stop: track 1% below peak price
-      // Scan all bars since entry to find peak, then set trailing stop below it
+      // Only activate trailing stop after position becomes profitable
       auto peak_price = pos.avg_entry_price;
       for (const auto &b : bars) {
         if (b.close > peak_price)
           peak_price = b.close;
       }
 
-      // Trailing stop: 1% below peak (only active if peak > entry)
-      auto trailing_stop_price = peak_price * (1.0 - default_params.trailing_stop_pct);
+      // Trailing stop: only activate after price rises above entry
+      // Until then, only stop loss protects the position
+      auto trailing_stop_price = levels.stop_loss; // Start disabled (at SL level)
 
-      // Don't let trailing stop fall below initial stop loss
-      if (trailing_stop_price < levels.stop_loss)
-        trailing_stop_price = levels.stop_loss;
+      if (peak_price > pos.avg_entry_price) {
+        // Position has been profitable - activate trailing stop
+        trailing_stop_price = peak_price * (1.0 - default_params.trailing_stop_pct);
+
+        // Don't let trailing stop fall below initial stop loss
+        if (trailing_stop_price < levels.stop_loss)
+          trailing_stop_price = levels.stop_loss;
+      }
 
       auto mock_position = position{
           .entry_price = pos.avg_entry_price,
@@ -123,8 +129,10 @@ int main() {
       };
 
       // Debug: show exit levels
-      std::println("   Exit levels: TP=${:.2f}, SL=${:.2f}, Trail=${:.2f} (peak=${:.2f})",
-                   levels.take_profit, levels.stop_loss, trailing_stop_price, peak_price);
+      auto trailing_active = peak_price > pos.avg_entry_price;
+      std::println("   Exit levels: TP=${:.2f}, SL=${:.2f}, Trail=${:.2f} {} (peak=${:.2f})",
+                   levels.take_profit, levels.stop_loss, trailing_stop_price,
+                   trailing_active ? "ACTIVE" : "inactive", peak_price);
 
       // Check exit strategy
       auto exit_check = check_exit(mock_position, bars.back());
