@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import Chart from 'chart.js/auto';
+  import { marketOpen } from '../lib/market.js';
 
   let dashboard = null;
   let history = [];
@@ -10,9 +11,36 @@
   let chartCanvas;
   let chart;
   let dailySummary = null;
+  let isMarketOpen = false;
 
   const API_URL = import.meta.env.VITE_API_URL ||
     (import.meta.env.PROD ? 'https://lft.turpin.dev' : 'http://localhost:8080');
+
+  // Update favicon based on market status
+  function updateFavicon(open) {
+    let link = document.querySelector("link[rel*='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
+    }
+    link.href = open ? '/favicon-open.svg' : '/favicon-closed.svg';
+  }
+
+  // Update market status based on latest position timestamp
+  $: if (dashboard?.positions?.length > 0) {
+    // Use the most recent position timestamp
+    const latestTimestamp = dashboard.positions[0]?.updated_at;
+    if (latestTimestamp) {
+      isMarketOpen = marketOpen(latestTimestamp);
+      updateFavicon(isMarketOpen);
+    }
+  } else {
+    // No positions - use current time to check market status
+    const now = new Date().toISOString();
+    isMarketOpen = marketOpen(now);
+    updateFavicon(isMarketOpen);
+  }
 
   async function fetchDashboard() {
     try {
