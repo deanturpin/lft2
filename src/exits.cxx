@@ -35,6 +35,35 @@ std::vector<alpaca_position> load_positions() {
   return positions;
 }
 
+// Find the most recent buy timestamp for a symbol from daily-summary.json
+std::string_view find_entry_timestamp(std::string_view symbol, const std::string &activities_json) {
+  // Find the activities array
+  auto activities_start = activities_json.find(R"("activities")");
+  if (activities_start == std::string::npos)
+    return "";
+
+  auto array_start = activities_json.find('[', activities_start);
+  if (array_start == std::string::npos)
+    return "";
+
+  std::string_view latest_timestamp;
+
+  // Parse activities array to find most recent buy for this symbol
+  json_foreach_object(std::string_view{activities_json}.substr(array_start), [&](std::string_view obj) {
+    auto activity_symbol = json_string(obj, "symbol");
+    auto side = json_string(obj, "side");
+
+    if (activity_symbol == symbol && side == "buy") {
+      auto timestamp = json_string(obj, "transaction_time");
+      if (timestamp > latest_timestamp) {
+        latest_timestamp = timestamp;
+      }
+    }
+  });
+
+  return latest_timestamp;
+}
+
 int main() {
   std::println("Low Frequency Trader v2 - Exit Module\n");
 
@@ -53,6 +82,17 @@ int main() {
   }
 
   std::println("Checking {} position(s) for exit signals...", positions.size());
+
+  // Load daily-summary.json to find entry timestamps for each position
+  auto activities_json = std::string{};
+  {
+    auto ifs = std::ifstream{paths::daily_summary};
+    if (ifs) {
+      activities_json = std::string{std::istreambuf_iterator<char>(ifs), {}};
+    } else {
+      std::println("⚠️  Warning: daily-summary.json not found - cannot determine entry timestamps");
+    }
+  }
 
   // Check if we need to liquidate everything (using latest bar timestamp)
   // We'll check per-position using the bar timestamp
@@ -102,12 +142,17 @@ int main() {
 
       // Calculate proper trailing stop: track 1% below peak price
       // Only activate trailing stop after position becomes profitable
-      // Scan only recent bars (last 100 = ~8 hours) to avoid using peaks from old positions
+      // Find entry timestamp to only scan bars since this position was opened
+      auto entry_timestamp = find_entry_timestamp(pos.symbol, activities_json);
+
       auto peak_price = pos.avg_entry_price;
-      auto recent_bars_start = bars.size() > 100 ? bars.size() - 100 : 0;
-      for (auto i = recent_bars_start; i < bars.size(); ++i) {
-        if (bars[i].close > peak_price)
-          peak_price = bars[i].close;
+      for (const auto &b : bars) {
+        // Skip bars before this position was entered
+        if (!entry_timestamp.empty() && b.timestamp < entry_timestamp)
+          continue;
+
+        if (b.close > peak_price)
+          peak_price = b.close;
       }
 
       // Trailing stop: only activate after price rises above entry
