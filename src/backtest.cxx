@@ -115,12 +115,20 @@ strategy_result backtest_strategy(std::span<const bar> bars,
     }
 
     // Update trailing stop to track peak price while in position
+    // Only activate trailing stop after position becomes profitable
     if (position) {
-      auto peak =
-          position->trailing_stop / (1.0 - default_params.trailing_stop_pct);
-      if (now.close > peak)
-        position->trailing_stop =
-            now.close * (1.0 - default_params.trailing_stop_pct);
+      // Check if position has become profitable
+      if (now.close > position->entry_price) {
+        // Position is profitable - activate/update trailing stop
+        auto peak =
+            position->trailing_stop / (1.0 - default_params.trailing_stop_pct);
+        if (now.close > peak)
+          position->trailing_stop =
+              now.close * (1.0 - default_params.trailing_stop_pct);
+      } else {
+        // Position not yet profitable - keep trailing stop at stop loss level
+        position->trailing_stop = position->stop_loss;
+      }
     }
 
     // Exit signal fires on now's close; fill at next bar's open
