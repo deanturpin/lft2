@@ -102,10 +102,12 @@ int main() {
 
       // Calculate proper trailing stop: track 1% below peak price
       // Only activate trailing stop after position becomes profitable
+      // Scan only recent bars (last 100 = ~8 hours) to avoid using peaks from old positions
       auto peak_price = pos.avg_entry_price;
-      for (const auto &b : bars) {
-        if (b.close > peak_price)
-          peak_price = b.close;
+      auto recent_bars_start = bars.size() > 100 ? bars.size() - 100 : 0;
+      for (auto i = recent_bars_start; i < bars.size(); ++i) {
+        if (bars[i].close > peak_price)
+          peak_price = bars[i].close;
       }
 
       // Trailing stop: only activate after price rises above entry
