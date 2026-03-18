@@ -10,7 +10,7 @@ struct trading_params {
 };
 
 // Default trading parameters
-constexpr auto default_params = trading_params{.take_profit_pct = 0.02,
+constexpr auto default_params = trading_params{.take_profit_pct = 0.015,
                                                .stop_loss_pct = 0.015,
                                                .trailing_stop_pct = 0.01};
 
