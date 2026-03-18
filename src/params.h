@@ -10,8 +10,8 @@ struct trading_params {
 };
 
 // Default trading parameters
-constexpr auto default_params = trading_params{.take_profit_pct = 0.0125,
-                                               .stop_loss_pct = 0.0125,
+constexpr auto default_params = trading_params{.take_profit_pct = 0.02,
+                                               .stop_loss_pct = 0.015,
                                                .trailing_stop_pct = 0.01};
 
 // Calculate absolute price levels from entry price and parameters
